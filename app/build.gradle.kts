@@ -13,8 +13,8 @@ android {
         applicationId = "app.anon.player"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.1.1"
         // phones by default; the emulator build passes -PanonAbis=x86_64
         ndk { abiFilters += (providers.gradleProperty("anonAbis").orNull ?: "arm64-v8a,armeabi-v7a").split(",") }
         // each worktree agent installs as its own app: ./gradlew installDebug -PanonSuffix=.player

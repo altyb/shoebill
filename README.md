@@ -6,7 +6,7 @@
 
 <p align="center">
   A private video player for Android, built on <a href="https://mpv.io">mpv</a>, with an encrypted vault.<br>
-  Arabic-first interface. No ads, no accounts, no tracking.
+  English and Arabic interface. No ads, no accounts, no tracking.
 </p>
 
 <p align="center" dir="rtl">مشغّل فيديو خاص لأندرويد، مع خزنة مشفّرة. بدون إعلانات ولا حسابات ولا تتبّع.</p>
@@ -27,6 +27,9 @@
 </p>
 
 ## Features
+
+**Languages:** English and Arabic. The layout follows the language (right-to-left in Arabic); pick one in
+Settings, or let it follow the phone.
 
 **Player**
 - Plays what mpv plays: HEVC 10-bit, H.264, VP9, TrueHD/EAC3/DTS, ASS/PGS subtitles, network streams (http, HLS, rtsp).

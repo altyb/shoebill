@@ -8,6 +8,7 @@ import android.view.ViewTreeObserver
 import android.view.View
 import android.os.SystemClock
 import android.os.Build
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -63,6 +64,8 @@ class MainActivity : FragmentActivity() { // FragmentActivity: BiometricPrompt (
     private class Incoming(val uri: Uri)
     private val incoming = mutableStateOf<Incoming?>(null)
 
+    override fun attachBaseContext(newBase: Context) = super.attachBaseContext(Lang.wrap(newBase))
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -81,8 +84,8 @@ class MainActivity : FragmentActivity() { // FragmentActivity: BiometricPrompt (
             })
         }
         setContent {
-            // UI strings are Arabic, so the layout is RTL whatever the phone locale is (times/seek bars opt back into LTR).
-            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) { AnonTheme {
+            // layout direction comes from the locale (Lang): RTL in Arabic, LTR in English; times/seek bars stay LTR
+            AnonTheme {
                 Surface(Modifier, color = MaterialTheme.colorScheme.background) {
                     // debug/test entry: adb shell am start -n <pkg>/app.anon.player.MainActivity --es route settings|appearance|search|vault
                     val start = remember { startRoute(routeOf(intent)) }
@@ -96,7 +99,8 @@ class MainActivity : FragmentActivity() { // FragmentActivity: BiometricPrompt (
                     LaunchedEffect(req) { req?.let { if (stack.last() != it.route) push(it.route) } }
                     BackHandler(stack.size > 1) { pop() }
 
-                    // M3 shared-axis X between pages (forward from the RTL end, back to it); the player fades + scales in.
+                    // M3 shared-axis X between pages (forward from the end side, back to it); the player fades + scales in.
+                    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
                     SharedTransitionLayout { CompositionLocalProvider(LocalSharedScope provides this) {
                     AnimatedContent(
                         targetState = stack.size to stack.last(),
@@ -109,7 +113,7 @@ class MainActivity : FragmentActivity() { // FragmentActivity: BiometricPrompt (
                                 // the tapped thumbnail grows into the player (ui/Shared.kt); the pages only cross-fade under it
                                 fadeIn(tween(dur, easing = ease)) togetherWith fadeOut(tween(dur, delayMillis = 120))
                             } else {
-                                val sign = if (forward) -1 else 1 // RTL: the next page comes from the left
+                                val sign = (if (forward) 1 else -1) * (if (rtl) -1 else 1) // the next page comes from the end side (left in RTL)
                                 (slideInHorizontally(tween(dur, easing = ease)) { sign * it / 6 } + fadeIn(tween(dur, delayMillis = dur / 4))) togetherWith
                                     (slideOutHorizontally(tween(dur, easing = ease)) { -sign * it / 6 } + fadeOut(tween(dur / 3)))
                             }
@@ -133,7 +137,7 @@ class MainActivity : FragmentActivity() { // FragmentActivity: BiometricPrompt (
                     } }
                     } }
                 }
-            } }
+            }
         }
     }
 

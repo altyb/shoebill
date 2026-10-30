@@ -97,6 +97,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import app.anon.player.ui.EmptyState
+import app.anon.player.R
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Locale
@@ -166,15 +169,15 @@ fun VaultGrid(
     if (allFilesDialog) {
         AlertDialog(
             onDismissRequest = { allFilesDialog = false },
-            title = { Text("نقل بدل النسخ") },
-            text = { Text("ليُحذف الأصل من المعرض تلقائياً دون نافذة سماح في كل مرة، فعّل «الوصول إلى كل الملفات» لهذا التطبيق. إن رفضت، تظهر نافذة السماح.") },
+            title = { Text(stringResource(R.string.vault_move_title)) },
+            text = { Text(stringResource(R.string.vault_move_body)) },
             confirmButton = {
                 TextButton(onClick = {
                     askedAllFiles = true; allFilesDialog = false; onBeginSystemHop()
                     allFilesLauncher.launch(Intent(android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, Uri.parse("package:${context.packageName}")))
-                }) { Text("تفعيل") }
+                }) { Text(stringResource(R.string.vault_enable)) }
             },
-            dismissButton = { TextButton(onClick = { askedAllFiles = true; allFilesDialog = false; addFilesNow() }) { Text("لاحقاً") } },
+            dismissButton = { TextButton(onClick = { askedAllFiles = true; allFilesDialog = false; addFilesNow() }) { Text(stringResource(R.string.vault_later)) } },
         )
     }
     val addFiles = { if (!askedAllFiles && needsAllFiles()) allFilesDialog = true else addFilesNow() }
@@ -215,16 +218,16 @@ fun VaultGrid(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (selecting) "${selected.size} محدد" else "داخل الخزنة") },
+                title = { Text(if (selecting) stringResource(R.string.vault_selected, selected.size) else stringResource(R.string.vault_title)) },
                 navigationIcon = {
-                    if (selecting) IconButton(onClick = { selected = emptySet() }) { Icon(Icons.Rounded.Close, "إلغاء التحديد") }
+                    if (selecting) IconButton(onClick = { selected = emptySet() }) { Icon(Icons.Rounded.Close, stringResource(R.string.vault_clear_selection)) }
                 },
                 actions = {
                     if (selecting) {
-                        TextButton(onClick = { selected = shown.map { it.id }.toSet() }) { Text("تحديد الكل") }
+                        TextButton(onClick = { selected = shown.map { it.id }.toSet() }) { Text(stringResource(R.string.vault_select_all)) }
                     } else {
-                        IconButton(onClick = onLock) { Icon(Icons.Filled.Lock, "قفل الخزنة") }
-                        IconButton(onClick = onSettings) { Icon(Icons.Filled.Settings, "إعدادات الخزنة") }
+                        IconButton(onClick = onLock) { Icon(Icons.Filled.Lock, stringResource(R.string.vault_lock)) }
+                        IconButton(onClick = onSettings) { Icon(Icons.Filled.Settings, stringResource(R.string.vault_settings)) }
                     }
                 },
             )
@@ -234,7 +237,7 @@ fun VaultGrid(
                 ExtendedFloatingActionButton(
                     onClick = addFiles,
                     icon = { Icon(Icons.Filled.Add, null) },
-                    text = { Text("إضافة ملفات") },
+                    text = { Text(stringResource(R.string.vault_add_files)) },
                 )
             }
         },
@@ -252,11 +255,11 @@ fun VaultGrid(
                 }
                 Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     MediaFilter.entries.forEach { f ->
-                        FilterChip(selected = ui.filter == f, onClick = { onFilter(f) }, label = { Text(f.label) })
+                        FilterChip(selected = ui.filter == f, onClick = { onFilter(f) }, label = { Text(stringResource(f.label)) })
                     }
                 }
                 if (shown.isEmpty()) {
-                    EmptyState(Icons.Filled.Lock, "الخزنة فارغة", Modifier.weight(1f), body = "أضف فيديو ليُشفَّر ويختفي من المعرض")
+                    EmptyState(Icons.Filled.Lock, stringResource(R.string.vault_empty), Modifier.weight(1f), body = stringResource(R.string.vault_empty_body))
                 } else {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(3),
@@ -315,7 +318,7 @@ fun VaultGrid(
                         ) {
                             Icon(Icons.Rounded.Restore, null, Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text("إرجاع إلى المعرض")
+                            Text(stringResource(R.string.vault_return_to_gallery))
                         }
                         OutlinedButton(
                             onClick = { confirmDeleteMany = true },
@@ -324,7 +327,7 @@ fun VaultGrid(
                         ) {
                             Icon(Icons.Rounded.Delete, null, Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text("حذف")
+                            Text(stringResource(R.string.delete))
                         }
                     }
                 }
@@ -349,16 +352,16 @@ fun VaultGrid(
     confirmDelete?.let { id ->
         AlertDialog(
             onDismissRequest = { confirmDelete = null },
-            title = { Text("حذف نهائياً؟") },
-            text = { Text("يُمحى الملف من الخزنة ولا يمكن استرجاعه.") },
+            title = { Text(stringResource(R.string.vault_delete_one_title)) },
+            text = { Text(stringResource(R.string.vault_delete_body)) },
             confirmButton = {
                 Button(onClick = {
                     confirmDelete = null
                     onView(null)
                     onDelete(id)
-                }) { Text("حذف") }
+                }) { Text(stringResource(R.string.delete)) }
             },
-            dismissButton = { TextButton(onClick = { confirmDelete = null }) { Text("إلغاء") } },
+            dismissButton = { TextButton(onClick = { confirmDelete = null }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 
@@ -366,17 +369,17 @@ fun VaultGrid(
         val n = selected.size
         AlertDialog(
             onDismissRequest = { confirmDeleteMany = false },
-            title = { Text("حذف $n ملف نهائياً؟") },
-            text = { Text("يُمحى الملف من الخزنة ولا يمكن استرجاعه.") },
+            title = { Text(pluralStringResource(R.plurals.vault_delete_many_title, n, n)) },
+            text = { Text(stringResource(R.string.vault_delete_body)) },
             confirmButton = {
                 Button(onClick = {
                     confirmDeleteMany = false
                     val ids = selected
                     selected = emptySet()
                     onDeleteMany(ids)
-                }) { Text("حذف") }
+                }) { Text(stringResource(R.string.delete)) }
             },
-            dismissButton = { TextButton(onClick = { confirmDeleteMany = false }) { Text("إلغاء") } },
+            dismissButton = { TextButton(onClick = { confirmDeleteMany = false }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 }
@@ -455,10 +458,10 @@ private fun PhotoViewer(
             )
         }
         Row(Modifier.align(Alignment.TopStart).fillMaxWidth().statusBarsPadding().padding(4.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onClose) { Icon(Icons.Filled.Close, "إغلاق", tint = Color.White) }
+            IconButton(onClick = onClose) { Icon(Icons.Filled.Close, stringResource(R.string.close), tint = Color.White) }
             Text(title, Modifier.weight(1f), color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            IconButton(onClick = onExport) { Icon(Icons.Filled.SaveAlt, "إرجاع إلى المعرض", tint = Color.White) }
-            IconButton(onClick = onDelete) { Icon(Icons.Filled.Delete, "حذف نهائياً", tint = Color.White) }
+            IconButton(onClick = onExport) { Icon(Icons.Filled.SaveAlt, stringResource(R.string.vault_return_to_gallery), tint = Color.White) }
+            IconButton(onClick = onDelete) { Icon(Icons.Filled.Delete, stringResource(R.string.vault_delete_forever), tint = Color.White) }
         }
     }
 }

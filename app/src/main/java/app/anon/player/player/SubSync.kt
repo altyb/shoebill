@@ -1,5 +1,8 @@
 package app.anon.player.player
 
+import app.anon.player.R
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -46,6 +49,7 @@ import java.util.Locale
 @Composable
 fun SubTimingTab(player: MpvPlayer, subFile: File?) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     var cue by remember { mutableStateOf("") }
     var delaySec by remember { mutableStateOf(player.getDouble("sub-delay") ?: 0.0) }
     var message by remember { mutableStateOf<String?>(null) }
@@ -67,7 +71,7 @@ fun SubTimingTab(player: MpvPlayer, subFile: File?) {
     fun fixFps(from: Double, to: Double) {
         val f = subFile
         if (f == null || f.extension.lowercase() != "srt") {
-            message = "تحويل الإطارات يعمل على ملف SRT خارجي فقط"
+            message = context.getString(R.string.sub_fps_srt_only)
             return
         }
         scope.launch {
@@ -75,14 +79,14 @@ fun SubTimingTab(player: MpvPlayer, subFile: File?) {
                 f.writeText(SrtParser.write(SrtParser.parse(f.readText()).scaleFps(from, to)), Charsets.UTF_8)
             }
             player.command("sub-reload")
-            message = "أُعيد حساب التوقيت"
+            message = context.getString(R.string.sub_fps_done)
         }
     }
 
     Column(Modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("%+.2f ث".format(Locale.ROOT, delaySec), style = MaterialTheme.typography.titleLarge)
-            TextButton(onClick = { player.setDouble("sub-delay", 0.0); delaySec = 0.0 }) { Text("صفر") }
+            Text(stringResource(R.string.player_seconds, "%+.2f".format(Locale.ROOT, delaySec)), style = MaterialTheme.typography.titleLarge)
+            TextButton(onClick = { player.setDouble("sub-delay", 0.0); delaySec = 0.0 }) { Text(stringResource(R.string.sub_reset)) }
         }
         Spacer(Modifier.height(6.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -95,11 +99,11 @@ fun SubTimingTab(player: MpvPlayer, subFile: File?) {
         Spacer(Modifier.height(12.dp))
         Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(cue.ifBlank { "لا ترجمة ظاهرة الآن" }, style = MaterialTheme.typography.titleMedium, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                Text(cue.ifBlank { stringResource(R.string.sub_no_cue) }, style = MaterialTheme.typography.titleMedium, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { player.command("sub-seek", "-1") }) { Text("السابق") }
-                    OutlinedButton(onClick = { player.command("sub-seek", "1") }) { Text("التالي") }
+                    OutlinedButton(onClick = { player.command("sub-seek", "-1") }) { Text(stringResource(R.string.player_previous)) }
+                    OutlinedButton(onClick = { player.command("sub-seek", "1") }) { Text(stringResource(R.string.player_next)) }
                 }
             }
         }
@@ -110,17 +114,17 @@ fun SubTimingTab(player: MpvPlayer, subFile: File?) {
             val now = player.getDouble("time-pos")
             val start = player.getDouble("sub-start")
             message = if (start == null || start < 0 || now == null) {
-                "لا سطر ظاهر الآن. انتظر حتى يظهر السطر ثم انقر"
+                context.getString(R.string.sub_sync_no_line)
             } else {
                 player.setDouble("sub-delay", now - start)
-                "ضُبط التأخير على هذا السطر"
+                context.getString(R.string.sub_sync_done)
             }
-        }, modifier = Modifier.fillMaxWidth()) { Text("هذا السطر الآن") }
+        }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.sub_sync_this_line)) }
         Spacer(Modifier.height(8.dp))
-        OutlinedButton(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) { Text("مزامنة تلقائية: قريباً") }
+        OutlinedButton(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.sub_auto_sync_soon)) }
 
         Spacer(Modifier.height(16.dp))
-        Text("تحويل الإطارات", style = MaterialTheme.typography.titleSmall)
+        Text(stringResource(R.string.sub_fps_convert), style = MaterialTheme.typography.titleSmall)
         Spacer(Modifier.height(6.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             OutlinedButton(onClick = { fixFps(23.976, 25.0) }, modifier = Modifier.weight(1f)) { Text("23.976 → 25") }

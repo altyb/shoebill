@@ -1,5 +1,8 @@
 package app.anon.player.ui
 
+import app.anon.player.R
+import androidx.compose.ui.res.stringResource
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.tween
@@ -77,7 +80,7 @@ fun PanelHeader(title: String, onClose: () -> Unit, actions: @Composable () -> U
     Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
         actions()
-        IconButton(onClick = onClose) { Icon(Icons.Rounded.Close, "إغلاق") }
+        IconButton(onClick = onClose) { Icon(Icons.Rounded.Close, stringResource(R.string.close)) }
     }
 }
 
@@ -112,7 +115,7 @@ fun SearchPill(
             )
         }
         AnimatedVisibility(value.isNotEmpty(), enter = fadeIn() + scaleIn(), exit = fadeOut()) {
-            IconButton(onClick = { onValueChange("") }) { Icon(Icons.Rounded.Close, "مسح", tint = cs.onSurfaceVariant) }
+            IconButton(onClick = { onValueChange("") }) { Icon(Icons.Rounded.Close, stringResource(R.string.clear), tint = cs.onSurfaceVariant) }
         }
     }
 }

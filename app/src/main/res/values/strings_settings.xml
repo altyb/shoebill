@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_title">Settings</string>
+    <string name="settings_player">Player</string>
+    <string name="settings_decoder">Decoder</string>
+    <string name="settings_decoder_hw">Hardware decoding, fastest and lightest</string>
+    <string name="settings_decoder_hwplus">Hardware decoding with frame copy, wider support</string>
+    <string name="settings_decoder_sw">Software decoding, widest support</string>
+    <string name="settings_auto_resume">Auto resume</string>
+    <string name="settings_auto_resume_sub">Continue from where you stopped</string>
+    <string name="settings_play_next">Next in folder</string>
+    <string name="settings_play_next_sub">Play the next file automatically</string>
+    <string name="settings_background">Background playback</string>
+    <string name="settings_background_sub">Keep audio playing when the screen is off</string>
+    <string name="settings_gestures">Gestures</string>
+    <string name="settings_gestures_sub">Swipe to change brightness, volume and position</string>
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_appearance_sub">Colors, style, mode and contrast</string>
+    <string name="settings_privacy">Privacy</string>
+    <string name="settings_history">Watch history</string>
+    <string name="settings_history_sub">Remember where each video stopped</string>
+    <string name="settings_clear_history">Clear history</string>
+    <string name="settings_clear_history_sub">Delete all saved positions</string>
+    <string name="settings_clear_history_q">Clear watch history?</string>
+    <string name="settings_clear_history_body">All saved positions will be deleted. This can\'t be undone.</string>
+    <string name="settings_about">About</string>
+    <string name="settings_version">Version</string>
+    <string name="settings_privacy_policy">Privacy policy</string>
+    <string name="settings_privacy_policy_sub">The app collects no data</string>
+    <string name="settings_source">Source code</string>
+    <string name="settings_source_sub">Open source · GPL-3.0</string>
+    <string name="settings_color_source">Color source</string>
+    <string name="settings_src_wallpaper">From wallpaper</string>
+    <string name="settings_src_preset">Presets</string>
+    <string name="settings_src_custom">Custom</string>
+    <string name="settings_hue">Hue %1$d°</string>
+    <string name="settings_style">Style</string>
+    <string name="settings_style_tonal">Calm</string>
+    <string name="settings_style_vibrant">Vibrant</string>
+    <string name="settings_style_expressive">Expressive</string>
+    <string name="settings_style_fidelity">Fidelity</string>
+    <string name="settings_style_mono">Monochrome</string>
+    <string name="settings_mode">Mode</string>
+    <string name="settings_mode_system">System</string>
+    <string name="settings_mode_light">Light</string>
+    <string name="settings_mode_dark">Dark</string>
+    <string name="settings_amoled">True black</string>
+    <string name="settings_amoled_sub">Full black background for AMOLED screens</string>
+    <string name="settings_contrast">Contrast</string>
+    <string name="settings_contrast_standard">Standard</string>
+    <string name="settings_contrast_medium">Medium</string>
+    <string name="settings_contrast_high">High</string>
+    <string name="settings_primary">Primary</string>
+    <string name="settings_secondary">Secondary</string>
+    <string name="settings_tertiary">Tertiary</string>
+
+</resources>

@@ -6,10 +6,11 @@ import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
+import app.anon.player.R
 
 /** Fingerprint only: the fingerprint button. */
 const val AUTH_FINGERPRINT = BiometricManager.Authenticators.BIOMETRIC_STRONG
-/** Device PIN/pattern/password only: "استخدم الرمز". API 30+. */
+/** Device PIN/pattern/password only: "Use PIN". API 30+. */
 const val AUTH_DEVICE = BiometricManager.Authenticators.DEVICE_CREDENTIAL
 
 /** Either factor, used when the key asks for auth mid-operation (fingerprint or the device credential on API 30+). */
@@ -17,9 +18,9 @@ fun authAny(): Int = if (Build.VERSION.SDK_INT >= 30) AUTH_FINGERPRINT or AUTH_D
 
 fun showVaultPrompt(activity: FragmentActivity, auth: Int, onOk: () -> Unit, onFail: () -> Unit) {
     val info = BiometricPrompt.PromptInfo.Builder()
-        .setTitle("فتح الخزنة")
+        .setTitle(activity.getString(R.string.vault_unlock))
         .setAllowedAuthenticators(auth)
-    if (auth and AUTH_DEVICE == 0) info.setNegativeButtonText("إلغاء") // a device-credential prompt brings its own cancel
+    if (auth and AUTH_DEVICE == 0) info.setNegativeButtonText(activity.getString(R.string.cancel)) // a device-credential prompt brings its own cancel
     BiometricPrompt(activity, ContextCompat.getMainExecutor(activity), object : BiometricPrompt.AuthenticationCallback() {
         override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) = onOk()
         override fun onAuthenticationError(errorCode: Int, errString: CharSequence) = onFail()

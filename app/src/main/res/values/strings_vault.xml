@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Vault screens. Arabic is in values-ar/strings_vault.xml. -->
+<resources>
+    <string name="vault_unlock">Unlock vault</string>
+    <string name="vault_enter_pin">Enter vault PIN</string>
+    <string name="vault_try_again_in">Try again in %1$ds</string>
+    <string name="vault_title">Vault</string>
+    <string name="vault_selected">%1$d selected</string>
+    <string name="vault_clear_selection">Clear selection</string>
+    <string name="vault_select_all">Select all</string>
+    <string name="vault_lock">Lock vault</string>
+    <string name="vault_settings">Vault settings</string>
+    <string name="vault_add_files">Add files</string>
+    <string name="vault_empty">Vault is empty</string>
+    <string name="vault_empty_body">Add a video to encrypt it and hide it from the gallery</string>
+    <string name="vault_return_to_gallery">Return to gallery</string>
+    <string name="vault_delete_one_title">Delete permanently?</string>
+    <string name="vault_delete_body">The file is erased from the vault and can\'t be recovered.</string>
+    <string name="vault_delete_forever">Delete permanently</string>
+    <plurals name="vault_delete_many_title">
+        <item quantity="one">Delete %1$d file permanently?</item>
+        <item quantity="other">Delete %1$d files permanently?</item>
+    </plurals>
+    <string name="vault_move_title">Move instead of copy</string>
+    <string name="vault_move_body">To remove the original from the gallery automatically, without a permission prompt each time, turn on \"All files access\" for this app. If you decline, the prompt will appear.</string>
+    <string name="vault_enable">Turn on</string>
+    <string name="vault_later">Later</string>
+    <string name="vault_filter_all">All</string>
+    <string name="vault_filter_video">Videos</string>
+    <string name="vault_filter_photo">Photos</string>
+
+    <string name="vault_rule_hint">No key, no recovery: forgetting the PIN or wiping the phone loses the vault for good, and backup isn\'t done yet.</string>
+    <string name="vault_need_screen_lock">Add a fingerprint or screen lock in the phone settings first.</string>
+    <string name="vault_choose_pin">Choose a vault PIN</string>
+    <string name="vault_reenter_pin">Re-enter the PIN</string>
+    <string name="vault_new_pin">Enter a new PIN</string>
+    <string name="vault_pins_mismatch">PINs don\'t match</string>
+    <string name="vault_before_create">Before creating the vault</string>
+    <string name="vault_understood">I understand</string>
+    <string name="vault_create">Create vault</string>
+    <string name="vault_pin_only_short">PIN only</string>
+    <string name="vault_unlock_hint">Fingerprint, or the device PIN as a fallback.</string>
+    <string name="vault_fingerprint">Fingerprint</string>
+    <string name="vault_use_pin">Use PIN</string>
+    <string name="vault_access">Access</string>
+    <string name="vault_pin">Vault PIN</string>
+    <string name="vault_fingerprint_or_device">Fingerprint or device PIN</string>
+    <string name="vault_pin_real">Unlock PIN</string>
+    <string name="vault_pin_decoy">Decoy PIN</string>
+    <string name="vault_pin_decoy_hint">Opens a separate empty vault you can fill with ordinary content</string>
+    <string name="vault_pin_wipe">Wipe PIN</string>
+    <string name="vault_pin_wipe_hint">Silently wipes the real vault and opens the decoy. Can\'t be undone</string>
+    <string name="vault_pin_only">Unlock with PIN only</string>
+    <string name="vault_pin_only_hint">No fingerprint. The key stays in the phone\'s secure chip, but anyone with root access could use it</string>
+    <string name="vault_protection">Protection</string>
+    <string name="vault_auto_lock">Auto-lock after leaving the app</string>
+    <string name="vault_lock_now">Immediately</string>
+    <string name="vault_lock_1min">After 1 minute</string>
+    <string name="vault_lock_5min">After 5 minutes</string>
+    <string name="vault_block_screenshots">Block screenshots and recording</string>
+    <string name="vault_backup_and_key">Backup and key</string>
+    <string name="vault_restoring">Restoring…</string>
+    <string name="vault_encrypting">Encrypting…</string>
+    <string name="vault_backup">Back up</string>
+    <string name="vault_restore">Restore</string>
+    <string name="vault_master_key">Master key: %1$s</string>
+    <string name="vault_key_unknown">Unknown</string>
+    <string name="vault_key_strongbox">StrongBox (separate hardware)</string>
+    <string name="vault_key_tee">TEE (secure processor)</string>
+    <string name="vault_key_software">Software, not in hardware</string>
+    <string name="vault_encrypted_backup">Encrypted backup</string>
+    <string name="vault_restore_backup">Restore backup</string>
+    <string name="vault_remove_pin_title">Remove PIN?</string>
+    <string name="vault_remove_pin_body">This PIN will no longer open the vault.</string>
+    <string name="vault_set">Set</string>
+    <string name="vault_password">Password</string>
+    <string name="vault_password_warning">The backup can\'t be restored if you forget the password</string>
+    <string name="vault_dial_title">Open from the Phone app</string>
+    <string name="vault_dial_hint">4 to 8 digits</string>
+    <string name="vault_dial_info">Dial *#*#%1$s#*#* in the Phone app to open the vault</string>
+    <string name="vault_dial_off">Off</string>
+
+    <string name="vault_pin_length">PIN must be 4 to 16 digits</string>
+    <string name="vault_pin_length_unique">PIN must be 4 to 16 digits and differ from the other PINs</string>
+    <plurals name="vault_wrong_pin">
+        <item quantity="one">Wrong PIN. %1$d attempt left</item>
+        <item quantity="other">Wrong PIN. %1$d attempts left</item>
+    </plurals>
+    <string name="vault_too_many_attempts">Too many attempts. Wait</string>
+    <string name="vault_now_pin_only">Now unlocking with PIN only</string>
+    <string name="vault_now_pin_and_fingerprint">Now unlocking with PIN and fingerprint</string>
+    <string name="vault_unlock_first">Unlock the vault first</string>
+    <string name="vault_set_pin_first">Set the unlock PIN first</string>
+    <plurals name="vault_added">
+        <item quantity="one">Added %1$d file to the vault</item>
+        <item quantity="other">Added %1$d files to the vault</item>
+    </plurals>
+    <plurals name="vault_verify_failed">
+        <item quantity="one">%1$d file failed verification; its original stays in the gallery</item>
+        <item quantity="other">%1$d files failed verification; their originals stay in the gallery</item>
+    </plurals>
+    <string name="vault_delete_originals_failed">Couldn\'t delete the originals automatically; delete them from the gallery</string>
+    <string name="vault_old_android_originals">Android 10 or older: originals stay in the gallery; delete them manually</string>
+    <string name="vault_export_needs_android10">Returning to the gallery needs Android 10 or newer</string>
+    <string name="vault_returning_progress">Returning %1$d of %2$d…</string>
+    <plurals name="vault_returned">
+        <item quantity="one">Returned %1$d file to the gallery</item>
+        <item quantity="other">Returned %1$d files to the gallery</item>
+    </plurals>
+    <string name="vault_failed_suffix">" · %1$d failed"</string>
+    <plurals name="vault_deleted">
+        <item quantity="one">Deleted %1$d file</item>
+        <item quantity="other">Deleted %1$d files</item>
+    </plurals>
+    <plurals name="vault_backup_saved">
+        <item quantity="one">Backup saved: %1$d file</item>
+        <item quantity="other">Backup saved: %1$d files</item>
+    </plurals>
+    <plurals name="vault_restore_progress">
+        <item quantity="one">Restored %1$d file…</item>
+        <item quantity="other">Restored %1$d files…</item>
+    </plurals>
+    <plurals name="vault_restored">
+        <item quantity="one">Restored %1$d file</item>
+        <item quantity="other">Restored %1$d files</item>
+    </plurals>
+    <string name="vault_wrong_password">Wrong password</string>
+    <string name="vault_bad_backup">The file is damaged or not a vault backup</string>
+    <string name="vault_op_failed">Couldn\'t complete the operation</string>
+    <string name="vault_op_failed_named">Operation failed: %1$s</string>
+</resources>

@@ -1,5 +1,8 @@
 package app.anon.player.library
 
+import app.anon.player.R
+import androidx.compose.ui.res.stringResource
+
 import app.anon.player.ui.AnonLoader
 import android.Manifest
 import android.content.Context
@@ -123,15 +126,15 @@ fun VideoGate(content: @Composable (List<Video>) -> Unit) {
     if (access == Access.None) {
         EmptyState(
             Icons.Rounded.VideoLibrary,
-            if (asked) "لم تسمح بالوصول إلى الفيديوهات، والتطبيق لا يقدر يعرضها بدونه."
-            else "أحتاج إذن الوصول إلى الفيديوهات لأعرضها هنا.",
+            if (asked) stringResource(R.string.lib_access_denied)
+            else stringResource(R.string.lib_access_needed),
             action = {
                 if (asked) {
                     Button(onClick = {
                         ctx.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", ctx.packageName, null)))
-                    }) { Text("افتح الإعدادات") }
+                    }) { Text(stringResource(R.string.lib_open_settings)) }
                 } else {
-                    Button(onClick = { launcher.launch(permission) }) { Text("اسمح بالوصول") }
+                    Button(onClick = { launcher.launch(permission) }) { Text(stringResource(R.string.lib_allow_access)) }
                 }
             },
         )
@@ -146,9 +149,9 @@ fun VideoGate(content: @Composable (List<Video>) -> Unit) {
                 color = MaterialTheme.colorScheme.secondaryContainer,
             ) {
                 Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("اخترت بعض الفيديو فقط", style = MaterialTheme.typography.bodyMedium,
+                    Text(stringResource(R.string.lib_partial_access), style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.weight(1f))
-                    TextButton(onClick = { launcher.launch(permission) }) { Text("اختر المزيد") }
+                    TextButton(onClick = { launcher.launch(permission) }) { Text(stringResource(R.string.lib_pick_more)) }
                 }
             }
         }
@@ -157,7 +160,7 @@ fun VideoGate(content: @Composable (List<Video>) -> Unit) {
         Box(Modifier.weight(1f).then(inset)) {
             when {
                 list == null -> CenteredGate { AnonLoader() }
-                list.isEmpty() -> EmptyState(Icons.Rounded.VideoLibrary, "لا فيديو على الجهاز")
+                list.isEmpty() -> EmptyState(Icons.Rounded.VideoLibrary, stringResource(R.string.lib_no_videos))
                 else -> content(list)
             }
         }
@@ -284,11 +287,11 @@ fun VideoRow(
                     Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Rounded.Check, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
                         Spacer(Modifier.width(4.dp))
-                        Text("شوهد", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                        Text(stringResource(R.string.lib_watched), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                     }
                 }
             }
-            IconButton(onClick = onMore) { Icon(Icons.Rounded.MoreVert, "خيارات") }
+            IconButton(onClick = onMore) { Icon(Icons.Rounded.MoreVert, stringResource(R.string.lib_options)) }
         }
     }
 }

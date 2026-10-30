@@ -1,0 +1,3 @@
+English interface; the layout follows the language (left-to-right in English, right-to-left in Arabic). Choose the language in Settings.
+Privacy policy and source code links in Settings.
+Fixes: reversed sizes and percentages in Arabic, subtitle track names, blank white thumbnails.

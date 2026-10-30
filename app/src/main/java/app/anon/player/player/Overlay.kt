@@ -1,5 +1,7 @@
 package app.anon.player.player
 
+import app.anon.player.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
@@ -136,14 +138,14 @@ fun Controls(
     ) {
         // top bar
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "رجوع", tint = Color.White) }
+            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back), tint = Color.White) }
             Column(Modifier.weight(1f).padding(horizontal = 4.dp)) {
                 Text(title, color = Color.White, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 codec?.let { Text(it, color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.labelMedium) }
             }
-            IconButton(onClick = { onPanel(Panel.Subs) }) { Icon(Icons.Rounded.Subtitles, "الترجمة", tint = Color.White) }
-            IconButton(onClick = { onPanel(Panel.Audio) }) { Icon(Icons.Rounded.Audiotrack, "الصوت", tint = Color.White) }
-            IconButton(onClick = { onPanel(Panel.Options) }) { Icon(Icons.Rounded.MoreVert, "المزيد", tint = Color.White) }
+            IconButton(onClick = { onPanel(Panel.Subs) }) { Icon(Icons.Rounded.Subtitles, stringResource(R.string.player_subtitles), tint = Color.White) }
+            IconButton(onClick = { onPanel(Panel.Audio) }) { Icon(Icons.Rounded.Audiotrack, stringResource(R.string.player_audio), tint = Color.White) }
+            IconButton(onClick = { onPanel(Panel.Options) }) { Icon(Icons.Rounded.MoreVert, stringResource(R.string.player_more), tint = Color.White) }
         }
 
         Spacer(Modifier.weight(1f))
@@ -152,10 +154,10 @@ fun Controls(
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onPrev, enabled = hasPrev, modifier = Modifier.size(56.dp)) {
-                    Icon(Icons.Rounded.SkipPrevious, "السابق", tint = Color.White, modifier = Modifier.size(36.dp))
+                    Icon(Icons.Rounded.SkipPrevious, stringResource(R.string.player_previous), tint = Color.White, modifier = Modifier.size(36.dp))
                 }
                 IconButton(onClick = { player.seekBy(-10.0) }, modifier = Modifier.size(56.dp)) {
-                    Icon(Icons.Rounded.Replay10, "−10 ث", tint = Color.White, modifier = Modifier.size(36.dp))
+                    Icon(Icons.Rounded.Replay10, stringResource(R.string.player_rewind_10), tint = Color.White, modifier = Modifier.size(36.dp))
                 }
                 val corner by animateDpAsState(
                     targetValue = if (paused) 48.dp else 24.dp,
@@ -175,15 +177,15 @@ fun Controls(
                 ) {
                     Icon(
                         when { eof -> Icons.Rounded.Replay; paused -> Icons.Rounded.PlayArrow; else -> Icons.Rounded.Pause },
-                        if (paused) "تشغيل" else "إيقاف مؤقت",
+                        stringResource(if (paused) R.string.play else R.string.pause),
                         modifier = Modifier.size(48.dp),
                     )
                 }
                 IconButton(onClick = { player.seekBy(10.0) }, modifier = Modifier.size(56.dp)) {
-                    Icon(Icons.Rounded.Forward10, "+10 ث", tint = Color.White, modifier = Modifier.size(36.dp))
+                    Icon(Icons.Rounded.Forward10, stringResource(R.string.player_forward_10), tint = Color.White, modifier = Modifier.size(36.dp))
                 }
                 IconButton(onClick = onNext, enabled = hasNext, modifier = Modifier.size(56.dp)) {
-                    Icon(Icons.Rounded.SkipNext, "التالي", tint = Color.White, modifier = Modifier.size(36.dp))
+                    Icon(Icons.Rounded.SkipNext, stringResource(R.string.player_next), tint = Color.White, modifier = Modifier.size(36.dp))
                 }
             }
         }
@@ -204,9 +206,9 @@ fun Controls(
                 Spacer(Modifier.height(8.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Pill {
-                        IconButton(onClick = onLock) { Icon(Icons.Rounded.Lock, "قفل", tint = Color.White) }
-                        IconButton(onClick = onRotate) { Icon(Icons.Rounded.ScreenRotation, "تدوير", tint = Color.White) }
-                        IconButton(onClick = onAspect) { Icon(Icons.Rounded.AspectRatio, "نسبة العرض", tint = Color.White) }
+                        IconButton(onClick = onLock) { Icon(Icons.Rounded.Lock, stringResource(R.string.player_lock), tint = Color.White) }
+                        IconButton(onClick = onRotate) { Icon(Icons.Rounded.ScreenRotation, stringResource(R.string.player_rotate), tint = Color.White) }
+                        IconButton(onClick = onAspect) { Icon(Icons.Rounded.AspectRatio, stringResource(R.string.player_aspect), tint = Color.White) }
                     }
                     Pill {
                         TextButton(onClick = { onPanel(Panel.Subs) }) { Text(subLabel, color = Color.White) }
@@ -320,11 +322,11 @@ fun LockOverlay(onUnlock: () -> Unit) {
                 Modifier.size(56.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.Rounded.Lock, "قفل: اضغط مطولاً للفتح", tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(28.dp))
+                Icon(Icons.Rounded.Lock, stringResource(R.string.player_locked_hold), tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(28.dp))
             }
         }
         Text(
-            "اضغط مطولاً للفتح", color = Color.White, style = MaterialTheme.typography.labelLarge,
+            stringResource(R.string.player_hold_unlock), color = Color.White, style = MaterialTheme.typography.labelLarge,
             modifier = Modifier.padding(top = 96.dp).background(Color.Black.copy(alpha = 0.45f), CircleShape).padding(horizontal = 12.dp, vertical = 6.dp),
         )
     }
@@ -390,12 +392,12 @@ fun EndCard(name: String, countdown: Int, onPlayNow: () -> Unit, onCancel: () ->
     Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.BottomEnd) {
         Surface(shape = RoundedCornerShape(28.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.width(300.dp)) {
             Column(Modifier.padding(20.dp)) {
-                Text("التالي خلال $countdown", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                Text(stringResource(R.string.player_next_in, countdown.toString()), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
                 Text(name, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = onPlayNow) { Text("شغّل الآن") }
-                    FilledTonalButton(onClick = onCancel) { Text("إلغاء") }
+                    Button(onClick = onPlayNow) { Text(stringResource(R.string.player_play_now)) }
+                    FilledTonalButton(onClick = onCancel) { Text(stringResource(R.string.cancel)) }
                 }
             }
         }

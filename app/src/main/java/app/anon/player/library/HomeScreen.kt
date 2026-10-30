@@ -1,5 +1,8 @@
 package app.anon.player.library
 
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
+
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.requiredSize
@@ -87,9 +90,9 @@ import app.anon.player.data.PlaybackStore
 import app.anon.player.ui.theme.AnonAmber
 
 private val homeTabs = listOf(
-    "المكتبة" to Icons.Rounded.VideoLibrary,
-    "القوائم" to Icons.Rounded.PlaylistPlay,
-    "الشبكة" to Icons.Rounded.Lan,
+    R.string.lib_tab_library to Icons.Rounded.VideoLibrary,
+    R.string.lib_tab_playlists to Icons.Rounded.PlaylistPlay,
+    R.string.lib_tab_network to Icons.Rounded.Lan,
 )
 
 /** ش-02: the home screen. Tabs 2 and 3 are placeholders for now. */
@@ -133,7 +136,7 @@ fun HomeScreen(
                         )
                     },
                     navigationIcon = { Logo(onLongClick = onVault) },
-                    actions = { IconButton(onClick = onSettings) { Icon(Icons.Rounded.Settings, "الإعدادات") } },
+                    actions = { IconButton(onClick = onSettings) { Icon(Icons.Rounded.Settings, stringResource(R.string.settings_title)) } },
                     scrollBehavior = scroll,
                     colors = TopAppBarDefaults.largeTopAppBarColors(
                         containerColor = Color.Transparent,
@@ -166,21 +169,21 @@ fun HomeScreen(
                     Row(Modifier.fillMaxSize().padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Rounded.Search, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.width(12.dp))
-                        Text("ابحث في كل الفيديوهات", color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        Text(stringResource(R.string.lib_search_all_videos), color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodyLarge)
                     }
                 }
             }
             if (cont.isNotEmpty()) {
                 item {
-                    Text("تابع المشاهدة", style = MaterialTheme.typography.titleLarge,
+                    Text(stringResource(R.string.lib_continue_watching), style = MaterialTheme.typography.titleLarge,
                         modifier = Modifier.padding(top = 20.dp, bottom = 8.dp))
                 }
                 item { ContinueCarousel(cont, onPlay) }
             }
             if (singles) {
                 item {
-                    Text("أحدث الأفلام", style = MaterialTheme.typography.titleLarge,
+                    Text(stringResource(R.string.lib_latest_movies), style = MaterialTheme.typography.titleLarge,
                         modifier = Modifier.padding(top = 20.dp, bottom = 8.dp))
                 }
                 items(latest.chunked(2), key = { row -> row.first().key }) { row ->
@@ -196,7 +199,7 @@ fun HomeScreen(
                 }
             }
             item {
-                Text("المجلدات", style = MaterialTheme.typography.titleLarge,
+                Text(stringResource(R.string.lib_folders), style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.padding(top = 24.dp, bottom = 8.dp))
             }
             itemsIndexed(folders, key = { _, f -> f.id }) { i, f ->
@@ -270,7 +273,7 @@ private fun ContinueCarousel(items: List<FileState>, onPlay: (Uri, String) -> Un
             Column(Modifier.align(Alignment.BottomStart).padding(16.dp)) {
                 Text(f.title, color = Color.White, style = MaterialTheme.typography.titleMedium,
                     maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text("بقي ${formatTime(f.durationMs - f.positionMs)}", color = Color.White.copy(alpha = 0.85f),
+                Text(stringResource(R.string.lib_time_left, formatTime(f.durationMs - f.positionMs)), color = Color.White.copy(alpha = 0.85f),
                     style = MaterialTheme.typography.labelLarge)
             }
             Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(4.dp).background(Color.White.copy(alpha = 0.3f))) {
@@ -295,14 +298,14 @@ private fun FolderRow(f: FolderInfo, shape: Shape, modifier: Modifier, onClick: 
                 durationMs = f.cover.durationMs)
             Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
                 Text(f.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text("\u2066${f.count}\u2069 فيديو · ${formatSize(f.bytes)}", style = MaterialTheme.typography.bodyMedium,
+                Text("${pluralStringResource(R.plurals.lib_video_count, f.count, f.count)} · ${formatSize(f.bytes)}", style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             if (f.fresh > 0) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
                     Spacer(Modifier.width(4.dp))
-                    Text("جديد", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    Text(stringResource(R.string.lib_new), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                 }
             }
         }
@@ -319,7 +322,8 @@ private fun HomeNav(tab: Int, onTab: (Int) -> Unit) {
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            homeTabs.forEachIndexed { i, (label, icon) ->
+            homeTabs.forEachIndexed { i, (labelRes, icon) ->
+                val label = stringResource(labelRes)
                 val selected = tab == i
                 val bg by animateColorAsState(if (selected) cs.secondaryContainer else Color.Transparent, label = "nav")
                 Row(

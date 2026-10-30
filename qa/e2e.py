@@ -5,6 +5,7 @@
     python3 qa/e2e.py            # all cases
     python3 qa/e2e.py T4 T6      # some cases
 Results: table on stdout + qa/e2e-report.md. Needs the debug build installed (./gradlew installFullDebug) and adb on PATH. Keeps app data unless ANON_CLEAR=1.
+Buttons are found by their Arabic labels: set the app language to Arabic (Settings → Language) first.
 """
 import os, re, subprocess, sys, time, xml.etree.ElementTree as ET
 
