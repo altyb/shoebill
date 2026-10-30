@@ -1,0 +1,22 @@
+
+Player
+- Plays what mpv plays: HEVC 10-bit, H.264, VP9, TrueHD/EAC3/DTS, ASS/PGS subtitles, network streams (http, HLS, rtsp).
+- Gestures for seeking, volume and brightness; double-tap to skip; speed; audio and subtitle tracks.
+- Screen lock, picture-in-picture, background audio, resume where you stopped, playlists.
+
+Subtitles
+- Search OpenSubtitles, SubDL and Jimaku (with your own free API keys).
+- Style them: colour, size, outline, background box, bold, presets.
+- Drag a subtitle on screen to move it; pinch it to resize it. Manual timing sync.
+- Old Arabic `windows-1256` files are converted automatically.
+
+Vault
+- Hide videos and photos inside the app. Moving a file in removes it from the gallery; moving it out puts it
+  back in its original folder.
+- Its own PIN (4–16 digits), separate from the phone's lock screen. Fingerprint optional.
+- Decoy PIN opens a second vault; wipe PIN erases the real one.
+- 5 wrong PINs lock it (30 s, doubling up to 1 h). Changing the phone's clock does not end the wait.
+- Videos play straight from the encrypted file; nothing decrypted is written to disk.
+- Encrypted backup and restore (`.anonvault` file, password-protected).
+- Screenshots and screen recording blocked inside the vault.
+
