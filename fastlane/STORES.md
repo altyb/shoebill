@@ -11,7 +11,7 @@ Signing certificate SHA-256: `AE:C6:44:AE:81:38:A6:FD:30:19:03:DD:15:3F:BC:18:10
 
 Open an issue at https://gitlab.com/IzzyOnDroid/repo/-/issues with:
 
-> **App:** Anon Player — https://github.com/altyb/anon-player
+> **App:** Shoebill — https://github.com/altyb/shoebill
 > **License:** GPL-3.0-or-later
 > **Description:** Private video player on libmpv, with an encrypted vault (AES-256-GCM, Android Keystore),
 > decoy/wipe PIN, subtitle search and styling. No ads, no trackers, no analytics.
@@ -39,7 +39,7 @@ the recipe must build libmpv and FFmpeg from source (as mpv-android's recipe doe
 - Store listing: title, short and full description from `fastlane/metadata/android/en-US/` (and `ar/`);
   icon `fastlane/metadata/android/en-US/images/icon.png` (512×512); screenshots in `images/phoneScreenshots/`;
   a 1024×500 feature graphic is still needed.
-- Privacy policy URL: https://github.com/altyb/anon-player/blob/main/PRIVACY.md
+- Privacy policy URL: https://github.com/altyb/shoebill/blob/main/PRIVACY.md
 - Category: Video Players & Editors. Contains ads: No. Target audience: 18+ (vault feature).
 
 **Data safety form**

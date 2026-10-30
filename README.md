@@ -1,19 +1,23 @@
 <p align="center">
-  <img src="design/logo/anon-player-logo.svg" width="112" alt="Anon Player logo">
+  <img src="design/logo/shoebill.svg" width="112" alt="Shoebill logo">
 </p>
 
-<h1 align="center">Anon Player</h1>
+<h1 align="center">Shoebill</h1>
 
 <p align="center">
   A private video player for Android, built on <a href="https://mpv.io">mpv</a>, with an encrypted vault.<br>
   English and Arabic interface. No ads, no accounts, no tracking.
 </p>
 
+<p align="center"><i>The shoebill stands dead still in the Nile marshes of Sudan and watches. It tells nobody what it saw.</i></p>
+
 <p align="center" dir="rtl">مشغّل فيديو خاص لأندرويد، مع خزنة مشفّرة. بدون إعلانات ولا حسابات ولا تتبّع.</p>
 
 <p align="center">
-  <a href="../../releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/altyb/anon-player?label=release"></a>
+  <a href="../../releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/altyb/shoebill?label=release"></a>
   <img alt="Android 8.0+" src="https://img.shields.io/badge/Android-8.0%2B-3ddc84">
+  <a href="../../releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/altyb/shoebill/total"></a>
+  <a href="https://github.com/altyb/shoebill/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/altyb/shoebill"></a>
   <a href="LICENSE"><img alt="GPL-3.0" src="https://img.shields.io/badge/license-GPL--3.0-blue"></a>
 </p>
 
@@ -25,6 +29,8 @@
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3.png" width="47%" alt="Player">
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4.png" width="47%" alt="Subtitle style">
 </p>
+
+Formerly Anon Player. Installed copies update in place and keep their data. Sister app: [Hudhud Keyboard](https://github.com/altyb/hudhud).
 
 ## Features
 
@@ -55,10 +61,10 @@ Settings, or let it follow the phone.
 ## Install
 
 - **GitHub:** download the APK from [Releases](../../releases/latest). Android 8.0 or newer.
-- **[Obtainium](https://github.com/ImranR98/Obtainium):** add `https://github.com/altyb/anon-player` to get updates.
+- **[Obtainium](https://github.com/ImranR98/Obtainium):** add `https://github.com/altyb/shoebill` to get updates.
 - F-Droid (IzzyOnDroid) and Google Play: coming.
 
-Use `app-full-release.apk` from GitHub. The Google Play version cannot ask for "All files access", so moving
+Use `shoebill-0.2.0.apk` from GitHub. The Google Play version cannot ask for "All files access", so moving
 files into the vault shows Android's delete dialog each time.
 
 ## Privacy

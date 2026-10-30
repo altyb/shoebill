@@ -70,10 +70,10 @@ class MainActivity : FragmentActivity() { // FragmentActivity: BiometricPrompt (
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         takeViewIntent(intent)
-        // Android 12+: let the launch animation (res/drawable/splash_anim.xml, 950 ms) finish on a normal launch;
+        // Android 12+: keep the splash icon up briefly on a normal launch;
         // opening a video from another app skips it
         if (Build.VERSION.SDK_INT >= 31 && savedInstanceState == null && intent?.action != Intent.ACTION_VIEW) {
-            val until = SystemClock.uptimeMillis() + 900
+            val until = SystemClock.uptimeMillis() + 300
             val content = findViewById<View>(android.R.id.content)
             content.viewTreeObserver.addOnPreDrawListener(object : ViewTreeObserver.OnPreDrawListener {
                 override fun onPreDraw(): Boolean {
