@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import app.anon.player.R
+import androidx.compose.ui.res.stringResource
 import app.anon.player.ui.AnonLoader
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
@@ -142,7 +143,7 @@ fun PinPad(
         if (onBack != null) {
             TopAppBar(
                 title = {},
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "رجوع") } },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) } },
             )
         }
         // Portrait: everything stacked. Landscape (e.g. after a video): header left, keypad right; keys shrink to fit.
@@ -176,7 +177,7 @@ fun PinPad(
                     }
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        if (locked) "حاول بعد $waitSec ث" else error.orEmpty(),
+                        if (locked) stringResource(R.string.vault_try_again_in, waitSec ?: 0L) else error.orEmpty(),
                         color = MaterialTheme.colorScheme.error,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.defaultMinSize(minHeight = 24.dp),
@@ -197,13 +198,13 @@ fun PinPad(
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(keySize / 4)) {
                             PinKey(keySize, enabled = enabled && length > 0, onClick = { backspace() }) {
-                                Icon(Icons.AutoMirrored.Rounded.Backspace, "حذف")
+                                Icon(Icons.AutoMirrored.Rounded.Backspace, stringResource(R.string.delete))
                             }
                             PinKey(keySize, enabled = enabled, onClick = { press('0') }) {
                                 Text("0", style = MaterialTheme.typography.headlineSmall)
                             }
                             PinKey(keySize, enabled = enabled && length >= PIN_MIN, onClick = { submit() }) {
-                                Icon(Icons.Rounded.Check, "تأكيد")
+                                Icon(Icons.Rounded.Check, stringResource(R.string.confirm))
                             }
                         }
                     }

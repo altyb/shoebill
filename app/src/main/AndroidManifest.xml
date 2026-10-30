@@ -11,6 +11,7 @@
         android:maxSdkVersion="32" />
 
     <application
+        android:name=".AnonApp"
         android:label="${appLabel}"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"

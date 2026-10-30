@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="vault_unlock">فتح الخزنة</string>
+    <string name="vault_enter_pin">أدخل رمز الخزنة</string>
+    <string name="vault_try_again_in">حاول بعد %1$d ث</string>
+    <string name="vault_title">داخل الخزنة</string>
+    <string name="vault_selected">%1$d محدد</string>
+    <string name="vault_clear_selection">إلغاء التحديد</string>
+    <string name="vault_select_all">تحديد الكل</string>
+    <string name="vault_lock">قفل الخزنة</string>
+    <string name="vault_settings">إعدادات الخزنة</string>
+    <string name="vault_add_files">إضافة ملفات</string>
+    <string name="vault_empty">الخزنة فارغة</string>
+    <string name="vault_empty_body">أضف فيديو ليُشفَّر ويختفي من المعرض</string>
+    <string name="vault_return_to_gallery">إرجاع إلى المعرض</string>
+    <string name="vault_delete_one_title">حذف نهائياً؟</string>
+    <string name="vault_delete_body">يُمحى الملف من الخزنة ولا يمكن استرجاعه.</string>
+    <string name="vault_delete_forever">حذف نهائياً</string>
+    <plurals name="vault_delete_many_title">
+        <item quantity="other">حذف %1$d ملف نهائياً؟</item>
+    </plurals>
+    <string name="vault_move_title">نقل بدل النسخ</string>
+    <string name="vault_move_body">ليُحذف الأصل من المعرض تلقائياً دون نافذة سماح في كل مرة، فعّل «الوصول إلى كل الملفات» لهذا التطبيق. إن رفضت، تظهر نافذة السماح.</string>
+    <string name="vault_enable">تفعيل</string>
+    <string name="vault_later">لاحقاً</string>
+    <string name="vault_filter_all">الكل</string>
+    <string name="vault_filter_video">فيديو</string>
+    <string name="vault_filter_photo">صور</string>
+
+    <string name="vault_rule_hint">لا استعادة بلا مفتاح: نسيان الرمز أو مسح الجهاز يُفقد الخزنة نهائياً، والنسخة الاحتياطية لم تُنفَّذ بعد.</string>
+    <string name="vault_need_screen_lock">أضف بصمة أو قفل شاشة من إعدادات الجهاز أولاً.</string>
+    <string name="vault_choose_pin">اختر رمزاً للخزنة</string>
+    <string name="vault_reenter_pin">أعد إدخال الرمز</string>
+    <string name="vault_new_pin">أدخل رمز جديد</string>
+    <string name="vault_pins_mismatch">الرمزان غير متطابقين</string>
+    <string name="vault_before_create">قبل إنشاء الخزنة</string>
+    <string name="vault_understood">فهمت</string>
+    <string name="vault_create">إنشاء الخزنة</string>
+    <string name="vault_pin_only_short">بالرمز فقط</string>
+    <string name="vault_unlock_hint">بصمة، أو رمز الجهاز احتياطاً.</string>
+    <string name="vault_fingerprint">بصمة</string>
+    <string name="vault_use_pin">استخدم الرمز</string>
+    <string name="vault_access">الدخول</string>
+    <string name="vault_pin">رمز الخزنة</string>
+    <string name="vault_fingerprint_or_device">البصمة أو رمز الجهاز</string>
+    <string name="vault_pin_real">رمز الدخول</string>
+    <string name="vault_pin_decoy">رمز التمويه</string>
+    <string name="vault_pin_decoy_hint">يفتح خزنة بديلة فارغة يمكنك ملؤها بمحتوى عادي</string>
+    <string name="vault_pin_wipe">رمز المسح</string>
+    <string name="vault_pin_wipe_hint">يمسح الخزنة الحقيقية بصمت ويفتح الخزنة البديلة. لا رجعة فيه</string>
+    <string name="vault_pin_only">الدخول بالرمز فقط</string>
+    <string name="vault_pin_only_hint">بدون بصمة. المفتاح يبقى داخل شريحة الهاتف، لكن من يملك صلاحيات root قد يستعمله</string>
+    <string name="vault_protection">الحماية</string>
+    <string name="vault_auto_lock">القفل التلقائي عند الخروج من التطبيق</string>
+    <string name="vault_lock_now">فوراً</string>
+    <string name="vault_lock_1min">بعد دقيقة</string>
+    <string name="vault_lock_5min">بعد 5 دقائق</string>
+    <string name="vault_block_screenshots">منع لقطات الشاشة والتسجيل</string>
+    <string name="vault_backup_and_key">النسخ والمفتاح</string>
+    <string name="vault_restoring">جارٍ الاسترجاع…</string>
+    <string name="vault_encrypting">جارٍ التشفير…</string>
+    <string name="vault_backup">نسخ احتياطي</string>
+    <string name="vault_restore">استرجاع</string>
+    <string name="vault_master_key">المفتاح الرئيسي: %1$s</string>
+    <string name="vault_key_unknown">غير معروف</string>
+    <string name="vault_key_strongbox">StrongBox (عتاد مستقل)</string>
+    <string name="vault_key_tee">TEE (المعالج الآمن)</string>
+    <string name="vault_key_software">برمجياً، ليس في العتاد</string>
+    <string name="vault_encrypted_backup">نسخ احتياطي مشفّر</string>
+    <string name="vault_restore_backup">استرجاع النسخة</string>
+    <string name="vault_remove_pin_title">إزالة الرمز؟</string>
+    <string name="vault_remove_pin_body">لن يفتح هذا الرمز الخزنة بعد الآن.</string>
+    <string name="vault_set">تعيين</string>
+    <string name="vault_password">كلمة المرور</string>
+    <string name="vault_password_warning">لا يمكن استرجاع النسخة إن نسيت كلمة المرور</string>
+    <string name="vault_dial_title">فتح من تطبيق الهاتف</string>
+    <string name="vault_dial_hint">رقم من ٤ إلى ٨ خانات</string>
+    <string name="vault_dial_info">اطلب *#*#%1$s#*#* في تطبيق الهاتف لتفتح الخزنة</string>
+    <string name="vault_dial_off">متوقف</string>
+
+    <string name="vault_pin_length">الرمز ٤ إلى ١٦ رقماً</string>
+    <string name="vault_pin_length_unique">الرمز ٤ إلى ١٦ رقماً ومختلف عن الرموز الأخرى</string>
+    <plurals name="vault_wrong_pin">
+        <item quantity="other">رمز خاطئ. بقيت %1$d محاولات</item>
+    </plurals>
+    <string name="vault_too_many_attempts">محاولات كثيرة. انتظر</string>
+    <string name="vault_now_pin_only">صار الدخول بالرمز فقط</string>
+    <string name="vault_now_pin_and_fingerprint">صار الدخول بالرمز والبصمة</string>
+    <string name="vault_unlock_first">افتح الخزنة أولاً</string>
+    <string name="vault_set_pin_first">عيّن رمز الدخول أولاً</string>
+    <plurals name="vault_added">
+        <item quantity="other">أُضيف %1$d ملف إلى الخزنة</item>
+    </plurals>
+    <plurals name="vault_verify_failed">
+        <item quantity="other">فشل التحقق من %1$d ملف، فبقيت أصولها في المعرض</item>
+    </plurals>
+    <string name="vault_delete_originals_failed">تعذّر حذف الأصول تلقائياً، احذفها من المعرض</string>
+    <string name="vault_old_android_originals">أندرويد 10 أو أقدم: الأصول باقية في المعرض، احذفها يدوياً</string>
+    <string name="vault_export_needs_android10">التصدير إلى المعرض يحتاج أندرويد 10 أو أحدث</string>
+    <string name="vault_returning_progress">يُرجع %1$d من %2$d…</string>
+    <plurals name="vault_returned">
+        <item quantity="other">أُرجع %1$d ملف إلى المعرض</item>
+    </plurals>
+    <string name="vault_failed_suffix">" · فشل %1$d"</string>
+    <plurals name="vault_deleted">
+        <item quantity="other">حُذف %1$d ملف</item>
+    </plurals>
+    <plurals name="vault_backup_saved">
+        <item quantity="other">حُفظت النسخة: %1$d ملف</item>
+    </plurals>
+    <plurals name="vault_restore_progress">
+        <item quantity="other">استُرجع %1$d ملف…</item>
+    </plurals>
+    <plurals name="vault_restored">
+        <item quantity="other">استُرجع %1$d ملف</item>
+    </plurals>
+    <string name="vault_wrong_password">كلمة المرور غير صحيحة</string>
+    <string name="vault_bad_backup">الملف تالف أو ليس نسخة من الخزنة</string>
+    <string name="vault_op_failed">تعذّر إكمال العملية</string>
+    <string name="vault_op_failed_named">تعذّرت العملية: %1$s</string>
+</resources>

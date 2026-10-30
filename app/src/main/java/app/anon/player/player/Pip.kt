@@ -1,5 +1,6 @@
 package app.anon.player.player
 
+import app.anon.player.R
 import android.app.Activity
 import android.app.PendingIntent
 import android.app.PictureInPictureParams
@@ -74,7 +75,7 @@ fun rememberPip(activity: Activity, player: MpvPlayer, paused: Boolean, enabled:
         }
         val action = RemoteAction(
             Icon.createWithResource(ctx, if (paused) android.R.drawable.ic_media_play else android.R.drawable.ic_media_pause),
-            if (paused) "تشغيل" else "إيقاف مؤقت", if (paused) "تشغيل" else "إيقاف مؤقت",
+            activity.getString(if (paused) R.string.play else R.string.pause), activity.getString(if (paused) R.string.play else R.string.pause),
             PendingIntent.getBroadcast(ctx, 0, Intent(ACTION_TOGGLE).setPackage(ctx.packageName), PendingIntent.FLAG_IMMUTABLE),
         )
         val b = PictureInPictureParams.Builder().setAspectRatio(ratio).setActions(listOf(action))

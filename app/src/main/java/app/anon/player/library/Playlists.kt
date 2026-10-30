@@ -1,5 +1,9 @@
 package app.anon.player.library
 
+import app.anon.player.R
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
+
 import android.content.Context
 import android.net.Uri
 import android.provider.MediaStore
@@ -141,8 +145,8 @@ fun PlaylistsTab(onPlayQueue: (List<Pair<Uri, String>>, Int) -> Unit, modifier: 
             if (lists.isEmpty()) {
                 EmptyState(
                     Icons.AutoMirrored.Rounded.PlaylistPlay,
-                    "لا قوائم بعد",
-                    body = "أنشئ قائمة، ثم أضف فيديوهات من زر الخيارات في المكتبة",
+                    stringResource(R.string.lib_no_playlists),
+                    body = stringResource(R.string.lib_no_playlists_body),
                 )
             } else {
                 LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp)) {
@@ -154,27 +158,27 @@ fun PlaylistsTab(onPlayQueue: (List<Pair<Uri, String>>, Int) -> Unit, modifier: 
             ExtendedFloatingActionButton(
                 onClick = { creating = true },
                 icon = { Icon(Icons.Rounded.Add, null) },
-                text = { Text("قائمة جديدة") },
+                text = { Text(stringResource(R.string.lib_new_playlist)) },
                 modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
             )
         }
     }
 
-    if (creating) NameDialog("قائمة جديدة", "", "إنشاء", { store.create(it); creating = false }, { creating = false })
+    if (creating) NameDialog(stringResource(R.string.lib_new_playlist), "", stringResource(R.string.lib_create), { store.create(it); creating = false }, { creating = false })
     renaming?.let { p ->
-        NameDialog("إعادة تسمية", p.name, "تغيير", { store.rename(p.id, it); renaming = null }, { renaming = null })
+        NameDialog(stringResource(R.string.rename), p.name, stringResource(R.string.change), { store.rename(p.id, it); renaming = null }, { renaming = null })
     }
     deleting?.let { p ->
         AlertDialog(
             onDismissRequest = { deleting = null },
-            title = { Text("حذف القائمة") },
-            text = { Text("حذف القائمة «${p.name}»؟") },
+            title = { Text(stringResource(R.string.lib_delete_playlist)) },
+            text = { Text(stringResource(R.string.lib_delete_playlist_q, p.name)) },
             confirmButton = {
                 TextButton(onClick = { store.delete(p.id); deleting = null }) {
-                    Text("حذف", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
                 }
             },
-            dismissButton = { TextButton(onClick = { deleting = null }) { Text("إلغاء") } },
+            dismissButton = { TextButton(onClick = { deleting = null }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 }
@@ -194,14 +198,14 @@ private fun PlaylistRow(p: Playlist, onOpen: () -> Unit, onRename: () -> Unit, o
             Icon(Icons.AutoMirrored.Rounded.PlaylistPlay, null, tint = cs.primary)
             Column(Modifier.weight(1f).padding(horizontal = 16.dp)) {
                 Text(p.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text("${p.items.size} فيديو", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+                Text(pluralStringResource(R.plurals.lib_video_count, p.items.size, p.items.size), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
             }
             Box {
-                IconButton(onClick = { menu = true }) { Icon(Icons.Rounded.MoreVert, "خيارات") }
+                IconButton(onClick = { menu = true }) { Icon(Icons.Rounded.MoreVert, stringResource(R.string.lib_options)) }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                    DropdownMenuItem(text = { Text("إعادة تسمية") }, onClick = { menu = false; onRename() })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.rename)) }, onClick = { menu = false; onRename() })
                     DropdownMenuItem(
-                        text = { Text("حذف", color = cs.error) },
+                        text = { Text(stringResource(R.string.delete), color = cs.error) },
                         onClick = { menu = false; onDelete() },
                     )
                 }
@@ -223,16 +227,16 @@ private fun PlaylistDetail(p: Playlist, onBack: () -> Unit, onPlayQueue: (List<P
 
     Column(modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "رجوع") }
+            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back)) }
             Text(p.name, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
         }
         FilledTonalButton(onClick = { onPlayQueue(queue, 0) }, enabled = queue.isNotEmpty(), modifier = Modifier.padding(vertical = 8.dp)) {
             Icon(Icons.Rounded.PlayArrow, null)
             Spacer(Modifier.width(8.dp))
-            Text("تشغيل الكل")
+            Text(stringResource(R.string.lib_play_all))
         }
         if (p.items.isEmpty()) {
-            EmptyState(Icons.AutoMirrored.Rounded.PlaylistPlay, "القائمة فارغة", Modifier.weight(1f), body = "أضف فيديوهات من زر الخيارات في المكتبة")
+            EmptyState(Icons.AutoMirrored.Rounded.PlaylistPlay, stringResource(R.string.lib_playlist_empty), Modifier.weight(1f), body = stringResource(R.string.lib_playlist_empty_body))
         } else {
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
                 itemsIndexed(p.items, key = { _, u -> u }) { i, uri ->
@@ -247,17 +251,17 @@ private fun PlaylistDetail(p: Playlist, onBack: () -> Unit, onPlayQueue: (List<P
                         ) {
                             when {
                                 !loaded -> Text("…", color = cs.onSurfaceVariant)
-                                name == null -> Text("الملف غير موجود", style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
+                                name == null -> Text(stringResource(R.string.lib_file_missing), style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
                                 else -> LtrText(AnnotatedString(name), MaterialTheme.typography.bodyLarge, maxLines = 2)
                             }
                         }
                         IconButton(onClick = { store.move(p.id, i, i - 1) }, enabled = i > 0) {
-                            Icon(Icons.Rounded.KeyboardArrowUp, "أعلى")
+                            Icon(Icons.Rounded.KeyboardArrowUp, stringResource(R.string.lib_move_up))
                         }
                         IconButton(onClick = { store.move(p.id, i, i + 1) }, enabled = i < p.items.lastIndex) {
-                            Icon(Icons.Rounded.KeyboardArrowDown, "أسفل")
+                            Icon(Icons.Rounded.KeyboardArrowDown, stringResource(R.string.lib_move_down))
                         }
-                        IconButton(onClick = { store.remove(p.id, uri) }) { Icon(Icons.Rounded.Close, "إزالة") }
+                        IconButton(onClick = { store.remove(p.id, uri) }) { Icon(Icons.Rounded.Close, stringResource(R.string.remove)) }
                     }
                 }
             }
@@ -274,7 +278,7 @@ fun AddToPlaylistDialog(uri: String, onDismiss: () -> Unit) {
     val trimmed = name.trim()
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("إضافة إلى قائمة") },
+        title = { Text(stringResource(R.string.lib_add_to_playlist)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 if (newMode) {
@@ -283,13 +287,13 @@ fun AddToPlaylistDialog(uri: String, onDismiss: () -> Unit) {
                     lists.forEach { p ->
                         ListItem(
                             headlineContent = { Text(p.name) },
-                            supportingContent = { Text("${p.items.size} فيديو") },
+                            supportingContent = { Text(pluralStringResource(R.plurals.lib_video_count, p.items.size, p.items.size)) },
                             modifier = Modifier.clickable { store.add(p.id, uri); onDismiss() },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                         )
                     }
                     ListItem(
-                        headlineContent = { Text("قائمة جديدة…") },
+                        headlineContent = { Text(stringResource(R.string.lib_new_playlist_more)) },
                         leadingContent = { Icon(Icons.Rounded.Add, null) },
                         modifier = Modifier.clickable { newMode = true },
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
@@ -300,11 +304,11 @@ fun AddToPlaylistDialog(uri: String, onDismiss: () -> Unit) {
         confirmButton = {
             if (newMode) {
                 TextButton(onClick = { store.add(store.create(trimmed), uri); onDismiss() }, enabled = trimmed.isNotEmpty()) {
-                    Text("إنشاء")
+                    Text(stringResource(R.string.lib_create))
                 }
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("إلغاء") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }
 
@@ -319,7 +323,7 @@ private fun NameDialog(title: String, initial: String, confirm: String, onConfir
         confirmButton = {
             TextButton(onClick = { onConfirm(trimmed) }, enabled = trimmed.isNotEmpty()) { Text(confirm) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("إلغاء") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }
 

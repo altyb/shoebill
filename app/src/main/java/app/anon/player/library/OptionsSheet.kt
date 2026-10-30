@@ -1,5 +1,8 @@
 package app.anon.player.library
 
+import app.anon.player.R
+import androidx.compose.ui.res.stringResource
+
 import android.content.Context
 import android.net.Uri
 import android.os.Build
@@ -87,10 +90,12 @@ fun OptionsSheet(
                 }
             }
             Spacer(Modifier.height(16.dp))
+            val resume = stringResource(R.string.lib_resume)
+            val fromStart = stringResource(R.string.lib_from_start)
             ButtonGroup(overflowIndicator = {}, modifier = Modifier.fillMaxWidth()) {
                 clickableItem(
                     onClick = { onPlay(video.uri, video.name); onDismiss() },
-                    label = "تابع",
+                    label = resume,
                     weight = 1f,
                 )
                 clickableItem(
@@ -99,17 +104,17 @@ fun OptionsSheet(
                         state?.let { PlaybackStore.get(ctx).save(it.copy(positionMs = 0)) }
                         onPlay(video.uri, video.name); onDismiss()
                     },
-                    label = "من البداية",
+                    label = fromStart,
                     weight = 1f,
                 )
             }
             Spacer(Modifier.height(8.dp))
-            SheetRow("معلومات الملف", Icons.Rounded.Info) { dialog = "info" }
-            SheetRow("إضافة إلى قائمة", Icons.AutoMirrored.Rounded.PlaylistAdd) { dialog = "playlist" }
-            if (canWrite) SheetRow("إعادة تسمية", Icons.Rounded.Edit) { dialog = "rename" }
-            SheetRow("مشاركة", Icons.Rounded.Share) { actions.share(listOf(video)); onDismiss() }
+            SheetRow(stringResource(R.string.lib_file_info), Icons.Rounded.Info) { dialog = "info" }
+            SheetRow(stringResource(R.string.lib_add_to_playlist), Icons.AutoMirrored.Rounded.PlaylistAdd) { dialog = "playlist" }
+            if (canWrite) SheetRow(stringResource(R.string.rename), Icons.Rounded.Edit) { dialog = "rename" }
+            SheetRow(stringResource(R.string.lib_share), Icons.Rounded.Share) { actions.share(listOf(video)); onDismiss() }
             if (canWrite) {
-                SheetRow("نقل إلى السلة", Icons.Rounded.Delete, error = true) {
+                SheetRow(stringResource(R.string.lib_trash), Icons.Rounded.Delete, error = true) {
                     actions.trash(listOf(video))
                     onDismiss()
                 }
@@ -148,18 +153,18 @@ private fun InfoDialog(video: Video, onDismiss: () -> Unit) {
     val date = remember(video) { DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(video.dateAdded * 1000)) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("معلومات الملف") },
+        title = { Text(stringResource(R.string.lib_file_info)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                InfoLine("الاسم", video.name)
-                InfoLine("المسار", path ?: "…")
-                InfoLine("الحجم", formatSize(video.sizeBytes))
-                InfoLine("الدقة", if (video.width > 0) "${video.width}×${video.height}" else "غير معروفة")
-                InfoLine("المدة", formatTime(video.durationMs))
-                InfoLine("التاريخ", date)
+                InfoLine(stringResource(R.string.lib_name), video.name)
+                InfoLine(stringResource(R.string.lib_path), path ?: "…")
+                InfoLine(stringResource(R.string.lib_size), formatSize(video.sizeBytes))
+                InfoLine(stringResource(R.string.lib_resolution), if (video.width > 0) "${video.width}×${video.height}" else stringResource(R.string.lib_unknown))
+                InfoLine(stringResource(R.string.lib_duration), formatTime(video.durationMs))
+                InfoLine(stringResource(R.string.lib_date), date)
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("تم") } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.lib_done)) } },
     )
 }
 
@@ -177,14 +182,14 @@ private fun RenameDialog(video: Video, onConfirm: (String) -> Unit, onDismiss: (
     val trimmed = name.trim()
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("إعادة تسمية") },
+        title = { Text(stringResource(R.string.rename)) },
         text = { OutlinedTextField(value = name, onValueChange = { name = it }, singleLine = true) },
         confirmButton = {
             TextButton(onClick = { onConfirm(trimmed) }, enabled = trimmed.isNotEmpty() && trimmed != video.name) {
-                Text("تغيير")
+                Text(stringResource(R.string.change))
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("إلغاء") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }
 

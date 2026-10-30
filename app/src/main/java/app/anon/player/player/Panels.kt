@@ -1,5 +1,7 @@
 package app.anon.player.player
 
+import app.anon.player.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
@@ -80,17 +82,19 @@ fun SidePanel(
     onClose: () -> Unit,
 ) {
     val title = when (panel) {
-        Panel.Subs -> "الترجمة"
-        Panel.Audio -> "الصوت"
-        Panel.Options -> "المزيد"
+        Panel.Subs -> stringResource(R.string.player_subtitles)
+        Panel.Audio -> stringResource(R.string.player_audio)
+        Panel.Options -> stringResource(R.string.player_more)
         null -> ""
     }
     GlassScrim(visible = panel != null, onDismiss = onClose)
+    // the panel sits on the end edge: slide from the right in LTR, from the left in RTL
+    val side = if (androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl) -1 else 1
     AnimatedVisibility(
         visible = panel != null,
         modifier = Modifier.fillMaxSize(),
-        enter = fadeIn(tween(220)) + slideInHorizontally(tween(260)) { it / 4 },
-        exit = fadeOut(tween(180)) + slideOutHorizontally(tween(180)) { it / 4 },
+        enter = fadeIn(tween(220)) + slideInHorizontally(tween(260)) { side * it / 4 },
+        exit = fadeOut(tween(180)) + slideOutHorizontally(tween(180)) { side * it / 4 },
     ) {
         Box(Modifier.fillMaxSize()) {
             Box(
@@ -113,8 +117,9 @@ fun SidePanel(
     }
 }
 
+@Composable
 private fun trackLabel(t: Track): String {
-    val name = t.title ?: t.lang?.uppercase() ?: "مسار ${t.id}"
+    val name = t.title ?: t.lang?.uppercase() ?: stringResource(R.string.player_track_n, t.id)
     return if (t.codec != null) "$name · ${t.codec}" else name
 }
 
@@ -154,8 +159,8 @@ private fun SubsPanel(
 ) {
     var tab by remember { mutableStateOf(startTab) }
     SecondaryTabRow(selectedTabIndex = tab, containerColor = androidx.compose.ui.graphics.Color.Transparent) {
-        listOf("المسار", "الشكل", "التوقيت").forEachIndexed { i, name ->
-            Tab(selected = tab == i, onClick = { tab = i }, text = { Text(name) })
+        listOf(R.string.sub_tab_track, R.string.sub_tab_style, R.string.sub_tab_timing).forEachIndexed { i, name ->
+            Tab(selected = tab == i, onClick = { tab = i }, text = { Text(stringResource(name)) })
         }
     }
     AnimatedContent(
@@ -183,30 +188,30 @@ private fun TrackTab(
     val none = subs.none { it.selected }
     var secOpen by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth()) {
-        TrackRow("إيقاف", none) { player.setString("sid", "no"); onTracksChanged() }
+        TrackRow(stringResource(R.string.off), none) { player.setString("sid", "no"); onTracksChanged() }
         subs.forEach { t -> TrackRow(trackLabel(t), t.selected) { player.setString("sid", t.id); onTracksChanged() } }
         Spacer(Modifier.height(8.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             FilledTonalButton(onClick = onSearch, modifier = Modifier.weight(1f).height(64.dp)) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Rounded.Search, null)
-                    Text("بحث", style = MaterialTheme.typography.labelLarge)
+                    Text(stringResource(R.string.search), style = MaterialTheme.typography.labelLarge)
                 }
             }
             FilledTonalButton(onClick = onAddSub, modifier = Modifier.weight(1f).height(64.dp)) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Rounded.FileOpen, null)
-                    Text("ملف", style = MaterialTheme.typography.labelLarge)
+                    Text(stringResource(R.string.sub_file), style = MaterialTheme.typography.labelLarge)
                 }
             }
         }
         TextButton(onClick = { secOpen = !secOpen }, modifier = Modifier.fillMaxWidth()) {
-            Text(if (secOpen) "ترجمة ثانية ▴" else "ترجمة ثانية ▾")
+            Text(stringResource(if (secOpen) R.string.sub_second_open else R.string.sub_second_closed))
         }
         AnimatedVisibility(visible = secOpen) {
             Column(Modifier.fillMaxWidth()) {
                 val secondary = player.getString("secondary-sid")
-                TrackRow("إيقاف", secondary.isNullOrEmpty() || secondary == "no") {
+                TrackRow(stringResource(R.string.off), secondary.isNullOrEmpty() || secondary == "no") {
                     player.setString("secondary-sid", "no"); onTracksChanged()
                 }
                 val primary = player.getString("sid")
@@ -226,10 +231,10 @@ private fun TrackTab(
 @Composable
 private fun AudioPanel(player: MpvPlayer, trackVersion: Int, speed: Double, volume: Double, onTracksChanged: () -> Unit) {
     val audio = remember(trackVersion) { player.tracks().filter { it.type == "audio" } }
-    SectionTitle("المسارات")
-    if (audio.isEmpty()) Text("لا مسارات صوت", style = MaterialTheme.typography.bodyMedium)
+    SectionTitle(stringResource(R.string.player_tracks))
+    if (audio.isEmpty()) Text(stringResource(R.string.player_no_audio_tracks), style = MaterialTheme.typography.bodyMedium)
     audio.forEach { t -> TrackRow(trackLabel(t), t.selected) { player.setString("aid", t.id); onTracksChanged() } }
-    SectionTitle("السرعة")
+    SectionTitle(stringResource(R.string.player_speed))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         listOf(0.5, 0.75, 1.0, 1.25, 1.5, 2.0).forEach { s ->
             val on = kotlin.math.abs(speed - s) < 0.01
@@ -241,7 +246,7 @@ private fun AudioPanel(player: MpvPlayer, trackVersion: Int, speed: Double, volu
         }
     }
     Slider(value = speed.toFloat().coerceIn(0.25f, 4f), onValueChange = { player.setSpeed(Math.round(it * 20) / 20.0) }, valueRange = 0.25f..4f)
-    SectionTitle("تضخيم الصوت \u2066${(volume).toInt()}%\u2069")
+    SectionTitle(stringResource(R.string.player_volume_boost, volume.toInt().toString()))
     Slider(value = volume.toFloat().coerceIn(100f, 200f), onValueChange = { player.setVolume(it.toDouble()) }, valueRange = 100f..200f)
 }
 
@@ -263,7 +268,7 @@ private fun OptionsPanel(
     var hw by remember { mutableStateOf(player.getString("hwdec") ?: "") }
     var aspect by remember { mutableStateOf(player.getString("video-aspect-override") ?: "-1") }
     var crop by remember { mutableStateOf((player.getDouble("panscan") ?: 0.0) > 0.0) }
-    SectionTitle("فك الترميز")
+    SectionTitle(stringResource(R.string.player_decoder))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Decoder.values().forEach { d ->
             val on = hw == d.hwdec
@@ -272,20 +277,20 @@ private fun OptionsPanel(
             else FilledTonalButton(onClick = onClick) { Text(decoderName(d)) }
         }
     }
-    SectionTitle("تكرار A-B")
+    SectionTitle(stringResource(R.string.player_ab_loop))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        OutlinedButton(onClick = onAbA) { Text(if (abA == null) "A هنا" else "A ${fmtSec(abA)}") }
-        OutlinedButton(onClick = onAbB) { Text(if (abB == null) "B هنا" else "B ${fmtSec(abB)}") }
-        OutlinedButton(onClick = onAbClear) { Text("مسح") }
+        OutlinedButton(onClick = onAbA) { Text(if (abA == null) stringResource(R.string.player_ab_set_a) else "A ${fmtSec(abA)}") }
+        OutlinedButton(onClick = onAbB) { Text(if (abB == null) stringResource(R.string.player_ab_set_b) else "B ${fmtSec(abB)}") }
+        OutlinedButton(onClick = onAbClear) { Text(stringResource(R.string.clear)) }
     }
-    SectionTitle("مؤقت النوم")
+    SectionTitle(stringResource(R.string.player_sleep_timer))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        listOf(15, 30, 60).forEach { m -> OutlinedButton(onClick = { onSleep(m) }) { Text("$m د") } }
-        OutlinedButton(onClick = { onSleep(null) }) { Text("إيقاف") }
+        listOf(15, 30, 60).forEach { m -> OutlinedButton(onClick = { onSleep(m) }) { Text(stringResource(R.string.player_minutes_short, m.toString())) } }
+        OutlinedButton(onClick = { onSleep(null) }) { Text(stringResource(R.string.off)) }
     }
-    SectionTitle("نسبة العرض")
+    SectionTitle(stringResource(R.string.player_aspect))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        listOf("-1" to "تلقائي", "16:9" to "16:9", "4:3" to "4:3", "2.35:1" to "2.35").forEach { (v, label) ->
+        listOf("-1" to stringResource(R.string.player_aspect_auto), "16:9" to "16:9", "4:3" to "4:3", "2.35:1" to "2.35").forEach { (v, label) ->
             val onClick = { aspect = v; player.setString("video-aspect-override", v) }
             if (aspect == v) androidx.compose.material3.Button(onClick = onClick) { Text(label) }
             else FilledTonalButton(onClick = onClick) { Text(label) }
@@ -295,9 +300,9 @@ private fun OptionsPanel(
     FilledTonalButton(onClick = {
         crop = !crop
         player.setDouble("panscan", if (crop) 1.0 else 0.0)
-    }, modifier = Modifier.fillMaxWidth()) { Text(if (crop) "قص الإطار: مفعّل" else "قص الإطار: معطّل") }
+    }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(if (crop) R.string.player_crop_on else R.string.player_crop_off)) }
     Spacer(Modifier.height(8.dp))
-    FilledTonalButton(onClick = onShot, modifier = Modifier.fillMaxWidth()) { Text("لقطة شاشة") }
+    FilledTonalButton(onClick = onShot, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.player_screenshot)) }
 }
 
 private fun fmtSec(s: Double) = "%.1f".format(Locale.ROOT, s)

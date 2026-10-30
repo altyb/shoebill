@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_title">الإعدادات</string>
+    <string name="settings_player">المشغّل</string>
+    <string name="settings_decoder">فك الترميز</string>
+    <string name="settings_decoder_hw">تسريع بالعتاد، الأسرع والأقل استهلاكاً</string>
+    <string name="settings_decoder_hwplus">تسريع بالعتاد مع نسخ الإطارات، أوسع توافقاً</string>
+    <string name="settings_decoder_sw">فك ترميز بالمعالج، الأوسع توافقاً</string>
+    <string name="settings_auto_resume">استئناف تلقائي</string>
+    <string name="settings_auto_resume_sub">متابعة من آخر موضع توقّف عنده</string>
+    <string name="settings_play_next">التالي في المجلد</string>
+    <string name="settings_play_next_sub">تشغيل الملف التالي تلقائياً</string>
+    <string name="settings_background">التشغيل في الخلفية</string>
+    <string name="settings_background_sub">متابعة الصوت عند إغلاق الشاشة</string>
+    <string name="settings_gestures">الإيماءات</string>
+    <string name="settings_gestures_sub">سحب على الشاشة لتغيير السطوع والصوت والتقديم</string>
+    <string name="settings_appearance">المظهر</string>
+    <string name="settings_appearance_sub">الألوان والنمط والوضع والتباين</string>
+    <string name="settings_privacy">الخصوصية</string>
+    <string name="settings_history">سجل المشاهدة</string>
+    <string name="settings_history_sub">حفظ مكان التوقّف لكل فيديو</string>
+    <string name="settings_clear_history">مسح السجل</string>
+    <string name="settings_clear_history_sub">حذف كل مواضع التوقّف المحفوظة</string>
+    <string name="settings_clear_history_q">مسح سجل المشاهدة؟</string>
+    <string name="settings_clear_history_body">ستُحذف كل مواضع التوقّف المحفوظة. لا يمكن التراجع.</string>
+    <string name="settings_about">حول</string>
+    <string name="settings_version">الإصدار</string>
+    <string name="settings_privacy_policy">سياسة الخصوصية</string>
+    <string name="settings_privacy_policy_sub">لا يجمع التطبيق أي بيانات</string>
+    <string name="settings_source">الكود المصدري</string>
+    <string name="settings_source_sub">مفتوح المصدر · GPL-3.0</string>
+    <string name="settings_color_source">مصدر الألوان</string>
+    <string name="settings_src_wallpaper">من الخلفية</string>
+    <string name="settings_src_preset">جاهزة</string>
+    <string name="settings_src_custom">مخصّص</string>
+    <string name="settings_hue">الدرجة %1$d°</string>
+    <string name="settings_style">النمط</string>
+    <string name="settings_style_tonal">هادئ</string>
+    <string name="settings_style_vibrant">نابض</string>
+    <string name="settings_style_expressive">تعبيري</string>
+    <string name="settings_style_fidelity">وفيّ</string>
+    <string name="settings_style_mono">أحادي</string>
+    <string name="settings_mode">الوضع</string>
+    <string name="settings_mode_system">النظام</string>
+    <string name="settings_mode_light">فاتح</string>
+    <string name="settings_mode_dark">داكن</string>
+    <string name="settings_amoled">أسود حقيقي</string>
+    <string name="settings_amoled_sub">خلفية سوداء كاملة لشاشات AMOLED</string>
+    <string name="settings_contrast">التباين</string>
+    <string name="settings_contrast_standard">عادي</string>
+    <string name="settings_contrast_medium">متوسط</string>
+    <string name="settings_contrast_high">عالٍ</string>
+    <string name="settings_primary">أساسي</string>
+    <string name="settings_secondary">ثانوي</string>
+    <string name="settings_tertiary">ثالث</string>
+
+</resources>

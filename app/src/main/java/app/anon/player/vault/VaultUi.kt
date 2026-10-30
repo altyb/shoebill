@@ -3,7 +3,9 @@ package app.anon.player.vault
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import app.anon.player.R
 import app.anon.player.ui.AnonLoader
+import androidx.compose.ui.res.stringResource
 import app.anon.player.vault.logic.PinStore
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -62,8 +64,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import java.time.LocalDate
 
-private val ruleAuthHint = "لا استعادة بلا مفتاح: نسيان الرمز أو مسح الجهاز يُفقد الخزنة نهائياً، والنسخة الاحتياطية لم تُنفَّذ بعد."
-
 /** First run: the rule ق-16 has to be acknowledged before the key exists. */
 @Composable
 fun SetupGate(canGuard: Boolean, onAccept: () -> Unit, onBack: () -> Unit, onCreateWithPin: (CharArray) -> Unit) {
@@ -71,15 +71,16 @@ fun SetupGate(canGuard: Boolean, onAccept: () -> Unit, onBack: () -> Unit, onCre
     var pinFlow by remember { mutableStateOf(false) }
     var first by remember { mutableStateOf<CharArray?>(null) }
     var mismatch by remember { mutableStateOf<String?>(null) }
+    val mismatchText = stringResource(R.string.vault_pins_mismatch)
     if (pinFlow) {
         PinPad(
-            title = if (first == null) "اختر رمزاً للخزنة" else "أعد إدخال الرمز",
+            title = if (first == null) stringResource(R.string.vault_choose_pin) else stringResource(R.string.vault_reenter_pin),
             error = mismatch, busy = false, lockedUntil = null,
             onSubmit = { pin ->
                 val f = first
                 if (f == null) { first = pin; mismatch = null }
                 else if (f.contentEquals(pin)) { f.fill('\u0000'); first = null; onCreateWithPin(pin) }
-                else { f.fill('\u0000'); pin.fill('\u0000'); first = null; mismatch = "الرمزان غير متطابقين" }
+                else { f.fill('\u0000'); pin.fill('\u0000'); first = null; mismatch = mismatchText }
             },
             onBack = { pinFlow = false; first?.fill('\u0000'); first = null },
         )
@@ -87,26 +88,26 @@ fun SetupGate(canGuard: Boolean, onAccept: () -> Unit, onBack: () -> Unit, onCre
     }
     AlertDialog(
         onDismissRequest = onBack,
-        title = { Text("قبل إنشاء الخزنة") },
+        title = { Text(stringResource(R.string.vault_before_create)) },
         text = {
             Column {
-                Text(if (canGuard) ruleAuthHint else "أضف بصمة أو قفل شاشة من إعدادات الجهاز أولاً.")
+                Text(if (canGuard) stringResource(R.string.vault_rule_hint) else stringResource(R.string.vault_need_screen_lock))
                 if (canGuard) {
                     Spacer(Modifier.height(12.dp))
                     Row(Modifier.fillMaxWidth().clickable { understood = !understood }, verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(checked = understood, onCheckedChange = { understood = it })
-                        Text("فهمت")
+                        Text(stringResource(R.string.vault_understood))
                     }
                 }
             }
         },
         confirmButton = {
-            if (canGuard) Button(onClick = onAccept, enabled = understood) { Text("إنشاء الخزنة") }
+            if (canGuard) Button(onClick = onAccept, enabled = understood) { Text(stringResource(R.string.vault_create)) }
         },
         dismissButton = {
             Row {
-                TextButton(onClick = { pinFlow = true }) { Text("بالرمز فقط") }
-                TextButton(onClick = onBack) { Text("رجوع") }
+                TextButton(onClick = { pinFlow = true }) { Text(stringResource(R.string.vault_pin_only_short)) }
+                TextButton(onClick = onBack) { Text(stringResource(R.string.back)) }
             }
         },
     )
@@ -124,8 +125,8 @@ fun UnlockScreen(
 ) {
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         TopAppBar(
-            title = { Text("فتح الخزنة") },
-            navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "رجوع") } },
+            title = { Text(stringResource(R.string.vault_unlock)) },
+            navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) } },
         )
         Column(
             Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -140,7 +141,7 @@ fun UnlockScreen(
                 Icon(Icons.Filled.Lock, null, Modifier.size(48.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
             }
             Spacer(Modifier.height(20.dp))
-            Text("بصمة، أو رمز الجهاز احتياطاً.", textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.vault_unlock_hint), textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(24.dp))
             if (busy) {
                 AnonLoader()
@@ -148,10 +149,10 @@ fun UnlockScreen(
                 FilledTonalButton(onClick = onFingerprint) {
                     Icon(Icons.Filled.Fingerprint, null)
                     Spacer(Modifier.width(8.dp))
-                    Text("بصمة")
+                    Text(stringResource(R.string.vault_fingerprint))
                 }
                 if (android.os.Build.VERSION.SDK_INT >= 30) {
-                    TextButton(onClick = onPin) { Text("استخدم الرمز") }
+                    TextButton(onClick = onPin) { Text(stringResource(R.string.vault_use_pin)) }
                 }
             }
             message?.let {
@@ -197,8 +198,8 @@ fun VaultSettings(
 
     pinRole?.let { role ->
         PinPad(
-            title = if (pinFirst == null) "أدخل رمز جديد" else "أعد إدخال الرمز",
-            error = if (pinMismatch) "الرمزان غير متطابقين" else null,
+            title = if (pinFirst == null) stringResource(R.string.vault_new_pin) else stringResource(R.string.vault_reenter_pin),
+            error = if (pinMismatch) stringResource(R.string.vault_pins_mismatch) else null,
             busy = false,
             lockedUntil = null,
             onSubmit = { pin ->
@@ -231,38 +232,38 @@ fun VaultSettings(
 
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         TopAppBar(
-            title = { Text("إعدادات الخزنة") },
-            navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "رجوع") } },
+            title = { Text(stringResource(R.string.vault_settings)) },
+            navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) } },
         )
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
-            Text("الدخول", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-            Text(if (pinOnly) "رمز الخزنة" else "البصمة أو رمز الجهاز")
+            Text(stringResource(R.string.vault_access), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+            Text(if (pinOnly) stringResource(R.string.vault_pin) else stringResource(R.string.vault_fingerprint_or_device))
             if (space == VaultSpace.Real) DialCodeRow()
             if (space == VaultSpace.Real) {
                 Spacer(Modifier.height(12.dp))
-                Text("رمز الخزنة", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                Text(stringResource(R.string.vault_pin), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
                 val realSet = PinStore.Role.Real in pinsSet
                 PinRoleRow(
-                    label = "رمز الدخول", subtitle = null, subtitleIsError = false,
+                    label = stringResource(R.string.vault_pin_real), subtitle = null, subtitleIsError = false,
                     isSet = realSet, enabled = true,
                     onSet = { pinRole = PinStore.Role.Real }, onRemove = { pendingRemove = PinStore.Role.Real },
                 )
                 PinRoleRow(
-                    label = "رمز التمويه", subtitle = "يفتح خزنة بديلة فارغة يمكنك ملؤها بمحتوى عادي", subtitleIsError = false,
+                    label = stringResource(R.string.vault_pin_decoy), subtitle = stringResource(R.string.vault_pin_decoy_hint), subtitleIsError = false,
                     isSet = PinStore.Role.Decoy in pinsSet, enabled = realSet,
                     onSet = { pinRole = PinStore.Role.Decoy }, onRemove = { pendingRemove = PinStore.Role.Decoy },
                 )
                 PinRoleRow(
-                    label = "رمز المسح", subtitle = "يمسح الخزنة الحقيقية بصمت ويفتح الخزنة البديلة. لا رجعة فيه", subtitleIsError = true,
+                    label = stringResource(R.string.vault_pin_wipe), subtitle = stringResource(R.string.vault_pin_wipe_hint), subtitleIsError = true,
                     isSet = PinStore.Role.Wipe in pinsSet, enabled = realSet,
                     onSet = { pinRole = PinStore.Role.Wipe }, onRemove = { pendingRemove = PinStore.Role.Wipe },
                 )
                 if (realSet) {
                     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text("الدخول بالرمز فقط")
+                            Text(stringResource(R.string.vault_pin_only))
                             Text(
-                                "بدون بصمة. المفتاح يبقى داخل شريحة الهاتف، لكن من يملك صلاحيات root قد يستعمله",
+                                stringResource(R.string.vault_pin_only_hint),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -272,47 +273,47 @@ fun VaultSettings(
                 }
             }
             Spacer(Modifier.height(20.dp))
-            Text("الحماية", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-            Text("القفل التلقائي عند الخروج من التطبيق", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.vault_protection), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+            Text(stringResource(R.string.vault_auto_lock), color = MaterialTheme.colorScheme.onSurfaceVariant)
             AutoLock.entries.forEach { opt ->
                 Row(Modifier.fillMaxWidth().clickable { onAutoLock(opt) }, verticalAlignment = Alignment.CenterVertically) {
                     RadioButton(selected = opt == autoLock, onClick = { onAutoLock(opt) })
-                    Text(opt.label)
+                    Text(stringResource(opt.label))
                 }
             }
             Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("منع لقطات الشاشة والتسجيل", Modifier.weight(1f))
+                Text(stringResource(R.string.vault_block_screenshots), Modifier.weight(1f))
                 Switch(checked = true, onCheckedChange = null, enabled = false)
             }
             Spacer(Modifier.height(20.dp))
-            Text("النسخ والمفتاح", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+            Text(stringResource(R.string.vault_backup_and_key), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
             if (busy) {
                 AnonLoader()
-                Text(if (restoring) "جارٍ الاسترجاع…" else "جارٍ التشفير…")
+                Text(if (restoring) stringResource(R.string.vault_restoring) else stringResource(R.string.vault_encrypting))
             } else {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     FilledTonalButton(onClick = { onBeginSystemHop(); exportLauncher.launch("anon-vault-${LocalDate.now()}.anonvault") }) {
                         Icon(Icons.Rounded.Backup, null)
                         Spacer(Modifier.width(8.dp))
-                        Text("نسخ احتياطي")
+                        Text(stringResource(R.string.vault_backup))
                     }
                     Spacer(Modifier.width(8.dp))
                     OutlinedButton(onClick = { onBeginSystemHop(); importLauncher.launch(arrayOf("*/*")) }) {
                         Icon(Icons.Rounded.Restore, null)
                         Spacer(Modifier.width(8.dp))
-                        Text("استرجاع")
+                        Text(stringResource(R.string.vault_restore))
                     }
                 }
             }
             message?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-            Text("المفتاح الرئيسي: ${keyLevel?.label() ?: "غير معروف"}")
+            Text(stringResource(R.string.vault_master_key, stringResource(keyLevel?.label() ?: R.string.vault_key_unknown)))
         }
     }
 
     pendingExport?.let { uri ->
         val cr = androidx.compose.ui.platform.LocalContext.current.contentResolver
         // cancelled: the file picker already created an empty file, remove it
-        PasswordDialog("نسخ احتياطي مشفّر", confirm = true, onDismiss = {
+        PasswordDialog(stringResource(R.string.vault_encrypted_backup), confirm = true, onDismiss = {
             runCatching { android.provider.DocumentsContract.deleteDocument(cr, uri) }
             pendingExport = null
         }) { pw ->
@@ -322,7 +323,7 @@ fun VaultSettings(
         }
     }
     pendingImport?.let { uri ->
-        PasswordDialog("استرجاع النسخة", confirm = false, onDismiss = { pendingImport = null }) { pw ->
+        PasswordDialog(stringResource(R.string.vault_restore_backup), confirm = false, onDismiss = { pendingImport = null }) { pw ->
             restoring = true
             pendingImport = null
             onImport(uri, pw)
@@ -331,14 +332,14 @@ fun VaultSettings(
     pendingRemove?.let { role ->
         AlertDialog(
             onDismissRequest = { pendingRemove = null },
-            title = { Text("إزالة الرمز؟") },
-            text = { Text("لن يفتح هذا الرمز الخزنة بعد الآن.") },
+            title = { Text(stringResource(R.string.vault_remove_pin_title)) },
+            text = { Text(stringResource(R.string.vault_remove_pin_body)) },
             confirmButton = {
                 TextButton(onClick = { onClearPin(role); pendingRemove = null }) {
-                    Text("إزالة", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.remove), color = MaterialTheme.colorScheme.error)
                 }
             },
-            dismissButton = { TextButton(onClick = { pendingRemove = null }) { Text("إلغاء") } },
+            dismissButton = { TextButton(onClick = { pendingRemove = null }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 }
@@ -365,10 +366,10 @@ private fun PinRoleRow(
             }
         }
         if (isSet) {
-            TextButton(onClick = onSet, enabled = enabled) { Text("تغيير") }
-            TextButton(onClick = onRemove, enabled = enabled) { Text("إزالة") }
+            TextButton(onClick = onSet, enabled = enabled) { Text(stringResource(R.string.change)) }
+            TextButton(onClick = onRemove, enabled = enabled) { Text(stringResource(R.string.remove)) }
         } else {
-            TextButton(onClick = onSet, enabled = enabled) { Text("تعيين") }
+            TextButton(onClick = onSet, enabled = enabled) { Text(stringResource(R.string.vault_set)) }
         }
     }
 }
@@ -384,31 +385,31 @@ private fun PasswordDialog(title: String, confirm: Boolean, onDismiss: () -> Uni
         text = {
             Column {
                 OutlinedTextField(
-                    pw, { pw = it }, singleLine = true, label = { Text("كلمة المرور") },
+                    pw, { pw = it }, singleLine = true, label = { Text(stringResource(R.string.vault_password)) },
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 )
                 if (confirm) {
                     Spacer(Modifier.height(8.dp))
                     OutlinedTextField(
-                        again, { again = it }, singleLine = true, label = { Text("تأكيد") },
+                        again, { again = it }, singleLine = true, label = { Text(stringResource(R.string.confirm)) },
                         visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     )
                     Spacer(Modifier.height(8.dp))
-                    Text("لا يمكن استرجاع النسخة إن نسيت كلمة المرور", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.vault_password_warning), color = MaterialTheme.colorScheme.error)
                 }
             }
         },
-        confirmButton = { Button(onClick = { onConfirm(pw.toCharArray()) }, enabled = ok) { Text("تأكيد") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("إلغاء") } },
+        confirmButton = { Button(onClick = { onConfirm(pw.toCharArray()) }, enabled = ok) { Text(stringResource(R.string.confirm)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }
 
-fun KeyLevel.label(): String = when (this) {
-    KeyLevel.StrongBox -> "StrongBox (عتاد مستقل)"
-    KeyLevel.Tee -> "TEE (المعالج الآمن)"
-    KeyLevel.Software -> "برمجياً، ليس في العتاد"
+fun KeyLevel.label(): Int = when (this) {
+    KeyLevel.StrongBox -> R.string.vault_key_strongbox
+    KeyLevel.Tee -> R.string.vault_key_tee
+    KeyLevel.Software -> R.string.vault_key_software
 }
 
 /** "Open from the phone app": *#*#code#*#* in the dialer opens the vault (SecretCodeReceiver). */
@@ -418,19 +419,19 @@ private fun DialCodeRow() {
     var code by remember { mutableStateOf(SecretCodeReceiver.dialCode(ctx).orEmpty()) }
     var saved by remember { mutableStateOf(SecretCodeReceiver.dialCode(ctx)) }
     Spacer(Modifier.height(12.dp))
-    Text("فتح من تطبيق الهاتف", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+    Text(stringResource(R.string.vault_dial_title), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
     Row(verticalAlignment = Alignment.CenterVertically) {
         OutlinedTextField(
             value = code, onValueChange = { v -> code = v.filter(Char::isDigit).take(8) },
-            singleLine = true, label = { Text("رقم من ٤ إلى ٨ خانات") },
+            singleLine = true, label = { Text(stringResource(R.string.vault_dial_hint)) },
             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword),
             modifier = Modifier.weight(1f),
         )
-        TextButton(enabled = code.length in 4..8 && code != saved, onClick = { SecretCodeReceiver.setDialCode(ctx, code); saved = code }) { Text("حفظ") }
-        if (saved != null) TextButton(onClick = { SecretCodeReceiver.setDialCode(ctx, null); saved = null; code = "" }) { Text("إيقاف") }
+        TextButton(enabled = code.length in 4..8 && code != saved, onClick = { SecretCodeReceiver.setDialCode(ctx, code); saved = code }) { Text(stringResource(R.string.save)) }
+        if (saved != null) TextButton(onClick = { SecretCodeReceiver.setDialCode(ctx, null); saved = null; code = "" }) { Text(stringResource(R.string.off)) }
     }
     Text(
-        saved?.let { "اطلب *#*#$it#*#* في تطبيق الهاتف لتفتح الخزنة" } ?: "متوقف",
+        saved?.let { stringResource(R.string.vault_dial_info, it) } ?: stringResource(R.string.vault_dial_off),
         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }

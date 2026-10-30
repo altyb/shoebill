@@ -1,6 +1,8 @@
 package app.anon.player.vault
 
 import app.anon.player.ui.SecureWindow
+import app.anon.player.R
+import androidx.compose.ui.res.stringResource
 import android.net.Uri
 import android.view.WindowManager
 import androidx.activity.compose.BackHandler
@@ -56,7 +58,7 @@ fun VaultScreen(onBack: () -> Unit, onPlay: (Uri, String) -> Unit) {
             Phase.Setup -> SetupGate(canGuard = canGuardVault(activity), onAccept = vm::createKey, onBack = onBack, onCreateWithPin = vm::createWithPin)
             Phase.Locked -> if (ui.pinRequired) {
                 PinPad(
-                    title = "أدخل رمز الخزنة",
+                    title = stringResource(R.string.vault_enter_pin),
                     error = ui.pinError,
                     busy = ui.pinBusy,
                     lockedUntil = ui.lockedUntil,

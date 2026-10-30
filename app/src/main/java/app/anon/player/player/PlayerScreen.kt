@@ -1,5 +1,6 @@
 package app.anon.player.player
 
+import app.anon.player.R
 import app.anon.player.ui.SecureWindow
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -67,7 +68,7 @@ import java.io.File
 import kotlin.math.abs
 import kotlin.math.ln
 
-private val ASPECTS = listOf("-1" to "تلقائي", "16:9" to "16:9", "4:3" to "4:3", "2.35:1" to "2.35:1")
+private val ASPECTS = listOf("-1", "16:9", "4:3", "2.35:1")
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -109,7 +110,7 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
     var hud by remember { mutableStateOf<Hud?>(null) }
     var notice by remember { mutableStateOf<Notice?>(null) }
     var videoCodec by remember { mutableStateOf<String?>(null) }
-    var subLabel by remember { mutableStateOf("إيقاف") }
+    var subLabel by remember { mutableStateOf(context.getString(R.string.off)) }
     var decoderLabel by remember { mutableStateOf("HW+") }
     var abA by remember { mutableStateOf<Double?>(null) }
     var abB by remember { mutableStateOf<Double?>(null) }
@@ -165,7 +166,7 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
         val fs = if (private) null else store.get(u.toString())
         val resume = settingsState.value.autoResume && fs != null && fs.unfinished
         player.setString("start", if (resume) "%.3f".format(java.util.Locale.ROOT, fs!!.positionMs / 1000.0) else "none")
-        if (!player.load(u)) notice = Notice("تعذّر فتح الملف: لم يعد موجوداً")
+        if (!player.load(u)) notice = Notice(context.getString(R.string.player_open_failed))
     }
 
     fun openFile(u: Uri, t: String) {
@@ -228,21 +229,21 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
         fs?.aspect?.let { player.setString("video-aspect-override", it) }
         fs?.let { player.setDouble("sub-delay", it.subDelayMs / 1000.0) }
         if (settingsState.value.autoResume && fs != null && fs.unfinished) {
-            notice = Notice("تابع من ${formatTime(fs.positionMs)}", "من البداية") { player.seekTo(0.0) }
+            notice = Notice(context.getString(R.string.player_resume_from, formatTime(fs.positionMs)), context.getString(R.string.player_from_start)) { player.seekTo(0.0) }
         }
         delay(1500)
         val wanted = player.getString("hwdec")
         val hasVideo = !player.getString("video-format").isNullOrEmpty()
         if (hasVideo && wanted != "no" && player.getString("hwdec-current") == "no") {
             player.setString("hwdec", "no")
-            notice = Notice("تحويل إلى SW")
+            notice = Notice(context.getString(R.string.player_switched_sw))
         }
         videoCodec = player.getString("video-codec")?.substringBefore(" / ") // "H.264 / AVC / MPEG-4 AVC / …" -> "H.264"
         decoderLabel = Decoder.values().firstOrNull { it.hwdec == player.getString("hwdec") }?.let { decoderName(it) } ?: "HW+"
     } }
 
     LaunchedEffect(loads, trackVersion, panel) {
-        subLabel = player.tracks().firstOrNull { it.type == "sub" && it.selected }?.let { it.lang ?: it.title ?: "ترجمة" } ?: "إيقاف"
+        subLabel = player.tracks().firstOrNull { it.type == "sub" && it.selected }?.let { it.lang ?: it.title ?: context.getString(R.string.player_subtitle_fallback) } ?: context.getString(R.string.off)
     }
 
     LaunchedEffect(current) {
@@ -292,7 +293,7 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
         delay((until - System.currentTimeMillis()).coerceAtLeast(0L))
         player.setPaused(true)
         sleepUntil = null
-        notice = Notice("مؤقت النوم: توقّف الفيديو")
+        notice = Notice(context.getString(R.string.player_sleep_done))
     }
 
     // UI state for qa/e2e.py (shows up in the debug AnonState line through mpv user-data)
@@ -340,7 +341,7 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
                     seekSign = sign
                     seekAt = now
                     player.seekBy(sign * 10.0)
-                    showHud(Hud(HudKind.Tap, label = (if (sign > 0) "+" else "−") + "$seekAcc ث"))
+                    showHud(Hud(HudKind.Tap, label = (if (sign > 0) "+" else "−") + context.getString(R.string.player_seconds, seekAcc.toString())))
                 }
 
                 awaitEachGesture {
@@ -382,7 +383,7 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
                                     // pinch that starts on the subtitle line resizes the subtitle, not the video
                                     val sc = (zoom0 * dist / pinch0).coerceIn(0.6, 2.0)
                                     player.setDouble("sub-scale", sc)
-                                    hud = Hud(HudKind.Tap, label = "حجم الترجمة \u2066${(sc * 100).roundToInt()}%\u2069")
+                                    hud = Hud(HudKind.Tap, label = context.getString(R.string.sub_size_hud, (sc * 100).roundToInt().toString()))
                                 } else if (dist > 0f) {
                                     player.setDouble("video-zoom", zoom0 + ln(dist / pinch0) / ln(2.0))
                                 }
@@ -414,7 +415,7 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
                                 Axis.Subtitle -> {
                                     val pos = (subPos0 + totalY / h * 100.0).roundToInt().coerceIn(0, 100)
                                     player.setString("sub-pos", pos.toString())
-                                    hud = Hud(HudKind.Tap, label = "موضع الترجمة $pos")
+                                    hud = Hud(HudKind.Tap, label = context.getString(R.string.sub_position_hud, pos.toString()))
                                     c.consume()
                                 }
                                 Axis.Vertical -> {
@@ -548,10 +549,10 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
                     },
                     onAspect = {
                         val cur = player.getString("video-aspect-override") ?: "-1"
-                        val idx = ASPECTS.indexOfFirst { it.first == cur }
+                        val idx = ASPECTS.indexOf(cur)
                         val next = ASPECTS[(idx + 1) % ASPECTS.size]
-                        player.setString("video-aspect-override", next.first)
-                        notice = Notice(next.second)
+                        player.setString("video-aspect-override", next)
+                        notice = Notice(if (next == "-1") context.getString(R.string.player_aspect_auto) else next)
                     },
                     onPrev = { prevFile?.let { openFile(it.first, it.second) } },
                     onNext = { nextFile?.let { openFile(it.first, it.second) } },
@@ -586,7 +587,7 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
             onShot = {
                 val file = java.io.File(context.cacheDir, "shot-${System.currentTimeMillis()}.png")
                 player.command("screenshot-to-file", file.absolutePath, "video")
-                notice = Notice("حُفظت اللقطة في الكاش")
+                notice = Notice(context.getString(R.string.player_shot_saved))
             },
             onDecoder = { decoderLabel = decoderName(it) },
             onClose = { panel = null },
@@ -604,7 +605,7 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
                 extSub = file
                 extSubTrack = lastSubId()
                 trackVersion++
-                notice = Notice("أُضيفت الترجمة")
+                notice = Notice(context.getString(R.string.sub_added))
             },
             onClose = { searchOpen = false },
         )

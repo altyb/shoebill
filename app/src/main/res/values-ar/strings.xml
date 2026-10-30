@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="language">اللغة</string>
+    <string name="language_system">لغة الهاتف</string>
+    <string name="cancel">إلغاء</string>
+    <string name="back">رجوع</string>
+    <string name="delete">حذف</string>
+    <string name="off">إيقاف</string>
+    <string name="clear">مسح</string>
+    <string name="no_results">لا نتائج</string>
+    <string name="play">تشغيل</string>
+    <string name="pause">إيقاف مؤقت</string>
+    <string name="rename">إعادة تسمية</string>
+    <string name="remove">إزالة</string>
+    <string name="change">تغيير</string>
+    <string name="confirm">تأكيد</string>
+    <string name="search">بحث</string>
+    <string name="close">إغلاق</string>
+    <string name="save">حفظ</string>
+    <string name="ok">حسناً</string>
+</resources>

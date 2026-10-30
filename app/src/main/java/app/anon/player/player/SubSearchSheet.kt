@@ -1,5 +1,8 @@
 package app.anon.player.player
 
+import app.anon.player.R
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import app.anon.player.ui.AnonLoader
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -125,12 +128,13 @@ private fun SearchContent(
     var message by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf<String?>(null) }
     val keyed = remember(keysVersion) { keys.providers().map { it.id } }
+    val noResults = stringResource(R.string.no_results)
 
     LaunchedEffect(reload, hash, keysVersion) {
         val providers = keys.providers(hidden).filter { it.id !in disabled }
         if (providers.isEmpty()) {
             results = emptyList()
-            message = if (keyed.isEmpty()) "أضف مفتاح API لمزوّد لتبدأ البحث" else "لا مزوّد مفعّل"
+            message = context.getString(if (keyed.isEmpty()) R.string.sub_need_key else R.string.sub_no_provider)
             return@LaunchedEffect
         }
         loading = true
@@ -141,14 +145,14 @@ private fun SearchContent(
         val (found, failures) = SubSearch.searchReport(providers, q)
         failures.forEach { f ->
             when (SubSearch.classify(f.error)) {
-                FailKind.Quota -> { onHide(f.providerId); message = "حصة ${SubKeys.LABELS[f.providerId]} انتهت. أُخفي المزوّد لهذه الجلسة" }
-                FailKind.Network -> { onHide(f.providerId); message = "تعذّر الاتصال بـ ${SubKeys.LABELS[f.providerId]}. أُخفي لهذه الجلسة" }
-                FailKind.Auth -> message = "مفتاح ${SubKeys.LABELS[f.providerId]} غير صالح. عدّله من «مفاتيح المزوّدين»"
-                FailKind.Other -> message = "خطأ من ${SubKeys.LABELS[f.providerId]}"
+                FailKind.Quota -> { onHide(f.providerId); message = context.getString(R.string.sub_fail_quota, SubKeys.LABELS[f.providerId].toString()) }
+                FailKind.Network -> { onHide(f.providerId); message = context.getString(R.string.sub_fail_network, SubKeys.LABELS[f.providerId].toString()) }
+                FailKind.Auth -> message = context.getString(R.string.sub_fail_auth, SubKeys.LABELS[f.providerId].toString())
+                FailKind.Other -> message = context.getString(R.string.sub_fail_other, SubKeys.LABELS[f.providerId].toString())
             }
         }
         results = SubSearch.rank(SubSearch.filterLanguages(found, langs), videoName)
-        if (results.isEmpty() && failures.isEmpty()) message = "لا نتائج"
+        if (results.isEmpty() && failures.isEmpty()) message = noResults
         loading = false
     }
 
@@ -165,9 +169,9 @@ private fun SearchContent(
                 onApplied(file, r.releaseName)
             } catch (e: Exception) {
                 message = when (SubSearch.classify(e)) {
-                    FailKind.Quota -> "حصة التنزيل انتهت لهذا المزوّد"
-                    FailKind.Network -> "تعذّر التنزيل. تحقّق من الاتصال"
-                    else -> "تعذّر تنزيل الترجمة"
+                    FailKind.Quota -> context.getString(R.string.sub_dl_quota)
+                    FailKind.Network -> context.getString(R.string.sub_dl_network)
+                    else -> context.getString(R.string.sub_dl_failed)
                 }
             } finally {
                 busy = null
@@ -176,10 +180,10 @@ private fun SearchContent(
     }
 
     Column(Modifier.fillMaxSize().padding(20.dp)) {
-        PanelHeader("بحث أونلاين", onClose) {
-            IconButton(onClick = { showKeys = true }) { Icon(Icons.Rounded.Key, "مفاتيح المزوّدين") }
+        PanelHeader(stringResource(R.string.sub_search_online), onClose) {
+            IconButton(onClick = { showKeys = true }) { Icon(Icons.Rounded.Key, stringResource(R.string.sub_provider_keys)) }
         }
-        SearchPill(query, { query = it }, "عنوان الفيلم أو الحلقة", Modifier.fillMaxWidth(), onSearch = { reload++ })
+        SearchPill(query, { query = it }, stringResource(R.string.sub_search_hint), Modifier.fillMaxWidth(), onSearch = { reload++ })
         Spacer(Modifier.height(8.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             LANGS.forEach { (code, label) ->
@@ -204,8 +208,8 @@ private fun SearchContent(
                 }
             }
         }
-        FilledTonalButton(onClick = { reload++ }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) { Text("بحث") }
-        message?.takeIf { keyed.isNotEmpty() && it != "لا نتائج" }?.let { Text(it, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(vertical = 8.dp)) }
+        FilledTonalButton(onClick = { reload++ }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) { Text(stringResource(R.string.search)) }
+        message?.takeIf { keyed.isNotEmpty() && it != noResults }?.let { Text(it, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(vertical = 8.dp)) }
         if (loading) {
             Spacer(Modifier.height(12.dp))
             AnonLoader(Modifier.align(Alignment.CenterHorizontally), 44.dp)
@@ -213,16 +217,16 @@ private fun SearchContent(
         when {
             keyed.isEmpty() -> EmptyState(
                 Icons.Rounded.Key,
-                "أضف مفتاح مزوّد",
+                stringResource(R.string.sub_add_key),
                 Modifier.weight(1f),
-                body = "البحث يحتاج مفتاح API واحد على الأقل",
-                action = { FilledTonalButton(onClick = { showKeys = true }) { Text("مفاتيح المزوّدين") } },
+                body = stringResource(R.string.sub_need_key_body),
+                action = { FilledTonalButton(onClick = { showKeys = true }) { Text(stringResource(R.string.sub_provider_keys)) } },
             )
-            message == "لا نتائج" -> EmptyState(
+            message == noResults -> EmptyState(
                 Icons.Rounded.SearchOff,
-                "لا نتائج",
+                noResults,
                 Modifier.weight(1f),
-                body = "جرّب عنواناً أقصر أو لغة أخرى",
+                body = stringResource(R.string.sub_try_shorter),
             )
             else -> LazyColumn(Modifier.weight(1f)) {
                 items(results, key = { it.providerId + it.id }) { r ->
@@ -253,8 +257,8 @@ private fun ResultRow(r: SubResult, busy: Boolean, onClick: () -> Unit, modifier
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(SubKeys.LABELS[r.providerId] ?: r.providerId, style = MaterialTheme.typography.labelMedium)
-                    if (r.hashMatch) Text("تطابق البصمة", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.tertiary)
-                    r.downloads?.let { Text("$it تنزيل", style = MaterialTheme.typography.labelMedium) }
+                    if (r.hashMatch) Text(stringResource(R.string.sub_hash_match), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.tertiary)
+                    r.downloads?.let { Text(pluralStringResource(R.plurals.sub_downloads, it, it.toString()), style = MaterialTheme.typography.labelMedium) }
                 }
             }
             if (busy) {
@@ -269,10 +273,10 @@ private fun KeysDialog(keys: SubKeys, onDismiss: () -> Unit, onSaved: () -> Unit
     val fields = SubKeys.LABELS.keys.map { id -> id to remember(id) { mutableStateOf(keys.key(id).orEmpty()) } }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("مفاتيح المزوّدين") },
+        title = { Text(stringResource(R.string.sub_provider_keys)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("تُحفظ على الجهاز فقط، ولا تُرسل إلا إلى مزوّدها.", style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.sub_keys_local), style = MaterialTheme.typography.bodyMedium)
                 fields.forEach { (id, state) ->
                     OutlinedTextField(
                         value = state.value,
@@ -288,8 +292,8 @@ private fun KeysDialog(keys: SubKeys, onDismiss: () -> Unit, onSaved: () -> Unit
             TextButton(onClick = {
                 fields.forEach { (id, state) -> keys.save(id, state.value) }
                 onSaved()
-            }) { Text("حفظ") }
+            }) { Text(stringResource(R.string.save)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("إلغاء") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }

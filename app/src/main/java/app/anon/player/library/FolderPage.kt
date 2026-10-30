@@ -1,5 +1,10 @@
 package app.anon.player.library
 
+import app.anon.player.R
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
+import androidx.annotation.StringRes
+
 import android.net.Uri
 import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
@@ -68,8 +73,8 @@ import app.anon.player.ui.EmptyState
 import app.anon.player.ui.SearchPill
 import kotlinx.coroutines.launch
 
-private enum class SortBy(val label: String) { Name("الاسم"), Date("التاريخ"), Size("الحجم"), Duration("المدة") }
-private enum class QuickFilter(val label: String) { All("الكل"), Unplayed("لم يُشاهد"), FourK("4K") }
+private enum class SortBy(@StringRes val label: Int) { Name(R.string.lib_name), Date(R.string.lib_date), Size(R.string.lib_size), Duration(R.string.lib_duration) }
+private enum class QuickFilter(@StringRes val label: Int) { All(R.string.lib_filter_all), Unplayed(R.string.lib_filter_unplayed), FourK(R.string.lib_filter_4k) }
 
 /** ش-03: one folder. `folder` is the MediaStore BUCKET_ID. */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -121,24 +126,24 @@ fun FolderBody(folder: String, onBack: () -> Unit, onPlay: (Uri, String) -> Unit
                     Column {
                         Text(videos.firstOrNull()?.folder ?: "", style = MaterialTheme.typography.titleMedium,
                             maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text("${videos.size} فيديو · ${formatSize(videos.sumOf { it.sizeBytes })}",
+                        Text("${pluralStringResource(R.plurals.lib_video_count, videos.size, videos.size)} · ${formatSize(videos.sumOf { it.sizeBytes })}",
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "رجوع") } },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back)) } },
                 actions = {
                     IconButton(onClick = { searching = !searching; if (!searching) query = "" }) {
-                        Icon(Icons.Rounded.Search, "بحث")
+                        Icon(Icons.Rounded.Search, stringResource(R.string.search))
                     }
                     IconButton(onClick = { grid = !grid }) {
-                        Icon(if (grid) Icons.Rounded.ViewList else Icons.Rounded.GridView, if (grid) "قائمة" else "شبكة")
+                        Icon(if (grid) Icons.Rounded.ViewList else Icons.Rounded.GridView, stringResource(if (grid) R.string.lib_view_list else R.string.lib_view_grid))
                     }
                     Box {
-                        IconButton(onClick = { sortMenu = true }) { Icon(Icons.Rounded.Sort, "ترتيب") }
+                        IconButton(onClick = { sortMenu = true }) { Icon(Icons.Rounded.Sort, stringResource(R.string.lib_sort)) }
                         DropdownMenu(expanded = sortMenu, onDismissRequest = { sortMenu = false }) {
                             SortBy.entries.forEach { s ->
                                 DropdownMenuItem(
-                                    text = { Text(s.label) },
+                                    text = { Text(stringResource(s.label)) },
                                     onClick = { sort = s; sortMenu = false },
                                     trailingIcon = { if (s == sort) Icon(Icons.Rounded.Check, null) },
                                 )
@@ -156,7 +161,7 @@ fun FolderBody(folder: String, onBack: () -> Unit, onPlay: (Uri, String) -> Unit
                     enter = fadeIn(tween(200)) + expandVertically(),
                     exit = fadeOut(tween(150)) + shrinkVertically(),
                 ) {
-                    SearchPill(query, { query = it }, "ابحث في هذا المجلد",
+                    SearchPill(query, { query = it }, stringResource(R.string.lib_search_folder),
                         Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp))
                 }
                 Row(
@@ -164,11 +169,11 @@ fun FolderBody(folder: String, onBack: () -> Unit, onPlay: (Uri, String) -> Unit
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     QuickFilter.entries.forEach { q ->
-                        FilterChip(selected = quick == q, onClick = { quick = q }, label = { Text(q.label) })
+                        FilterChip(selected = quick == q, onClick = { quick = q }, label = { Text(stringResource(q.label)) })
                     }
                 }
                 if (shown.isEmpty()) {
-                    EmptyState(Icons.Rounded.SearchOff, "لا فيديوهات هنا", Modifier.weight(1f), body = "غيّر الفلتر أو كلمة البحث")
+                    EmptyState(Icons.Rounded.SearchOff, stringResource(R.string.lib_no_videos_here), Modifier.weight(1f), body = stringResource(R.string.lib_no_videos_here_body))
                 } else if (grid) {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(2),
@@ -209,13 +214,13 @@ fun FolderBody(folder: String, onBack: () -> Unit, onPlay: (Uri, String) -> Unit
                     Row(Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text("${picked.size}", style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.padding(horizontal = 12.dp))
-                        IconButton(onClick = { actions.share(picked) }) { Icon(Icons.Rounded.Share, "مشاركة") }
+                        IconButton(onClick = { actions.share(picked) }) { Icon(Icons.Rounded.Share, stringResource(R.string.lib_share)) }
                         if (Build.VERSION.SDK_INT >= 30) {
                             IconButton(onClick = { actions.trash(picked) { selected = emptySet() } }) {
-                                Icon(Icons.Rounded.Delete, "نقل إلى السلة", tint = MaterialTheme.colorScheme.error)
+                                Icon(Icons.Rounded.Delete, stringResource(R.string.lib_trash), tint = MaterialTheme.colorScheme.error)
                             }
                         }
-                        IconButton(onClick = { selected = emptySet() }) { Icon(Icons.Rounded.Close, "إلغاء التحديد") }
+                        IconButton(onClick = { selected = emptySet() }) { Icon(Icons.Rounded.Close, stringResource(R.string.lib_clear_selection)) }
                     }
                 }
             }
