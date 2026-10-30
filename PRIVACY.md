@@ -1,8 +1,8 @@
-# Privacy policy — Anon Player
+# Privacy policy — Shoebill
 
 Last updated: 2026-10-30
 
-Anon Player does not collect, store or share personal data. It has no accounts, no ads and no analytics.
+Shoebill does not collect, store or share personal data. It has no accounts, no ads and no analytics.
 
 **What stays on your phone.** Your videos, watch positions, settings, playlists and everything in the vault stay
 on the device. Vault files are encrypted. Android backup is turned off for the app, so its data is not copied to
@@ -21,4 +21,4 @@ any cloud.
 - Biometrics (optional): to unlock the vault with a fingerprint.
 - Internet: subtitle search and network playback, as described above.
 
-**Contact.** Open an issue at https://github.com/altyb/anon-player/issues
+**Contact.** Open an issue at https://github.com/altyb/shoebill/issues

@@ -128,12 +128,7 @@ fun HomeScreen(
                 val patternColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f)
                 LargeTopAppBar(
                     title = {
-                        Text(
-                            buildAnnotatedString {
-                                withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append("Anon") }
-                                withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Light)) { append(" Player") }
-                            },
-                        )
+                        Text("Shoebill", fontWeight = FontWeight.Bold)
                     },
                     navigationIcon = { Logo(onLongClick = onVault) },
                     actions = { IconButton(onClick = onSettings) { Icon(Icons.Rounded.Settings, stringResource(R.string.settings_title)) } },
@@ -222,7 +217,7 @@ private fun Logo(onLongClick: () -> Unit) {
         contentAlignment = Alignment.Center,
     ) {
         Image(
-            painterResource(R.drawable.ic_launcher_monochrome), "Anon Player", Modifier.requiredSize(54.dp),
+            painterResource(R.drawable.ic_launcher_monochrome), "Shoebill", Modifier.requiredSize(54.dp),
             colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurface),
         )
     }

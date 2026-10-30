@@ -13,14 +13,14 @@ android {
         applicationId = "app.anon.player"
         minSdk = 26
         targetSdk = 36
-        versionCode = 2
-        versionName = "0.1.1"
+        versionCode = 3
+        versionName = "0.2.0"
         // phones by default; the emulator build passes -PanonAbis=x86_64
         ndk { abiFilters += (providers.gradleProperty("anonAbis").orNull ?: "arm64-v8a,armeabi-v7a").split(",") }
         // each worktree agent installs as its own app: ./gradlew installDebug -PanonSuffix=.player
         providers.gradleProperty("anonSuffix").orNull?.let { applicationIdSuffix = it }
         // a test copy installed next to the real app must not look like it on the home screen
-        manifestPlaceholders["appLabel"] = if (providers.gradleProperty("anonSuffix").isPresent) "Anon QA" else "Anon Player"
+        manifestPlaceholders["appLabel"] = if (providers.gradleProperty("anonSuffix").isPresent) "Anon QA" else "Shoebill"
     }
 
     // release key lives outside the repo (~/.secrets/anon-player-release.properties); without it release is debug-signed
