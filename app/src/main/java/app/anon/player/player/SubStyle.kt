@@ -1,5 +1,7 @@
 package app.anon.player.player
 
+import app.anon.player.R
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -45,10 +47,10 @@ fun applySubStyle(player: MpvPlayer, s: SubStyle) {
 private fun argb(c: Long) = "#%08X".format(Locale.ROOT, c)
 
 val SubPresets = listOf(
-    "افتراضي" to SubStyle(),
-    "أصفر كلاسيكي" to SubStyle(color = 0xFFFFE14D),
-    "صندوق" to SubStyle(box = true),
-    "كبير" to SubStyle(scale = 1.4f, outline = 3f),
+    R.string.sub_preset_default to SubStyle(),
+    R.string.sub_preset_yellow to SubStyle(color = 0xFFFFE14D),
+    R.string.sub_preset_box to SubStyle(box = true),
+    R.string.sub_preset_large to SubStyle(scale = 1.4f, outline = 3f),
 )
 
 private val SubColors = listOf(0xFFFFFFFF, 0xFFFFE14D, 0xFF4DE8FF, 0xFF7CFF6B, 0xFFFF7AC8, 0xFFFFA64D)
@@ -58,10 +60,10 @@ fun SubStyleTab(style: SubStyle, onChange: (SubStyle) -> Unit) {
     Column(Modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             SubPresets.forEach { (name, preset) ->
-                FilterChip(selected = style.copy(pos = preset.pos) == preset, onClick = { onChange(preset.copy(pos = style.pos)) }, label = { Text(name) })
+                FilterChip(selected = style.copy(pos = preset.pos) == preset, onClick = { onChange(preset.copy(pos = style.pos)) }, label = { Text(stringResource(name)) })
             }
         }
-        SectionTitle("اللون")
+        SectionTitle(stringResource(R.string.sub_color))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             SubColors.forEach { c ->
                 Box(
@@ -71,25 +73,25 @@ fun SubStyleTab(style: SubStyle, onChange: (SubStyle) -> Unit) {
                 )
             }
         }
-        SectionTitle("الحجم \u2066${(style.scale * 100).roundToInt()}%\u2069")
+        SectionTitle(stringResource(R.string.sub_size, (style.scale * 100).roundToInt().toString()))
         Slider(value = style.scale, onValueChange = { onChange(style.copy(scale = it)) }, valueRange = 0.6f..2f)
-        SectionTitle("الحدود ${style.outline.roundToInt()}")
+        SectionTitle(stringResource(R.string.sub_outline, style.outline.roundToInt().toString()))
         Slider(value = style.outline, onValueChange = { onChange(style.copy(outline = it)) }, valueRange = 0f..6f, enabled = !style.box)
-        SwitchRow("خلفية", style.box) { onChange(style.copy(box = it)) }
+        SwitchRow(stringResource(R.string.sub_background), style.box) { onChange(style.copy(box = it)) }
         if (style.box) {
-            SectionTitle("شفافية الخلفية \u2066${(style.boxAlpha * 100).roundToInt()}%\u2069")
+            SectionTitle(stringResource(R.string.sub_background_opacity, (style.boxAlpha * 100).roundToInt().toString()))
             Slider(value = style.boxAlpha, onValueChange = { onChange(style.copy(boxAlpha = it)) }, valueRange = 0.2f..1f)
         }
-        SectionTitle("الموضع ${style.pos}")
+        SectionTitle(stringResource(R.string.sub_position, style.pos.toString()))
         Slider(value = style.pos.toFloat(), onValueChange = { onChange(style.copy(pos = it.roundToInt())) }, valueRange = 0f..100f)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("أعلى", style = MaterialTheme.typography.labelMedium)
-            Text("أسفل", style = MaterialTheme.typography.labelMedium)
+            Text(stringResource(R.string.sub_top), style = MaterialTheme.typography.labelMedium)
+            Text(stringResource(R.string.sub_bottom), style = MaterialTheme.typography.labelMedium)
         }
-        SwitchRow("عريض", style.bold) { onChange(style.copy(bold = it)) }
-        SwitchRow("فرض أسلوبي على ترجمات ASS", style.force) { onChange(style.copy(force = it)) }
+        SwitchRow(stringResource(R.string.sub_bold), style.bold) { onChange(style.copy(bold = it)) }
+        SwitchRow(stringResource(R.string.sub_force_style), style.force) { onChange(style.copy(force = it)) }
         Text(
-            "ترجمات الأنمي لها ألوانها الخاصة؛ فعّل هذا لتطبيق اختياراتك",
+            stringResource(R.string.sub_force_style_hint),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

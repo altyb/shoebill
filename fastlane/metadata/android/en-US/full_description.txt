@@ -20,3 +20,5 @@ Vault
 - Encrypted backup and restore (`.anonvault` file, password-protected).
 - Screenshots and screen recording blocked inside the vault.
 
+
+Open source (GPL-3.0): https://github.com/altyb/anon-player

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shared words. English is the default; Arabic is in values-ar. Each area keeps its own strings_<area>.xml. -->
+<resources>
+    <string name="language">Language</string>
+    <string name="language_system">Phone language</string>
+    <string name="cancel">Cancel</string>
+    <string name="back">Back</string>
+    <string name="delete">Delete</string>
+    <string name="off">Off</string>
+    <string name="clear">Clear</string>
+    <string name="no_results">No results</string>
+    <string name="play">Play</string>
+    <string name="pause">Pause</string>
+    <string name="rename">Rename</string>
+    <string name="remove">Remove</string>
+    <string name="change">Change</string>
+    <string name="confirm">Confirm</string>
+    <string name="search">Search</string>
+    <string name="close">Close</string>
+    <string name="save">Save</string>
+    <string name="ok">OK</string>
+</resources>

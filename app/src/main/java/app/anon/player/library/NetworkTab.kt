@@ -1,5 +1,8 @@
 package app.anon.player.library
 
+import app.anon.player.R
+import androidx.compose.ui.res.stringResource
+
 import android.content.ClipboardManager
 import android.content.Context
 import android.net.Uri
@@ -62,27 +65,27 @@ fun NetworkTab(onPlay: (Uri, String) -> Unit, modifier: Modifier = Modifier) {
 
     Column(modifier.fillMaxSize().padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            SearchPill(url, { url = it }, "رابط بث: https / m3u8 / rtsp", Modifier.weight(1f), onSearch = { if (valid) play(url) })
+            SearchPill(url, { url = it }, stringResource(R.string.lib_stream_hint), Modifier.weight(1f), onSearch = { if (valid) play(url) })
             IconButton(onClick = {
                 val clip = (ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).primaryClip
                 clip?.getItemAt(0)?.coerceToText(ctx)?.toString()?.let { url = it.trim() }
-            }) { Icon(Icons.Rounded.ContentPaste, "لصق") }
+            }) { Icon(Icons.Rounded.ContentPaste, stringResource(R.string.lib_paste)) }
         }
         Spacer(Modifier.height(8.dp))
         FilledTonalButton(onClick = { play(url) }, enabled = valid, modifier = Modifier.fillMaxWidth()) {
             Icon(Icons.Rounded.PlayArrow, null)
-            Text("تشغيل", Modifier.padding(start = 8.dp))
+            Text(stringResource(R.string.play), Modifier.padding(start = 8.dp))
         }
         if (url.isNotBlank() && !valid) {
-            Text("الرابط يبدأ بـ http:// أو https:// أو rtsp://", style = MaterialTheme.typography.bodySmall,
+            Text(stringResource(R.string.lib_stream_invalid), style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 6.dp))
         }
         Spacer(Modifier.height(16.dp))
         if (recents.isEmpty()) {
-            EmptyState(Icons.Rounded.Wifi, "شغّل فيديو من رابط", body = "الصق رابط بث أو ملف على الإنترنت، ويُحفظ هنا للمرة القادمة")
+            EmptyState(Icons.Rounded.Wifi, stringResource(R.string.lib_network_empty), body = stringResource(R.string.lib_network_empty_body))
         } else {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("آخر الروابط", style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.lib_recent_links), style = MaterialTheme.typography.titleSmall)
             }
             LazyColumn {
                 items(recents, key = { it }) { r ->
@@ -90,7 +93,7 @@ fun NetworkTab(onPlay: (Uri, String) -> Unit, modifier: Modifier = Modifier) {
                         headlineContent = { Text(r, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                         leadingContent = { Icon(Icons.Rounded.Link, null) },
                         trailingContent = {
-                            IconButton(onClick = { Streams.remove(ctx, r); recents = Streams.list(ctx) }) { Icon(Icons.Rounded.Close, "إزالة") }
+                            IconButton(onClick = { Streams.remove(ctx, r); recents = Streams.list(ctx) }) { Icon(Icons.Rounded.Close, stringResource(R.string.remove)) }
                         },
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                         modifier = Modifier.animateItem().clickable { play(r) },

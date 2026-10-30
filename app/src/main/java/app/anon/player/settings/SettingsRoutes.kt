@@ -1,5 +1,7 @@
 package app.anon.player.settings
 
+import app.anon.player.Lang
+import app.anon.player.R
 import app.anon.player.data.PlaybackStore
 import android.content.Context
 import android.os.Build
@@ -54,6 +56,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -76,55 +79,70 @@ fun SettingsScreen(onBack: () -> Unit, onAppearance: () -> Unit) {
     val s by app.settings.collectAsState()
     var decoderDialog by remember { mutableStateOf(false) }
     var clearDialog by remember { mutableStateOf(false) }
+    var langDialog by remember { mutableStateOf(false) }
+    val lang = remember { Lang.get(context) }
     val version = remember { runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: "?" }
 
     Scaffold(topBar = {
         TopAppBar(
-            title = { Text("الإعدادات") },
-            navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "رجوع") } },
+            title = { Text(stringResource(R.string.settings_title)) },
+            navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back)) } },
         )
     }) { pad ->
         Column(
             Modifier.fillMaxSize().padding(pad).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            GroupTitle("المشغّل")
+            GroupTitle(stringResource(R.string.settings_player))
             val player = groupShapes(4)
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 SettingRow(
-                    title = "فك الترميز", shape = player[0], subtitle = s.decoder.description,
+                    title = stringResource(R.string.settings_decoder), shape = player[0], subtitle = stringResource(s.decoder.description),
                     onClick = { decoderDialog = true }, trailing = { Text(s.decoder.label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary) },
                 )
-                SwitchRow("استئناف تلقائي", player[1], s.autoResume, "متابعة من آخر موضع توقّف عنده") { v -> app.update { it.copy(autoResume = v) } }
-                SwitchRow("التالي في المجلد", player[2], s.playNext, "تشغيل الملف التالي تلقائياً") { v -> app.update { it.copy(playNext = v) } }
-                SwitchRow("التشغيل في الخلفية", player[3], s.backgroundAudio, "متابعة الصوت عند إغلاق الشاشة") { v -> app.update { it.copy(backgroundAudio = v) } }
+                SwitchRow(stringResource(R.string.settings_auto_resume), player[1], s.autoResume, stringResource(R.string.settings_auto_resume_sub)) { v -> app.update { it.copy(autoResume = v) } }
+                SwitchRow(stringResource(R.string.settings_play_next), player[2], s.playNext, stringResource(R.string.settings_play_next_sub)) { v -> app.update { it.copy(playNext = v) } }
+                SwitchRow(stringResource(R.string.settings_background), player[3], s.backgroundAudio, stringResource(R.string.settings_background_sub)) { v -> app.update { it.copy(backgroundAudio = v) } }
             }
 
-            GroupTitle("الإيماءات")
-            SwitchRow("الإيماءات", groupShapes(1)[0], s.gestures, "سحب على الشاشة لتغيير السطوع والصوت والتقديم") { v -> app.update { it.copy(gestures = v) } }
+            GroupTitle(stringResource(R.string.settings_gestures))
+            SwitchRow(stringResource(R.string.settings_gestures), groupShapes(1)[0], s.gestures, stringResource(R.string.settings_gestures_sub)) { v -> app.update { it.copy(gestures = v) } }
 
-            GroupTitle("المظهر")
+            GroupTitle(stringResource(R.string.language))
+            val langNames = mapOf("" to stringResource(R.string.language_system), "ar" to "العربية", "en" to "English")
             SettingRow(
-                title = "المظهر", shape = groupShapes(1)[0], subtitle = "الألوان والنمط والوضع والتباين", onClick = onAppearance,
+                title = stringResource(R.string.language), shape = groupShapes(1)[0], onClick = { langDialog = true },
+                trailing = { Text(langNames[lang].orEmpty(), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary) },
+            )
+
+            GroupTitle(stringResource(R.string.settings_appearance))
+            SettingRow(
+                title = stringResource(R.string.settings_appearance), shape = groupShapes(1)[0], subtitle = stringResource(R.string.settings_appearance_sub), onClick = onAppearance,
                 trailing = { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
             )
 
-            GroupTitle("الخصوصية")
+            GroupTitle(stringResource(R.string.settings_privacy))
             val privacy = groupShapes(2)
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                SwitchRow("سجل المشاهدة", privacy[0], s.keepHistory, "حفظ مكان التوقّف لكل فيديو") { v -> app.update { it.copy(keepHistory = v) } }
-                SettingRow(title = "مسح السجل", shape = privacy[1], subtitle = "حذف كل مواضع التوقّف المحفوظة", onClick = { clearDialog = true })
+                SwitchRow(stringResource(R.string.settings_history), privacy[0], s.keepHistory, stringResource(R.string.settings_history_sub)) { v -> app.update { it.copy(keepHistory = v) } }
+                SettingRow(title = stringResource(R.string.settings_clear_history), shape = privacy[1], subtitle = stringResource(R.string.settings_clear_history_sub), onClick = { clearDialog = true })
             }
 
-            GroupTitle("حول")
-            SettingRow(title = "الإصدار", shape = groupShapes(1)[0], trailing = { Text(version, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant) })
+            GroupTitle(stringResource(R.string.settings_about))
+            val about = groupShapes(3)
+            val open = { url: String -> runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))) } }
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                SettingRow(title = stringResource(R.string.settings_version), shape = about[0], trailing = { Text(version, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant) })
+                SettingRow(title = stringResource(R.string.settings_privacy_policy), shape = about[1], subtitle = stringResource(R.string.settings_privacy_policy_sub), onClick = { open("https://github.com/altyb/anon-player/blob/main/PRIVACY.md") })
+                SettingRow(title = stringResource(R.string.settings_source), shape = about[2], subtitle = stringResource(R.string.settings_source_sub), onClick = { open("https://github.com/altyb/anon-player") })
+            }
         }
     }
 
     if (decoderDialog) {
         AlertDialog(
             onDismissRequest = { decoderDialog = false },
-            title = { Text("فك الترميز") },
+            title = { Text(stringResource(R.string.settings_decoder)) },
             text = {
                 Column {
                     Decoder.entries.forEach { d ->
@@ -141,28 +159,56 @@ fun SettingsScreen(onBack: () -> Unit, onAppearance: () -> Unit) {
                             Spacer(Modifier.width(12.dp))
                             Column {
                                 Text(d.label, style = MaterialTheme.typography.bodyLarge)
-                                Text(d.description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(stringResource(d.description), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = { decoderDialog = false }) { Text("إلغاء") } },
+            confirmButton = { TextButton(onClick = { decoderDialog = false }) { Text(stringResource(R.string.cancel)) } },
+        )
+    }
+
+    if (langDialog) {
+        val activity = context as? android.app.Activity ?: (context as? android.content.ContextWrapper)?.baseContext as? android.app.Activity
+        AlertDialog(
+            onDismissRequest = { langDialog = false },
+            title = { Text(stringResource(R.string.language)) },
+            text = {
+                Column {
+                    listOf("" to stringResource(R.string.language_system), "ar" to "العربية", "en" to "English").forEach { (tag, name) ->
+                        Row(
+                            Modifier.fillMaxWidth()
+                                .selectable(selected = tag == lang, role = Role.RadioButton, onClick = {
+                                    langDialog = false
+                                    activity?.let { Lang.set(it, tag) }
+                                })
+                                .padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RadioButton(selected = tag == lang, onClick = null)
+                            Spacer(Modifier.width(12.dp))
+                            Text(name, style = MaterialTheme.typography.bodyLarge)
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { langDialog = false }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 
     if (clearDialog) {
         AlertDialog(
             onDismissRequest = { clearDialog = false },
-            title = { Text("مسح سجل المشاهدة؟") },
-            text = { Text("ستُحذف كل مواضع التوقّف المحفوظة. لا يمكن التراجع.") },
+            title = { Text(stringResource(R.string.settings_clear_history_q)) },
+            text = { Text(stringResource(R.string.settings_clear_history_body)) },
             confirmButton = {
                 TextButton(onClick = {
                     PlaybackStore.get(context).clearAll()
                     clearDialog = false
-                }) { Text("مسح") }
+                }) { Text(stringResource(R.string.clear)) }
             },
-            dismissButton = { TextButton(onClick = { clearDialog = false }) { Text("إلغاء") } },
+            dismissButton = { TextButton(onClick = { clearDialog = false }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 }
@@ -173,10 +219,10 @@ private val Decoder.label: String get() = when (this) {
     Decoder.SW -> "SW"
 }
 
-private val Decoder.description: String get() = when (this) {
-    Decoder.HW -> "تسريع بالعتاد، الأسرع والأقل استهلاكاً"
-    Decoder.HWPlus -> "تسريع بالعتاد مع نسخ الإطارات، أوسع توافقاً"
-    Decoder.SW -> "فك ترميز بالمعالج، الأوسع توافقاً"
+private val Decoder.description: Int get() = when (this) {
+    Decoder.HW -> R.string.settings_decoder_hw
+    Decoder.HWPlus -> R.string.settings_decoder_hwplus
+    Decoder.SW -> R.string.settings_decoder_sw
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
@@ -191,8 +237,8 @@ fun AppearanceScreen(onBack: () -> Unit) {
 
     Scaffold(topBar = {
         TopAppBar(
-            title = { Text("المظهر") },
-            navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "رجوع") } },
+            title = { Text(stringResource(R.string.settings_appearance)) },
+            navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back)) } },
         )
     }) { pad ->
         Column(
@@ -201,11 +247,14 @@ fun AppearanceScreen(onBack: () -> Unit) {
         ) {
             PreviewCard()
 
-            GroupTitle("مصدر الألوان")
+            GroupTitle(stringResource(R.string.settings_color_source))
+            val fromWallpaper = stringResource(R.string.settings_src_wallpaper)
+            val preset = stringResource(R.string.settings_src_preset)
+            val custom = stringResource(R.string.settings_src_custom)
             val sources = buildList {
-                if (hasWallpaper) add(ColorSource.Wallpaper to "من الخلفية")
-                add(ColorSource.Preset to "جاهزة")
-                add(ColorSource.Custom to "مخصّص")
+                if (hasWallpaper) add(ColorSource.Wallpaper to fromWallpaper)
+                add(ColorSource.Preset to preset)
+                add(ColorSource.Custom to custom)
             }
             Choice(sources, s.colorSource) { src -> app.update { it.copy(colorSource = src) } }
 
@@ -224,7 +273,7 @@ fun AppearanceScreen(onBack: () -> Unit) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(40.dp).clip(CircleShape).background(Color(s.seed)))
                         Spacer(Modifier.width(12.dp))
-                        Text("الدرجة ${hue.toInt()}°", style = MaterialTheme.typography.bodyLarge)
+                        Text(stringResource(R.string.settings_hue, hue.toInt()), style = MaterialTheme.typography.bodyLarge)
                     }
                     Slider(
                         value = hue, valueRange = 0f..360f,
@@ -234,11 +283,11 @@ fun AppearanceScreen(onBack: () -> Unit) {
                 }
             }
 
-            GroupTitle("النمط")
+            GroupTitle(stringResource(R.string.settings_style))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(
-                    SchemeStyle.TonalSpot to "هادئ", SchemeStyle.Vibrant to "نابض", SchemeStyle.Expressive to "تعبيري",
-                    SchemeStyle.Fidelity to "وفيّ", SchemeStyle.Monochrome to "أحادي",
+                    SchemeStyle.TonalSpot to stringResource(R.string.settings_style_tonal), SchemeStyle.Vibrant to stringResource(R.string.settings_style_vibrant), SchemeStyle.Expressive to stringResource(R.string.settings_style_expressive),
+                    SchemeStyle.Fidelity to stringResource(R.string.settings_style_fidelity), SchemeStyle.Monochrome to stringResource(R.string.settings_style_mono),
                 ).forEach { (st, label) ->
                     FilterChip(
                         selected = s.style == st, onClick = { app.update { it.copy(style = st) } }, label = { Text(label) },
@@ -247,15 +296,15 @@ fun AppearanceScreen(onBack: () -> Unit) {
                 }
             }
 
-            GroupTitle("الوضع")
+            GroupTitle(stringResource(R.string.settings_mode))
             Choice(
-                listOf(DarkMode.System to "النظام", DarkMode.Light to "فاتح", DarkMode.Dark to "داكن"), s.darkMode,
+                listOf(DarkMode.System to stringResource(R.string.settings_mode_system), DarkMode.Light to stringResource(R.string.settings_mode_light), DarkMode.Dark to stringResource(R.string.settings_mode_dark)), s.darkMode,
             ) { m -> app.update { it.copy(darkMode = m) } }
-            SwitchRow("أسود حقيقي", groupShapes(1)[0], s.amoled, "خلفية سوداء كاملة لشاشات AMOLED") { v -> app.update { it.copy(amoled = v) } }
+            SwitchRow(stringResource(R.string.settings_amoled), groupShapes(1)[0], s.amoled, stringResource(R.string.settings_amoled_sub)) { v -> app.update { it.copy(amoled = v) } }
 
-            GroupTitle("التباين")
+            GroupTitle(stringResource(R.string.settings_contrast))
             Choice(
-                listOf(Contrast.Standard to "عادي", Contrast.Medium to "متوسط", Contrast.High to "عالٍ"), s.contrast,
+                listOf(Contrast.Standard to stringResource(R.string.settings_contrast_standard), Contrast.Medium to stringResource(R.string.settings_contrast_medium), Contrast.High to stringResource(R.string.settings_contrast_high)), s.contrast,
             ) { c -> app.update { it.copy(contrast = c) } }
         }
     }
@@ -287,9 +336,9 @@ private fun PreviewCard() {
         colors = CardDefaults.cardColors(containerColor = c.surfaceContainer),
     ) {
         Row(Modifier.fillMaxWidth().padding(16.dp).height(110.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Block("أساسي", c.primary, c.onPrimary, Modifier.weight(1.4f).fillMaxSize())
-            Block("ثانوي", c.secondaryContainer, c.onSecondaryContainer, Modifier.weight(1f).fillMaxSize())
-            Block("ثالث", c.tertiaryContainer, c.onTertiaryContainer, Modifier.weight(1f).fillMaxSize())
+            Block(stringResource(R.string.settings_primary), c.primary, c.onPrimary, Modifier.weight(1.4f).fillMaxSize())
+            Block(stringResource(R.string.settings_secondary), c.secondaryContainer, c.onSecondaryContainer, Modifier.weight(1f).fillMaxSize())
+            Block(stringResource(R.string.settings_tertiary), c.tertiaryContainer, c.onTertiaryContainer, Modifier.weight(1f).fillMaxSize())
         }
     }
 }

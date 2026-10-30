@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- overlay -->
+    <string name="player_subtitles">الترجمة</string>
+    <string name="player_audio">الصوت</string>
+    <string name="player_more">المزيد</string>
+    <string name="player_previous">السابق</string>
+    <string name="player_next">التالي</string>
+    <string name="player_rewind_10">−10 ث</string>
+    <string name="player_forward_10">+10 ث</string>
+    <string name="player_lock">قفل</string>
+    <string name="player_rotate">تدوير</string>
+    <string name="player_aspect">نسبة العرض</string>
+    <string name="player_aspect_auto">تلقائي</string>
+    <string name="player_locked_hold">قفل: اضغط مطولاً للفتح</string>
+    <string name="player_hold_unlock">اضغط مطولاً للفتح</string>
+    <string name="player_next_in">التالي خلال %1$s</string>
+    <string name="player_play_now">شغّل الآن</string>
+    <string name="player_seconds">%1$s ث</string>
+    <!-- notices -->
+    <string name="player_open_failed">تعذّر فتح الملف: لم يعد موجوداً</string>
+    <string name="player_resume_from">تابع من %1$s</string>
+    <string name="player_from_start">من البداية</string>
+    <string name="player_switched_sw">تحويل إلى SW</string>
+    <string name="player_sleep_done">مؤقت النوم: توقّف الفيديو</string>
+    <string name="player_shot_saved">حُفظت اللقطة في الكاش</string>
+    <string name="player_subtitle_fallback">ترجمة</string>
+    <!-- side panels -->
+    <string name="player_track_n">مسار %1$s</string>
+    <string name="player_tracks">المسارات</string>
+    <string name="player_no_audio_tracks">لا مسارات صوت</string>
+    <string name="player_speed">السرعة</string>
+    <string name="player_volume_boost">تضخيم الصوت ⁦%1$s%%⁩</string>
+    <string name="player_decoder">فك الترميز</string>
+    <string name="player_ab_loop">تكرار A-B</string>
+    <string name="player_ab_set_a">A هنا</string>
+    <string name="player_ab_set_b">B هنا</string>
+    <string name="player_sleep_timer">مؤقت النوم</string>
+    <string name="player_minutes_short">%1$s د</string>
+    <string name="player_crop_on">قص الإطار: مفعّل</string>
+    <string name="player_crop_off">قص الإطار: معطّل</string>
+    <string name="player_screenshot">لقطة شاشة</string>
+    <!-- subtitles: track tab -->
+    <string name="sub_tab_track">المسار</string>
+    <string name="sub_tab_style">الشكل</string>
+    <string name="sub_tab_timing">التوقيت</string>
+    <string name="sub_file">ملف</string>
+    <string name="sub_second_open">ترجمة ثانية ▴</string>
+    <string name="sub_second_closed">ترجمة ثانية ▾</string>
+    <string name="sub_added">أُضيفت الترجمة</string>
+    <string name="sub_size_hud">حجم الترجمة ⁦%1$s%%⁩</string>
+    <string name="sub_position_hud">موضع الترجمة %1$s</string>
+    <!-- subtitles: style tab -->
+    <string name="sub_preset_default">افتراضي</string>
+    <string name="sub_preset_yellow">أصفر كلاسيكي</string>
+    <string name="sub_preset_box">صندوق</string>
+    <string name="sub_preset_large">كبير</string>
+    <string name="sub_color">اللون</string>
+    <string name="sub_size">الحجم ⁦%1$s%%⁩</string>
+    <string name="sub_outline">الحدود %1$s</string>
+    <string name="sub_background">خلفية</string>
+    <string name="sub_background_opacity">شفافية الخلفية ⁦%1$s%%⁩</string>
+    <string name="sub_position">الموضع %1$s</string>
+    <string name="sub_top">أعلى</string>
+    <string name="sub_bottom">أسفل</string>
+    <string name="sub_bold">عريض</string>
+    <string name="sub_force_style">فرض أسلوبي على ترجمات ASS</string>
+    <string name="sub_force_style_hint">ترجمات الأنمي لها ألوانها الخاصة؛ فعّل هذا لتطبيق اختياراتك</string>
+    <!-- subtitles: timing tab -->
+    <string name="sub_fps_srt_only">تحويل الإطارات يعمل على ملف SRT خارجي فقط</string>
+    <string name="sub_fps_done">أُعيد حساب التوقيت</string>
+    <string name="sub_reset">صفر</string>
+    <string name="sub_no_cue">لا ترجمة ظاهرة الآن</string>
+    <string name="sub_sync_no_line">لا سطر ظاهر الآن. انتظر حتى يظهر السطر ثم انقر</string>
+    <string name="sub_sync_done">ضُبط التأخير على هذا السطر</string>
+    <string name="sub_sync_this_line">هذا السطر الآن</string>
+    <string name="sub_auto_sync_soon">مزامنة تلقائية: قريباً</string>
+    <string name="sub_fps_convert">تحويل الإطارات</string>
+    <!-- subtitles: online search -->
+    <string name="sub_search_online">بحث أونلاين</string>
+    <string name="sub_provider_keys">مفاتيح المزوّدين</string>
+    <string name="sub_search_hint">عنوان الفيلم أو الحلقة</string>
+    <string name="sub_need_key">أضف مفتاح API لمزوّد لتبدأ البحث</string>
+    <string name="sub_no_provider">لا مزوّد مفعّل</string>
+    <string name="sub_fail_quota">حصة %1$s انتهت. أُخفي المزوّد لهذه الجلسة</string>
+    <string name="sub_fail_network">تعذّر الاتصال بـ %1$s. أُخفي لهذه الجلسة</string>
+    <string name="sub_fail_auth">مفتاح %1$s غير صالح. عدّله من «مفاتيح المزوّدين»</string>
+    <string name="sub_fail_other">خطأ من %1$s</string>
+    <string name="sub_dl_quota">حصة التنزيل انتهت لهذا المزوّد</string>
+    <string name="sub_dl_network">تعذّر التنزيل. تحقّق من الاتصال</string>
+    <string name="sub_dl_failed">تعذّر تنزيل الترجمة</string>
+    <string name="sub_add_key">أضف مفتاح مزوّد</string>
+    <string name="sub_need_key_body">البحث يحتاج مفتاح API واحد على الأقل</string>
+    <string name="sub_try_shorter">جرّب عنواناً أقصر أو لغة أخرى</string>
+    <string name="sub_hash_match">تطابق البصمة</string>
+    <!-- one form in Arabic, as before -->
+    <plurals name="sub_downloads">
+        <item quantity="other">%1$s تنزيل</item>
+    </plurals>
+    <string name="sub_keys_local">تُحفظ على الجهاز فقط، ولا تُرسل إلا إلى مزوّدها.</string>
+</resources>

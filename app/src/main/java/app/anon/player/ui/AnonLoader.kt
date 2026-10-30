@@ -1,5 +1,8 @@
 package app.anon.player.ui
 
+import app.anon.player.R
+import androidx.compose.ui.res.stringResource
+
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -61,10 +64,11 @@ fun AnonLoader(modifier: Modifier = Modifier, size: Dp = 56.dp, color: Color = M
         }),
         label = "blink",
     )
+    val loading = stringResource(R.string.ui_loading)
     Canvas(
         modifier.size(size)
             .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen) // so BlendMode.Clear cuts the eyes only
-            .semantics { contentDescription = "جارٍ التحميل" },
+            .semantics { contentDescription = loading },
     ) {
         val k = this.size.minDimension / LogoPaths.SIZE
         scale(k * breathe, k * breathe, pivot = Offset.Zero) {

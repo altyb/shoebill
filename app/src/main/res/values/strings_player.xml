@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Player overlay, side panels and subtitle tools. Arabic is in values-ar. -->
+<resources>
+    <!-- overlay -->
+    <string name="player_subtitles">Subtitles</string>
+    <string name="player_audio">Audio</string>
+    <string name="player_more">More</string>
+    <string name="player_previous">Previous</string>
+    <string name="player_next">Next</string>
+    <string name="player_rewind_10">Back 10 seconds</string>
+    <string name="player_forward_10">Forward 10 seconds</string>
+    <string name="player_lock">Lock</string>
+    <string name="player_rotate">Rotate</string>
+    <string name="player_aspect">Aspect ratio</string>
+    <string name="player_aspect_auto">Auto</string>
+    <string name="player_locked_hold">Locked: hold to unlock</string>
+    <string name="player_hold_unlock">Hold to unlock</string>
+    <string name="player_next_in">Next in %1$s</string>
+    <string name="player_play_now">Play now</string>
+    <string name="player_seconds">%1$s s</string>
+    <!-- notices -->
+    <string name="player_open_failed">Can\'t open the file: it no longer exists</string>
+    <string name="player_resume_from">Resume from %1$s</string>
+    <string name="player_from_start">Start over</string>
+    <string name="player_switched_sw">Switched to SW</string>
+    <string name="player_sleep_done">Sleep timer: video stopped</string>
+    <string name="player_shot_saved">Screenshot saved to cache</string>
+    <string name="player_subtitle_fallback">Subtitle</string>
+    <!-- side panels -->
+    <string name="player_track_n">Track %1$s</string>
+    <string name="player_tracks">Tracks</string>
+    <string name="player_no_audio_tracks">No audio tracks</string>
+    <string name="player_speed">Speed</string>
+    <string name="player_volume_boost">Volume boost ⁦%1$s%%⁩</string>
+    <string name="player_decoder">Decoder</string>
+    <string name="player_ab_loop">A-B repeat</string>
+    <string name="player_ab_set_a">Set A</string>
+    <string name="player_ab_set_b">Set B</string>
+    <string name="player_sleep_timer">Sleep timer</string>
+    <string name="player_minutes_short">%1$s min</string>
+    <string name="player_crop_on">Crop: on</string>
+    <string name="player_crop_off">Crop: off</string>
+    <string name="player_screenshot">Screenshot</string>
+    <!-- subtitles: track tab -->
+    <string name="sub_tab_track">Track</string>
+    <string name="sub_tab_style">Style</string>
+    <string name="sub_tab_timing">Timing</string>
+    <string name="sub_file">File</string>
+    <string name="sub_second_open">Second subtitle ▴</string>
+    <string name="sub_second_closed">Second subtitle ▾</string>
+    <string name="sub_added">Subtitle added</string>
+    <string name="sub_size_hud">Subtitle size ⁦%1$s%%⁩</string>
+    <string name="sub_position_hud">Subtitle position %1$s</string>
+    <!-- subtitles: style tab -->
+    <string name="sub_preset_default">Default</string>
+    <string name="sub_preset_yellow">Classic yellow</string>
+    <string name="sub_preset_box">Box</string>
+    <string name="sub_preset_large">Large</string>
+    <string name="sub_color">Color</string>
+    <string name="sub_size">Size ⁦%1$s%%⁩</string>
+    <string name="sub_outline">Outline %1$s</string>
+    <string name="sub_background">Background</string>
+    <string name="sub_background_opacity">Background opacity ⁦%1$s%%⁩</string>
+    <string name="sub_position">Position %1$s</string>
+    <string name="sub_top">Top</string>
+    <string name="sub_bottom">Bottom</string>
+    <string name="sub_bold">Bold</string>
+    <string name="sub_force_style">Force my style on ASS subtitles</string>
+    <string name="sub_force_style_hint">Anime subtitles have their own colors; turn this on to apply yours</string>
+    <!-- subtitles: timing tab -->
+    <string name="sub_fps_srt_only">Frame rate conversion works on an external SRT file only</string>
+    <string name="sub_fps_done">Timing recalculated</string>
+    <string name="sub_reset">Reset</string>
+    <string name="sub_no_cue">No subtitle on screen now</string>
+    <string name="sub_sync_no_line">No line on screen. Wait for a line to appear, then tap</string>
+    <string name="sub_sync_done">Delay set to this line</string>
+    <string name="sub_sync_this_line">This line now</string>
+    <string name="sub_auto_sync_soon">Auto sync: coming soon</string>
+    <string name="sub_fps_convert">Frame rate conversion</string>
+    <!-- subtitles: online search -->
+    <string name="sub_search_online">Online search</string>
+    <string name="sub_provider_keys">Provider keys</string>
+    <string name="sub_search_hint">Movie or episode title</string>
+    <string name="sub_need_key">Add a provider API key to start searching</string>
+    <string name="sub_no_provider">No provider enabled</string>
+    <string name="sub_fail_quota">%1$s quota used up. Provider hidden for this session</string>
+    <string name="sub_fail_network">Can\'t reach %1$s. Hidden for this session</string>
+    <string name="sub_fail_auth">%1$s key is invalid. Edit it in “Provider keys”</string>
+    <string name="sub_fail_other">Error from %1$s</string>
+    <string name="sub_dl_quota">Download quota used up for this provider</string>
+    <string name="sub_dl_network">Download failed. Check your connection</string>
+    <string name="sub_dl_failed">Couldn\'t download the subtitle</string>
+    <string name="sub_add_key">Add a provider key</string>
+    <string name="sub_need_key_body">Search needs at least one API key</string>
+    <string name="sub_try_shorter">Try a shorter title or another language</string>
+    <string name="sub_hash_match">Hash match</string>
+    <plurals name="sub_downloads">
+        <item quantity="one">%1$s download</item>
+        <item quantity="other">%1$s downloads</item>
+    </plurals>
+    <string name="sub_keys_local">Stored on this device only and sent only to its provider.</string>
+</resources>

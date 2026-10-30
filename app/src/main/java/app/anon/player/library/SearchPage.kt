@@ -1,5 +1,8 @@
 package app.anon.player.library
 
+import app.anon.player.R
+import androidx.compose.ui.res.stringResource
+
 import android.content.Context
 import android.net.Uri
 import androidx.compose.animation.AnimatedContent
@@ -89,10 +92,10 @@ fun SearchBody(onBack: () -> Unit, onPlay: (Uri, String) -> Unit) = VideoGate { 
         topBar = {
             TopAppBar(
                 title = {
-                    SearchPill(query, { query = it }, "ابحث عن فيديو", Modifier.fillMaxWidth().padding(end = 12.dp),
+                    SearchPill(query, { query = it }, stringResource(R.string.lib_search_video), Modifier.fillMaxWidth().padding(end = 12.dp),
                         onSearch = { commit() }, focusRequester = focus)
                 },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "رجوع") } },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back)) } },
             )
         },
     ) { pad ->
@@ -101,7 +104,7 @@ fun SearchBody(onBack: () -> Unit, onPlay: (Uri, String) -> Unit) = VideoGate { 
                 Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                FilterChip(selected = folder == null, onClick = { folder = null }, label = { Text("كل المجلدات") })
+                FilterChip(selected = folder == null, onClick = { folder = null }, label = { Text(stringResource(R.string.lib_all_folders)) })
                 folders.forEach { (id, name) ->
                     FilterChip(
                         selected = folder == id,
@@ -128,8 +131,8 @@ fun SearchBody(onBack: () -> Unit, onPlay: (Uri, String) -> Unit) = VideoGate { 
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween,
                             ) {
-                                Text("آخر عمليات البحث", style = MaterialTheme.typography.titleSmall)
-                                TextButton(onClick = { Recents.clear(ctx); recents = emptyList() }) { Text("مسح") }
+                                Text(stringResource(R.string.lib_recent_searches), style = MaterialTheme.typography.titleSmall)
+                                TextButton(onClick = { Recents.clear(ctx); recents = emptyList() }) { Text(stringResource(R.string.clear)) }
                             }
                             LazyColumn {
                                 items(recents) { r ->
@@ -143,14 +146,14 @@ fun SearchBody(onBack: () -> Unit, onPlay: (Uri, String) -> Unit) = VideoGate { 
                             }
                         }
                     } else {
-                        EmptyState(Icons.AutoMirrored.Rounded.ManageSearch, "ابحث في كل فيديوهاتك", body = "بالاسم، داخل كل المجلدات")
+                        EmptyState(Icons.AutoMirrored.Rounded.ManageSearch, stringResource(R.string.lib_search_empty), body = stringResource(R.string.lib_search_empty_body))
                     }
                     1 -> EmptyState(
                         Icons.Rounded.SearchOff,
-                        "لا نتائج لـ «${query.trim()}»",
-                        body = "جرّب كلمة أقصر أو اسماً آخر",
+                        stringResource(R.string.lib_no_results_for, query.trim()),
+                        body = stringResource(R.string.lib_no_results_body),
                         action = {
-                            if (folder != null) TextButton(onClick = { folder = null }) { Text("ابحث في كل المجلدات") }
+                            if (folder != null) TextButton(onClick = { folder = null }) { Text(stringResource(R.string.lib_search_all_folders)) }
                         },
                     )
                     else -> LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)) {

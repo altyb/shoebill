@@ -21,6 +21,7 @@ import android.provider.OpenableColumns
 import android.security.keystore.UserNotAuthenticatedException
 import android.util.Size
 import androidx.lifecycle.AndroidViewModel
+import app.anon.player.R
 import androidx.lifecycle.viewModelScope
 import app.anon.player.vault.crypto.BackupFormat
 import app.anon.player.vault.logic.PinStore
@@ -40,12 +41,12 @@ import kotlinx.coroutines.sync.withLock
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 
-enum class AutoLock(val seconds: Long, val label: String) {
-    Immediately(0, "فوراً"), OneMinute(60, "بعد دقيقة"), FiveMinutes(300, "بعد 5 دقائق"),
+enum class AutoLock(val seconds: Long, val label: Int) {
+    Immediately(0, R.string.vault_lock_now), OneMinute(60, R.string.vault_lock_1min), FiveMinutes(300, R.string.vault_lock_5min),
 }
 
 enum class Phase { Setup, Locked, Unlocked }
-enum class MediaFilter(val label: String) { All("الكل"), Video("فيديو"), Photo("صور") }
+enum class MediaFilter(val label: Int) { All(R.string.vault_filter_all), Video(R.string.vault_filter_video), Photo(R.string.vault_filter_photo) }
 
 data class Importing(val done: Int, val total: Int, val current: String)
 
@@ -79,6 +80,9 @@ private class VaultAuthCancelled : Exception()
  * the UI shows the biometric prompt, and the op retries. Nothing outlives [lock]: keys, thumbnails and open playback descriptors are wiped.
  */
 class VaultViewModel(app: Application) : AndroidViewModel(app) {
+    private fun str(id: Int, vararg args: Any): String = getApplication<Application>().getString(id, *args)
+    private fun plural(id: Int, n: Int): String = getApplication<Application>().resources.getQuantityString(id, n, n)
+
     private val prefs = app.getSharedPreferences("vault", android.content.Context.MODE_PRIVATE)
     private val pins = PinStore(object : PinStore.Storage {
         private val sp = app.getSharedPreferences("vault_pin", android.content.Context.MODE_PRIVATE)
@@ -156,7 +160,7 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
             KeystoreMasterKey.setPinOnlyFlag(ctx, VaultSpace.Real, true)
             _ui.update { it.copy(phase = Phase.Locked, pinRequired = true, pinsSet = it.pinsSet + PinStore.Role.Real, pinOnly = true) }
         } catch (e: IllegalArgumentException) {
-            _ui.update { it.copy(message = "الرمز ٤ إلى ١٦ رقماً") }
+            _ui.update { it.copy(message = str(R.string.vault_pin_length)) }
         } finally {
             pin.fill('\u0000')
         }
@@ -270,9 +274,9 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
                     if (pinOnly) unlock()
                 }
                 is PinStore.Result.Wrong ->
-                    _ui.update { it.copy(pinBusy = false, pinError = "رمز خاطئ. بقيت ${r.attemptsLeft} محاولات") }
+                    _ui.update { it.copy(pinBusy = false, pinError = plural(R.plurals.vault_wrong_pin, r.attemptsLeft)) }
                 is PinStore.Result.LockedOut ->
-                    _ui.update { it.copy(pinBusy = false, lockedUntil = System.currentTimeMillis() + (r.untilMs - android.os.SystemClock.elapsedRealtime()), pinError = "محاولات كثيرة. انتظر") }
+                    _ui.update { it.copy(pinBusy = false, lockedUntil = System.currentTimeMillis() + (r.untilMs - android.os.SystemClock.elapsedRealtime()), pinError = str(R.string.vault_too_many_attempts)) }
             }
         }
     }
@@ -284,7 +288,7 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 pins.setPin(role, pin)
             } catch (e: IllegalArgumentException) {
-                _ui.update { it.copy(message = "الرمز ٤ إلى ١٦ رقماً ومختلف عن الرموز الأخرى") }
+                _ui.update { it.copy(message = str(R.string.vault_pin_length_unique)) }
             } finally {
                 pin.fill('\u0000')
                 _ui.update { it.copy(pinBusy = false, pinsSet = pinsSet()) }
@@ -302,7 +306,7 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
     /** Real space, vault unlocked. Moves the vault key to the PIN-only alias (no auth) or back to the biometric alias. */
     fun setPinOnly(enabled: Boolean) = launchOp {
         if (switchPinOnly(enabled)) {
-            _ui.update { it.copy(message = if (enabled) "صار الدخول بالرمز فقط" else "صار الدخول بالرمز والبصمة") }
+            _ui.update { it.copy(message = if (enabled) str(R.string.vault_now_pin_only) else str(R.string.vault_now_pin_and_fingerprint)) }
         }
     }
 
@@ -310,8 +314,8 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun switchPinOnly(enabled: Boolean): Boolean {
         val app = getApplication<Application>()
         val r = repo
-        if (r == null) { _ui.update { it.copy(message = "افتح الخزنة أولاً") }; return false }
-        if (PinStore.Role.Real !in pinsSet()) { _ui.update { it.copy(message = "عيّن رمز الدخول أولاً") }; return false }
+        if (r == null) { _ui.update { it.copy(message = str(R.string.vault_unlock_first)) }; return false }
+        if (PinStore.Role.Real !in pinsSet()) { _ui.update { it.copy(message = str(R.string.vault_set_pin_first)) }; return false }
         val space = VaultSpace.Real
         val old = KeystoreMasterKey.activeAlias(app, space)
         val target = if (enabled) KeystoreMasterKey.pinOnlyAlias(space.alias) else space.alias
@@ -365,8 +369,8 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
             _ui.update { it.copy(entries = r.items, thumbs = r.thumbnails()) }
         }
         val app = getApplication<Application>()
-        val parts = mutableListOf("أُضيف ${verified.size} ملف إلى الخزنة")
-        if (failed > 0) parts += "فشل التحقق من $failed ملف، فبقيت أصولها في المعرض"
+        val parts = mutableListOf(plural(R.plurals.vault_added, verified.size))
+        if (failed > 0) parts += plural(R.plurals.vault_verify_failed, failed)
         if (verified.isEmpty()) {
             _ui.update { it.copy(message = parts.joinToString(" · ")) }
             return@launchOp
@@ -382,10 +386,10 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
             } else mapped
             val pi = if (leftover.isEmpty()) null else runCatching { MediaStore.createDeleteRequest(app.contentResolver, leftover) }
                 .onFailure { Log.w("vault", "createDeleteRequest failed", it) }.getOrNull()
-            if (leftover.isNotEmpty() && pi == null) parts += "تعذّر حذف الأصول تلقائياً، احذفها من المعرض"
+            if (leftover.isNotEmpty() && pi == null) parts += str(R.string.vault_delete_originals_failed)
             _ui.update { it.copy(deleteRequest = pi, message = parts.joinToString(" · ")) }
         } else {
-            parts += "أندرويد 10 أو أقدم: الأصول باقية في المعرض، احذفها يدوياً"
+            parts += str(R.string.vault_old_android_originals)
             _ui.update { it.copy(message = parts.joinToString(" · ")) }
         }
     }
@@ -467,7 +471,7 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
         val list = ids.mapNotNull { r.find(it) }
         if (list.isEmpty()) return@launchOp
         if (Build.VERSION.SDK_INT < 29) {
-            _ui.update { it.copy(message = "التصدير إلى المعرض يحتاج أندرويد 10 أو أحدث") }
+            _ui.update { it.copy(message = str(R.string.vault_export_needs_android10)) }
             return@launchOp
         }
         val cr = getApplication<Application>().contentResolver
@@ -476,7 +480,7 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
         try {
             list.forEachIndexed { i, e ->
                 currentCoroutineContext().ensureActive()
-                _ui.update { it.copy(message = "يُرجع ${i + 1} من ${list.size}…") }
+                _ui.update { it.copy(message = str(R.string.vault_returning_progress, i + 1, list.size)) }
                 val fallback = if (e.kind == "video") Environment.DIRECTORY_MOVIES else Environment.DIRECTORY_PICTURES
                 val name = r.nameOf(e)
                 val original = r.pathOf(e)
@@ -501,7 +505,7 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
         } finally {
             _ui.update { it.copy(entries = r.items, thumbs = r.thumbnails()) }
         }
-        _ui.update { it.copy(message = buildString { append("أُرجع $ok ملف إلى المعرض"); if (failed > 0) append(" · فشل $failed") }) }
+        _ui.update { it.copy(message = buildString { append(plural(R.plurals.vault_returned, ok)); if (failed > 0) append(str(R.string.vault_failed_suffix, failed)) }) }
     }
 
     private fun insertPending(cr: ContentResolver, e: VaultEntry, name: String, folder: String): Uri? = runCatching {
@@ -528,7 +532,7 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
         } finally {
             _ui.update { it.copy(entries = r.items, thumbs = r.thumbnails()) }
         }
-        _ui.update { it.copy(message = "حُذف $n ملف") }
+        _ui.update { it.copy(message = plural(R.plurals.vault_deleted, n)) }
     }
 
     /** Full plaintext photo in memory for the viewer. Not stored in state. */
@@ -550,7 +554,7 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
         authed { r.warmKeys() }
         getApplication<Application>().contentResolver.openOutputStream(uri)?.use { r.exportBackup(it, password) }
             ?: throw IOException("no output")
-        "حُفظت النسخة: ${r.items.size} ملف"
+        plural(R.plurals.vault_backup_saved, r.items.size)
     }
 
     fun importBackup(uri: Uri, password: CharArray) = backupOp(password) {
@@ -558,27 +562,27 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
         try {
             val n = getApplication<Application>().contentResolver.openInputStream(uri)?.use { input ->
                 r.importBackup(input, password, addOne = { add -> runBlocking { authed(add) } }) { done ->
-                    _ui.update { it.copy(message = "استُرجع $done ملف…") }
+                    _ui.update { it.copy(message = plural(R.plurals.vault_restore_progress, done)) }
                 }
             } ?: throw IOException("no input")
-            "استُرجع $n ملف"
+            plural(R.plurals.vault_restored, n)
         } finally {
             _ui.update { it.copy(entries = r.items, thumbs = r.thumbnails()) }
         }
     }
 
-    /** Runs a backup op on the IO dispatcher, maps its failures to Arabic messages and always zeroes the password. */
+    /** Runs a backup op on the IO dispatcher, maps its failures to localized messages and always zeroes the password. */
     private fun backupOp(password: CharArray, block: suspend () -> String) = launchOp {
         try {
             val ok = block()
             _ui.update { it.copy(message = ok) }
         } catch (e: BackupFormat.BadPasswordException) {
-            _ui.update { it.copy(message = "كلمة المرور غير صحيحة") }
+            _ui.update { it.copy(message = str(R.string.vault_wrong_password)) }
         } catch (e: BackupFormat.CorruptBackupException) {
-            _ui.update { it.copy(message = "الملف تالف أو ليس نسخة من الخزنة") }
+            _ui.update { it.copy(message = str(R.string.vault_bad_backup)) }
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            _ui.update { it.copy(message = "تعذّر إكمال العملية") }
+            _ui.update { it.copy(message = str(R.string.vault_op_failed)) }
         } finally {
             password.fill('\u0000')
         }
@@ -634,7 +638,7 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
                 // user backed out of the prompt
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                _ui.update { it.copy(message = "تعذّرت العملية: ${e.javaClass.simpleName}") }
+                _ui.update { it.copy(message = str(R.string.vault_op_failed_named, e.javaClass.simpleName)) }
             } finally {
                 _ui.update { it.copy(busy = false, importing = null) }
             }
