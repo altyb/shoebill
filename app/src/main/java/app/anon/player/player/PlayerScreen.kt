@@ -166,6 +166,9 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
         val fs = if (private) null else store.get(u.toString())
         val resume = settingsState.value.autoResume && fs != null && fs.unfinished
         player.setString("start", if (resume) "%.3f".format(java.util.Locale.ROOT, fs!!.positionMs / 1000.0) else "none")
+        player.shareableUri = if (private) null else u
+        player.onOpenFailed = { notice = Notice(context.getString(R.string.player_open_failed)) }
+        player.shareableTitle = currentTitle
         if (!player.load(u)) notice = Notice(context.getString(R.string.player_open_failed))
     }
 

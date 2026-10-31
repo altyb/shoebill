@@ -1,6 +1,6 @@
 # Privacy policy — Shoebill
 
-Last updated: 2026-10-30
+Last updated: 2026-10-31
 
 Shoebill does not collect, store or share personal data. It has no accounts, no ads and no analytics.
 
@@ -13,12 +13,16 @@ any cloud.
   OpenSubtitles, a hash of the video file, to the subtitle service you use: OpenSubtitles, SubDL or Jimaku. Their
   own privacy policies apply. You provide your own API key for each service; it is stored only on your phone.
 - Playing a network link you entered. The app connects to that address.
+- Network shares you add. The app connects to that server. The password is encrypted on your phone.
+- Casting. The app looks for TVs on your Wi-Fi and serves the video you chose to the TV you chose, only while casting.
 
 **Permissions.**
 - Videos and photos: to list and play your videos, and to move files into the vault.
 - All files access (GitHub/F-Droid version only, optional): to delete the original after moving a file into
   the vault, without a confirmation dialog each time.
 - Biometrics (optional): to unlock the vault with a fingerprint.
-- Internet: subtitle search and network playback, as described above.
+- Internet and Wi-Fi multicast: subtitle search, network playback, network shares and finding TVs, as described above.
+
+**Backups.** If you save settings to a file, it holds your settings, playlists and watch history in plain text, at the place you choose. It never holds vault contents, passwords or API keys.
 
 **Contact.** Open an issue at https://github.com/altyb/shoebill/issues

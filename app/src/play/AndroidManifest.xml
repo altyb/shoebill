@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
-    <!-- Play policy: All files access is for file managers/backup apps, not vaults -->
-    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" tools:node="remove" />
+<!-- Play build: no hidden dialer entry to the vault; it opens by long-pressing the logo. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+    <application>
+        <receiver android:name=".vault.SecretCodeReceiver" tools:node="remove" />
+    </application>
 </manifest>

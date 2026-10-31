@@ -8,3 +8,12 @@
     public static int d(...);
     public static int v(...);
 }
+
+# smbj: reads classes by name; Kerberos and logging backends are not used on Android
+-keep class com.hierynomus.** { *; }
+-keep class net.engio.mbassy.** { *; }
+-dontwarn javax.security.auth.**
+-dontwarn org.ietf.jgss.**
+-dontwarn org.slf4j.**
+-dontwarn net.engio.**
+-dontwarn org.bouncycastle.**

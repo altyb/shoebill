@@ -44,8 +44,16 @@ Settings, or let it follow the phone.
 - Gestures for seeking, volume and brightness; double-tap to skip; speed; audio and subtitle tracks.
 - Screen lock, picture-in-picture, background audio, resume where you stopped, playlists.
 
+**Network and TV**
+- Browse SMB shares and play from them. Passwords are encrypted under a key in the phone's security chip.
+- Cast to DLNA TVs. The video is served only while casting, at a random address on your Wi-Fi. Vault files can never be cast.
+
+**Audio**
+- Audio delay, and an equalizer on phones that support Android's audio effects.
+
 **Subtitles**
 - Search OpenSubtitles, SubDL and Jimaku (with your own free API keys).
+- Sync automatically from the audio (`.srt` files, audio your phone can decode). It changes nothing if it is not sure.
 - Style them: colour, size, outline, background box, bold, presets.
 - Drag a subtitle on screen to move it; pinch it to resize it. Manual timing sync.
 - Old Arabic `windows-1256` files are converted automatically.
@@ -114,9 +122,10 @@ Tests:
 
 ## Known limits
 
-- The dialer code does not work on Xiaomi HyperOS: the system blocks the broadcast for third-party apps.
-- Subtitle sync is manual; automatic sync from the audio is not built yet.
-- SMB/DLNA browsing is not built; network playback takes a direct link.
+- The dialer code does not work on Xiaomi HyperOS: the system blocks the broadcast for third-party apps. Long-press the logo instead. The Google Play build has no dialer code.
+- Automatic subtitle sync listens for loudness, so films with constant music or noise may get no result. Use the manual buttons there.
+- Casting has no remote control beyond stop, and has not been tried on many TV brands.
+- DLNA server browsing is not built; SMB shares and direct links are.
 - After the wipe PIN the real vault is gone for good; the PIN pad stays and the decoy PIN keeps working.
   To start a new real vault, clear the app's data.
 

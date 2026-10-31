@@ -5,6 +5,7 @@ import app.anon.player.R
 import app.anon.player.data.PlaybackStore
 import android.content.Context
 import android.os.Build
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -78,6 +79,21 @@ fun SettingsScreen(onBack: () -> Unit, onAppearance: () -> Unit) {
     val app = AppSettings.get(context)
     val s by app.settings.collectAsState()
     var decoderDialog by remember { mutableStateOf(false) }
+    var licenses by remember { mutableStateOf(false) }
+    var backupNote by remember { mutableStateOf<Int?>(null) }
+    val backupScope = androidx.compose.runtime.rememberCoroutineScope()
+    val saveBackup = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri != null) backupScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val ok = runCatching { context.contentResolver.openOutputStream(uri)!!.use { SettingsBackup.write(context, it) } }.isSuccess
+            backupNote = if (ok) R.string.settings_backup_saved else R.string.settings_backup_failed
+        }
+    }
+    val openBackup = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) backupScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val ok = runCatching { context.contentResolver.openInputStream(uri)!!.use { SettingsBackup.read(context, it) } }.isSuccess
+            backupNote = if (ok) R.string.settings_backup_restored else R.string.settings_backup_bad
+        }
+    }
     var clearDialog by remember { mutableStateOf(false) }
     var langDialog by remember { mutableStateOf(false) }
     val lang = remember { Lang.get(context) }
@@ -129,14 +145,34 @@ fun SettingsScreen(onBack: () -> Unit, onAppearance: () -> Unit) {
             }
 
             GroupTitle(stringResource(R.string.settings_about))
-            val about = groupShapes(3)
+            val about = groupShapes(6)
             val open = { url: String -> runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))) } }
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 SettingRow(title = stringResource(R.string.settings_version), shape = about[0], trailing = { Text(version, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant) })
                 SettingRow(title = stringResource(R.string.settings_privacy_policy), shape = about[1], subtitle = stringResource(R.string.settings_privacy_policy_sub), onClick = { open("https://github.com/altyb/shoebill/blob/main/PRIVACY.md") })
                 SettingRow(title = stringResource(R.string.settings_source), shape = about[2], subtitle = stringResource(R.string.settings_source_sub), onClick = { open("https://github.com/altyb/shoebill") })
+                SettingRow(title = stringResource(R.string.settings_licenses), shape = about[3], onClick = { licenses = true })
+                SettingRow(title = stringResource(R.string.settings_backup_save), shape = about[4], subtitle = stringResource(R.string.settings_backup_sub), onClick = { saveBackup.launch("shoebill-settings.json") })
+                SettingRow(title = stringResource(R.string.settings_backup_restore), shape = about[5], onClick = { openBackup.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) })
             }
         }
+    }
+
+    if (licenses) {
+        val text = remember { runCatching { context.assets.open("NOTICE.txt").bufferedReader().use { it.readText() } + "\n\n" + context.assets.open("LICENSE.txt").bufferedReader().use { it.readText() } }.getOrDefault("") }
+        AlertDialog(
+            onDismissRequest = { licenses = false },
+            title = { Text(stringResource(R.string.settings_licenses)) },
+            text = { Text(text, Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()), style = MaterialTheme.typography.bodySmall) },
+            confirmButton = { TextButton(onClick = { licenses = false }) { Text(stringResource(R.string.close_label)) } },
+        )
+    }
+    backupNote?.let { note ->
+        AlertDialog(
+            onDismissRequest = { backupNote = null },
+            text = { Text(stringResource(note)) },
+            confirmButton = { TextButton(onClick = { backupNote = null }) { Text(stringResource(R.string.close_label)) } },
+        )
     }
 
     if (decoderDialog) {

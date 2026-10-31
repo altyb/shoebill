@@ -19,3 +19,4 @@ tasks.test {
 
 // Pure logic lives in the app; these JVM tests are its contract (no android imports allowed there).
 kotlin.sourceSets["main"].kotlin.srcDir("../app/src/main/java/app/anon/player/library/logic")
+kotlin.sourceSets["main"].kotlin.srcDir("../app/src/main/java/app/anon/player/player/cast/logic")

@@ -8,7 +8,7 @@ import org.json.JSONObject
  */
 class OpenSubtitlesProvider(
     private val apiKey: String,
-    private val userAgent: String = "AnonPlayer v1",
+    private val userAgent: String = "Shoebill v0.3",
     private val token: String? = null, // from POST /login; download quota depends on it (UNVERIFIED)
 ) : SubtitleProvider {
     init {
