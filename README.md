@@ -72,8 +72,9 @@ Settings, or let it follow the phone.
 
 - **GitHub:** download the APK from [Releases](../../releases/latest). Android 8.0 or newer.
 - **[Obtainium](https://github.com/ImranR98/Obtainium):** add `https://github.com/altyb/shoebill` to get updates.
+- **F-Droid app:** add my own repo under Settings, Repositories: `https://altyb.github.io/fdroid/repo?fingerprint=4882F491E55FA2B5630EBA1409087C2DC2F404E8786813D0E60B13569CC1040A`. These are the same signed APKs as the GitHub releases. The apps are not in the main F-Droid catalogue yet.
 
-Use `shoebill-0.2.0.apk` from GitHub. The Google Play version cannot ask for "All files access", so moving
+Use the GitHub APK. The Google Play version cannot ask for "All files access", so moving
 files into the vault shows Android's delete dialog each time.
 
 ## Privacy
@@ -127,6 +128,10 @@ Tests:
 - DLNA server browsing is not built; SMB shares and direct links are.
 - After the wipe PIN the real vault is gone for good; the PIN pad stays and the decoy PIN keeps working.
   To start a new real vault, clear the app's data.
+
+## How it was made
+
+Much of this code was written with an AI coding assistant (Claude) under my direction. If something looks wrong, please open an issue.
 
 ## Credits
 
