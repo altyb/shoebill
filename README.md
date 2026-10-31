@@ -1,8 +1,4 @@
-<p align="center">
-  <img src="design/logo/shoebill.svg" width="112" alt="Shoebill logo">
-</p>
-
-<h1 align="center">Shoebill</h1>
+<p align="center"><img src="docs/brand/banner.png" width="100%" alt="Shoebill"></p>
 
 <p align="center">
   A private video player for Android, built on <a href="https://mpv.io">mpv</a>, with an encrypted vault.<br>
@@ -12,6 +8,12 @@
 <p align="center"><i>The shoebill stands dead still in the Nile marshes of Sudan and watches. It tells nobody what it saw.</i></p>
 
 <p align="center" dir="rtl">مشغّل فيديو خاص لأندرويد، مع خزنة مشفّرة. بدون إعلانات ولا حسابات ولا تتبّع.</p>
+
+<p align="center">
+  <a href="https://github.com/altyb/shoebill/releases/latest"><img src="docs/badges/github.png" height="64" alt="Get it on GitHub"></a>
+  <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/altyb/shoebill"><img src="docs/badges/obtainium.png" height="64" alt="Get it on Obtainium"></a>
+  <!-- Turn on once listed. docs/badges/izzy.png, fdroid.png, play.png -->
+</p>
 
 <p align="center">
   <a href="../../releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/altyb/shoebill?label=release"></a>
