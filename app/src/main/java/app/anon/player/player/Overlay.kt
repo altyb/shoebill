@@ -85,7 +85,7 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.unit.Dp
 import app.anon.player.library.formatTime
-import app.anon.player.ui.theme.AnonAmber
+import app.anon.player.ui.theme.BrandAmber
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -284,11 +284,11 @@ private fun SeekBar(
             val a = abA
             val b = abB
             if (a != null && b != null && b > a) {
-                drawRect(AnonAmber.copy(alpha = 0.25f), topLeft = Offset(x(a), 0f), size = Size(x(b) - x(a), size.height))
+                drawRect(BrandAmber.copy(alpha = 0.25f), topLeft = Offset(x(a), 0f), size = Size(x(b) - x(a), size.height))
             }
             listOfNotNull(a, b).forEach { sec ->
                 drawRect(
-                    AnonAmber,
+                    BrandAmber,
                     topLeft = Offset(x(sec) - 1.5.dp.toPx(), size.height / 2 - 10.dp.toPx()),
                     size = Size(3.dp.toPx(), 20.dp.toPx()),
                 )

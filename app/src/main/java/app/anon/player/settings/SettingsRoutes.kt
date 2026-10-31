@@ -64,7 +64,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.toArgb
-import app.anon.player.ui.theme.AnonPresets
+import app.anon.player.ui.theme.BrandPresets
 import app.anon.player.ui.theme.Preset
 import app.anon.player.ui.theme.isDark
 import app.anon.player.ui.theme.seedScheme
@@ -295,7 +295,7 @@ fun AppearanceScreen(onBack: () -> Unit) {
             Choice(sources, s.colorSource) { src -> app.update { it.copy(colorSource = src) } }
 
             if (s.colorSource == ColorSource.Preset) {
-                AnonPresets.chunked(4).forEach { row ->
+                BrandPresets.chunked(4).forEach { row ->
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                         row.forEach { p ->
                             PresetCircle(p, s, dark) { app.update { it.copy(colorSource = ColorSource.Preset, seed = p.seed) } }

@@ -4,7 +4,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import app.anon.player.R
-import app.anon.player.ui.AnonLoader
+import app.anon.player.ui.BrandLoader
 import androidx.compose.ui.res.stringResource
 import app.anon.player.vault.logic.PinStore
 import androidx.compose.foundation.background
@@ -144,7 +144,7 @@ fun UnlockScreen(
             Text(stringResource(R.string.vault_unlock_hint), textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(24.dp))
             if (busy) {
-                AnonLoader()
+                BrandLoader()
             } else {
                 FilledTonalButton(onClick = onFingerprint) {
                     Icon(Icons.Filled.Fingerprint, null)
@@ -288,7 +288,7 @@ fun VaultSettings(
             Spacer(Modifier.height(20.dp))
             Text(stringResource(R.string.vault_backup_and_key), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
             if (busy) {
-                AnonLoader()
+                BrandLoader()
                 Text(if (restoring) stringResource(R.string.vault_restoring) else stringResource(R.string.vault_encrypting))
             } else {
                 Row(verticalAlignment = Alignment.CenterVertically) {

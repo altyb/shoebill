@@ -13,7 +13,7 @@
         android:maxSdkVersion="32" />
 
     <application
-        android:name=".AnonApp"
+        android:name=".ShoebillApp"
         android:label="${appLabel}"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -21,7 +21,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:usesCleartextTraffic="true"
-        android:theme="@style/Theme.Anon">
+        android:theme="@style/Theme.Shoebill">
         <activity
             android:name=".MainActivity"
             android:exported="true"

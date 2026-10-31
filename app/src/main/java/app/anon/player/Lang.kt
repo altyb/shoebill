@@ -38,6 +38,6 @@ object Lang {
     }
 }
 
-class AnonApp : Application() {
+class ShoebillApp : Application() {
     override fun attachBaseContext(base: Context) = super.attachBaseContext(Lang.wrap(base))
 }

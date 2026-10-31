@@ -87,7 +87,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.platform.LocalContext
 import app.anon.player.data.FileState
 import app.anon.player.data.PlaybackStore
-import app.anon.player.ui.theme.AnonAmber
+import app.anon.player.ui.theme.BrandAmber
 
 private val homeTabs = listOf(
     R.string.lib_tab_library to Icons.Rounded.VideoLibrary,
@@ -272,7 +272,7 @@ private fun ContinueCarousel(items: List<FileState>, onPlay: (Uri, String) -> Un
                     style = MaterialTheme.typography.labelLarge)
             }
             Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(4.dp).background(Color.White.copy(alpha = 0.3f))) {
-                Box(Modifier.fillMaxWidth(frac).fillMaxHeight().background(AnonAmber))
+                Box(Modifier.fillMaxWidth(frac).fillMaxHeight().background(BrandAmber))
             }
         }
     }

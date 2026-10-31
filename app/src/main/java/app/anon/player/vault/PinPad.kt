@@ -55,7 +55,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import app.anon.player.R
 import androidx.compose.ui.res.stringResource
-import app.anon.player.ui.AnonLoader
+import app.anon.player.ui.BrandLoader
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
@@ -168,7 +168,7 @@ fun PinPad(
                         contentAlignment = Alignment.Center,
                     ) {
                         if (busy) {
-                            AnonLoader(size = 44.dp)
+                            BrandLoader(size = 44.dp)
                         } else {
                             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                 repeat(maxOf(PIN_MIN, length)) { PinDot(filled = it < length) }

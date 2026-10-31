@@ -21,4 +21,4 @@ Vault
 - Screenshots and screen recording blocked inside the vault.
 
 
-Open source (GPL-3.0): https://github.com/altyb/anon-player
+Open source (GPL-3.0): https://github.com/altyb/shoebill

@@ -13,7 +13,7 @@ data class Track(val id: String, val type: String, val title: String?, val lang:
 
 /** Thin wrapper over libmpv. Observer callbacks run on an mpv thread: they only write StateFlows. */
 class MpvPlayer(context: Context) : MPVLib.EventObserver {
-    // Debug builds log one state line per second (tag AnonState) so qa/player-e2e.sh can assert real player state.
+    // Debug builds log one state line per second (tag BrandState) so qa/player-e2e.sh can assert real player state.
     private val debuggable = context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0
     // own thread: these reads wait on mpv's core lock, and the UI thread must never wait on mpv for a debug log
     private val stateThread by lazy { android.os.HandlerThread("anon-state").apply { start() } }
@@ -22,7 +22,7 @@ class MpvPlayer(context: Context) : MPVLib.EventObserver {
         override fun run() {
             val keys = listOf("filename", "duration", "time-pos", "pause", "sid", "aid", "secondary-sid", "sub-delay", "hwdec-current", "volume", "speed",
                 "video-zoom", "ab-loop-a", "ab-loop-b", "video-aspect-override", "eof-reached", "af", "sub-pos", "sub-start", "user-data/anon/ui")
-            Log.d("AnonState", keys.joinToString(" ") { k -> "$k=${runCatching { mpv.getPropertyString(k) }.getOrNull()}" })
+            Log.d("BrandState", keys.joinToString(" ") { k -> "$k=${runCatching { mpv.getPropertyString(k) }.getOrNull()}" })
             stateHandler.postDelayed(this, 1000)
         }
     }
@@ -193,7 +193,7 @@ class MpvPlayer(context: Context) : MPVLib.EventObserver {
                 val now = System.currentTimeMillis()
                 if (!_paused.value && now - lastLogMs >= 1000) {
                     lastLogMs = now
-                    Log.d("Anon", "time-pos=%.2f".format(value))
+                    Log.d("Shoebill", "time-pos=%.2f".format(value))
                 }
             }
             "duration" -> _duration.value = value
