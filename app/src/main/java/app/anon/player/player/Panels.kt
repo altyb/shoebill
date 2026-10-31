@@ -40,6 +40,7 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -246,8 +247,39 @@ private fun AudioPanel(player: MpvPlayer, trackVersion: Int, speed: Double, volu
         }
     }
     Slider(value = speed.toFloat().coerceIn(0.25f, 4f), onValueChange = { player.setSpeed(Math.round(it * 20) / 20.0) }, valueRange = 0.25f..4f)
+    AudioDelayAndEq(player)
     SectionTitle(stringResource(R.string.player_volume_boost, volume.toInt().toString()))
     Slider(value = volume.toFloat().coerceIn(100f, 200f), onValueChange = { player.setVolume(it.toDouble()) }, valueRange = 100f..200f)
+}
+
+@Composable
+private fun AudioDelayAndEq(player: MpvPlayer) {
+    var delayS by remember { mutableStateOf(player.getDouble("audio-delay") ?: 0.0) }
+    SectionTitle(stringResource(R.string.player_audio_delay, "%+.2f".format(Locale.ROOT, delayS)))
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        listOf(-0.5, -0.1, 0.1, 0.5).forEach { step ->
+            FilledTonalButton(onClick = { delayS += step; player.setDouble("audio-delay", delayS) }, modifier = Modifier.weight(1f)) {
+                Text((if (step > 0) "+" else "−") + "%.1f".format(Locale.ROOT, kotlin.math.abs(step)))
+            }
+        }
+        OutlinedButton(onClick = { delayS = 0.0; player.setDouble("audio-delay", 0.0) }) { Text("0") }
+    }
+    val fx = player.fx ?: return
+    var on by remember { mutableStateOf(fx.enabled) }
+    var version by remember { mutableStateOf(0) }
+    SectionTitle(stringResource(R.string.player_equalizer))
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        FilledTonalButton(onClick = { on = !on; fx.setEnabled(on) }, modifier = Modifier.weight(1f)) {
+            Text(stringResource(if (on) R.string.player_equalizer_on else R.string.off))
+        }
+        OutlinedButton(onClick = { fx.reset(); version++ }) { Text(stringResource(R.string.player_equalizer_reset)) }
+    }
+    if (on) for (b in 0 until fx.bands) key(version, b) {
+        var level by remember { mutableStateOf(fx.level(b).toFloat()) }
+        Text("${fx.hz(b)} Hz", style = MaterialTheme.typography.bodySmall)
+        Slider(value = level, onValueChange = { level = it; fx.setLevel(b, it.toInt()) },
+            valueRange = fx.minLevel.toFloat()..fx.maxLevel.toFloat())
+    }
 }
 
 internal fun speedText(s: Double) = java.math.BigDecimal(s).setScale(2, java.math.RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() + "×"
@@ -268,6 +300,11 @@ private fun OptionsPanel(
     var hw by remember { mutableStateOf(player.getString("hwdec") ?: "") }
     var aspect by remember { mutableStateOf(player.getString("video-aspect-override") ?: "-1") }
     var crop by remember { mutableStateOf((player.getDouble("panscan") ?: 0.0) > 0.0) }
+    var casting by remember { mutableStateOf(false) }
+    player.shareableUri?.let { u ->
+        FilledTonalButton(onClick = { casting = true }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.cast_title)) }
+        if (casting) app.anon.player.player.cast.CastDialog(u, player.shareableTitle, { player.setPaused(true) }) { casting = false }
+    }
     SectionTitle(stringResource(R.string.player_decoder))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Decoder.values().forEach { d ->

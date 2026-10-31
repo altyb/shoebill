@@ -44,8 +44,6 @@ import androidx.compose.ui.unit.dp
 import app.anon.player.ui.EmptyState
 import app.anon.player.ui.SearchPill
 
-// ponytail: direct stream links only (http/https/HLS/rtsp, whatever mpv opens). Browsing SMB/DLNA shares needs a
-// share browser + credentials store; add when someone needs a NAS.
 private val SCHEMES = listOf("http://", "https://", "rtsp://", "rtmp://", "ftp://")
 
 /** "الشبكة" tab: play a stream link, keep the last 12. */
@@ -80,7 +78,9 @@ fun NetworkTab(onPlay: (Uri, String) -> Unit, modifier: Modifier = Modifier) {
             Text(stringResource(R.string.lib_stream_invalid), style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 6.dp))
         }
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(8.dp))
+        SmbSection(onPlay)
+        Spacer(Modifier.height(8.dp))
         if (recents.isEmpty()) {
             EmptyState(Icons.Rounded.Wifi, stringResource(R.string.lib_network_empty), body = stringResource(R.string.lib_network_empty_body))
         } else {

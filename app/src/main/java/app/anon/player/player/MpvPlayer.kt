@@ -50,6 +50,18 @@ class MpvPlayer(context: Context) : MPVLib.EventObserver {
 
     @Volatile private var lastLogMs = 0L
 
+    /** Called off the main thread when a file opened in the background turns out unreadable. */
+    @Volatile var onOpenFailed: (() -> Unit)? = null
+    @Volatile private var destroyed = false
+
+    /** Audio session the equalizer attaches to. */
+    private val audioSession = appContext.getSystemService(android.media.AudioManager::class.java).generateAudioSessionId()
+    /** Null on phones without the effect. */
+    val fx: AudioFx? by lazy { AudioFx.open(appContext, audioSession) }
+    /** The file as other tools may read it; null in the vault, where nothing may leave the player. */
+    @Volatile var shareableUri: Uri? = null
+    @Volatile var shareableTitle: String = ""
+
     private val mpv: MPVLib = requireNotNull(MPVLib.create(appContext)) { "libmpv create failed" }
 
     init {
@@ -58,6 +70,7 @@ class MpvPlayer(context: Context) : MPVLib.EventObserver {
         mpv.setOptionString("opengl-es", "yes")
         mpv.setOptionString("hwdec", "mediacodec-copy")
         mpv.setOptionString("ao", "audiotrack,opensles")
+        mpv.setOptionString("audiotrack-session-id", audioSession.toString())
         mpv.setOptionString("keep-open", "yes")
         mpv.setOptionString("idle", "yes")
         mpv.setOptionString("force-window", "no")
@@ -85,7 +98,15 @@ class MpvPlayer(context: Context) : MPVLib.EventObserver {
 
     /** False when the file cannot be opened (deleted, moved into the vault, permission gone). */
     fun load(uri: Uri): Boolean {
-        if (uri.scheme == "content") {
+        if (uri.authority?.endsWith(".smb") == true) {
+            // a network share: opening it talks to the server, which must not happen on the main thread
+            Thread({
+                val fd = runCatching { appContext.contentResolver.openFileDescriptor(uri, "r") }.getOrNull()?.detachFd()
+                if (destroyed) { fd?.let { runCatching { android.os.ParcelFileDescriptor.adoptFd(it).close() } } }
+                else if (fd == null) onOpenFailed?.invoke()
+                else mpv.command(arrayOf("loadfile", "fdclose://$fd"))
+            }, "smb-open").start()
+        } else if (uri.scheme == "content") {
             val fd = runCatching { appContext.contentResolver.openFileDescriptor(uri, "r") }.getOrNull()?.detachFd()
                 ?: return false
             mpv.command(arrayOf("loadfile", "fdclose://$fd"))
@@ -96,6 +117,8 @@ class MpvPlayer(context: Context) : MPVLib.EventObserver {
         }
         return true
     }
+
+    private val fxOpened: Boolean get() = (::fx.getDelegate() as Lazy<*>).isInitialized()
 
     fun command(vararg args: String) = mpv.command(arrayOf(*args))
     fun getString(name: String): String? = mpv.getPropertyString(name)
@@ -142,11 +165,13 @@ class MpvPlayer(context: Context) : MPVLib.EventObserver {
     }
 
     fun destroy() {
+        destroyed = true
         if (debuggable) {
             stateHandler.removeCallbacks(stateTick)
             stateThread.quitSafely()
             stateThread.join(2000) // a tick in flight must not read a destroyed mpv
         }
+        runCatching { if (fxOpened) fx?.release() }
         mpv.destroy()
     }
 

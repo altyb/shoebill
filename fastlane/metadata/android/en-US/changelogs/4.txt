@@ -1,0 +1,1 @@
+Network shares (SMB), DLNA casting, audio delay, equalizer, automatic subtitle sync from the audio, settings backup, open source licenses screen.

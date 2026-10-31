@@ -7,7 +7,10 @@ This app includes these native libraries through libmpv-android
 - mpv (https://mpv.io)
 - FFmpeg (https://ffmpeg.org), built with --enable-gpl --enable-version3, so GPL version 3 or later
 - dav1d, mbedTLS and libxml2, enabled in that FFmpeg build
-Source and build scripts: https://github.com/jarnedemeulemeester/libmpv-android
+Source and build scripts for this exact build: https://github.com/jarnedemeulemeester/libmpv-android/tree/v1.0.0
+(tag v1.0.0, commit fcf6745703)
+
+Network shares use smbj (https://github.com/hierynomus/smbj, Apache License 2.0) and Bouncy Castle (MIT-style licence).
 
 It also includes Tink (https://github.com/tink-crypto/tink-java), AndroidX and Jetpack Compose
 (Apache License 2.0) and MaterialKolor (https://github.com/jordond/MaterialKolor).

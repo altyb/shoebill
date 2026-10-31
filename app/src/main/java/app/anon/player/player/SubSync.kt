@@ -63,13 +63,16 @@ fun SubTimingTab(player: MpvPlayer, subFile: File?) {
         }
     }
 
+    // whichever way the subtitle was added (picked, found beside the video, downloaded), mpv knows the file in use
+    fun activeSub(): File? = player.getString("current-tracks/sub/external-filename")?.let(::File)?.takeIf { it.exists() } ?: subFile
+
     fun nudge(step: Double) {
         player.setDouble("sub-delay", (player.getDouble("sub-delay") ?: 0.0) + step)
         delaySec = player.getDouble("sub-delay") ?: 0.0
     }
 
     fun fixFps(from: Double, to: Double) {
-        val f = subFile
+        val f = activeSub()
         if (f == null || f.extension.lowercase() != "srt") {
             message = context.getString(R.string.sub_fps_srt_only)
             return
@@ -110,7 +113,6 @@ fun SubTimingTab(player: MpvPlayer, subFile: File?) {
 
         Spacer(Modifier.height(12.dp))
         FilledTonalButton(onClick = {
-            // ponytail: manual tap-sync only. Auto-sync from the audio waveform is not built.
             val now = player.getDouble("time-pos")
             val start = player.getDouble("sub-start")
             message = if (start == null || start < 0 || now == null) {
@@ -121,7 +123,26 @@ fun SubTimingTab(player: MpvPlayer, subFile: File?) {
             }
         }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.sub_sync_this_line)) }
         Spacer(Modifier.height(8.dp))
-        OutlinedButton(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.sub_auto_sync_soon)) }
+        OutlinedButton(onClick = {
+            val u = player.shareableUri
+            val f = activeSub()
+            val from = (player.getDouble("time-pos") ?: 0.0)
+            if (u == null || f == null || f.extension.lowercase() != "srt") {
+                message = context.getString(R.string.sub_auto_srt_only)
+            } else {
+                message = context.getString(R.string.sub_auto_busy)
+                scope.launch {
+                    val ms = withContext(Dispatchers.Default) { AudioSync.find(context, u, from, f) }
+                    if (ms == null) {
+                        message = context.getString(R.string.sub_auto_failed)
+                    } else {
+                        player.setDouble("sub-delay", ms / 1000.0)
+                        message = context.getString(R.string.sub_auto_done, "%+.1f".format(Locale.ROOT, ms / 1000.0))
+                    }
+                }
+            }
+        }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.sub_auto_sync)) }
+        message?.let { Spacer(Modifier.height(12.dp)); Text(it, style = MaterialTheme.typography.bodyMedium) }
 
         Spacer(Modifier.height(16.dp))
         Text(stringResource(R.string.sub_fps_convert), style = MaterialTheme.typography.titleSmall)
@@ -130,6 +151,5 @@ fun SubTimingTab(player: MpvPlayer, subFile: File?) {
             OutlinedButton(onClick = { fixFps(23.976, 25.0) }, modifier = Modifier.weight(1f)) { Text("23.976 → 25") }
             OutlinedButton(onClick = { fixFps(25.0, 23.976) }, modifier = Modifier.weight(1f)) { Text("25 → 23.976") }
         }
-        message?.let { Spacer(Modifier.height(12.dp)); Text(it, style = MaterialTheme.typography.bodyMedium) }
     }
 }
