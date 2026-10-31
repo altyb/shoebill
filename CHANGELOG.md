@@ -7,7 +7,7 @@ New app ID, `dev.altayeb.shoebill`. This installs as a new app next to older cop
 SMB network shares. DLNA casting. Audio delay and equalizer. Automatic subtitle sync from the audio. Settings backup. Licenses screen. Picked subtitle files now work with frame-rate conversion. The Google Play build has no dialer code.
 
 ## 0.2.0 (2026-10-31)
-Renamed from Anon Player. New icon.
+New name and icon.
 
 ## 0.1.1 (2026-10-30)
 English interface, language setting, privacy and source links.
