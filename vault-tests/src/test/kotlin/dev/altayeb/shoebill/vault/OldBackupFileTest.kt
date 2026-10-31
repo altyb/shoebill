@@ -27,6 +27,14 @@ class OldBackupFileTest {
         } catch (_: BackupFormat.BadPasswordException) {}
     }
 
+    @Test fun otherMagicIsRefused() {
+        val bytes = old().readBytes().also { "XXXXVB1\n".toByteArray().copyInto(it) }
+        try {
+            BackupFormat.read(ByteArrayInputStream(bytes), "old password".toCharArray()) { _, _ -> }
+            fail("opened a file with a foreign header")
+        } catch (_: BackupFormat.CorruptBackupException) {}
+    }
+
     @Test fun newBackupsUseTheNewHeader() {
         val out = ByteArrayOutputStream()
         BackupFormat.write(out, "p".toCharArray(), emptyList(), { ByteArrayInputStream(ByteArray(0)) }, 1000)
