@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""End-to-end player checks on a real phone. Asserts the player's real state from the debug `AnonState` log line
+"""End-to-end player checks on a real phone. Asserts the player's real state from the debug `BrandState` log line
 (MpvPlayer logs it once per second), and finds buttons by their content-desc through uiautomator — no blind taps.
 
     python3 qa/e2e.py            # all cases
@@ -40,11 +40,11 @@ def open_video(vid, fresh=True):
 
 
 def state():
-    """Last AnonState line → dict."""
-    lines = [l for l in adb("logcat", "-d", "-s", "AnonState").splitlines() if "AnonState:" in l]
+    """Last BrandState line → dict."""
+    lines = [l for l in adb("logcat", "-d", "-s", "BrandState").splitlines() if "BrandState:" in l]
     if not lines:
         return {}
-    body = lines[-1].split("AnonState: ", 1)[1]
+    body = lines[-1].split("BrandState: ", 1)[1]
     return dict(re.findall(r"(\S+?)=(\S*)", body))
 
 
@@ -111,7 +111,7 @@ def screen():
 
 
 def ui():
-    """controls / panel / locked as reported by the app (user-data/anon/ui in the AnonState line)."""
+    """controls / panel / locked as reported by the app (user-data/anon/ui in the BrandState line)."""
     raw = state().get("user-data/anon/ui", "").strip('"')  # mpv returns user-data strings JSON-quoted
     return dict(kv.split("=", 1) for kv in raw.split(",") if "=" in kv)
 
@@ -120,7 +120,7 @@ def show_controls():
     if ui().get("controls") != "1":
         w, h = screen()
         tap_xy(w // 2, h // 4)  # above the centre play button
-        time.sleep(1.2)  # wait for the next AnonState tick
+        time.sleep(1.2)  # wait for the next BrandState tick
 
 
 def hide_controls():
