@@ -1,0 +1,21 @@
+Shoebill
+Copyright 2026 Altayeb
+Licensed under the GNU General Public License, version 3 or later. See LICENSE.
+
+This app includes these native libraries through libmpv-android
+(https://github.com/jarnedemeulemeester/libmpv-android, wrapper code MIT), artifact dev.jdtech.mpv:libmpv:1.0.0:
+- mpv (https://mpv.io)
+- FFmpeg (https://ffmpeg.org), built with --enable-gpl --enable-version3, so GPL version 3 or later
+- dav1d, mbedTLS and libxml2, enabled in that FFmpeg build
+Source and build scripts: https://github.com/jarnedemeulemeester/libmpv-android
+
+It also includes Tink (https://github.com/tink-crypto/tink-java), AndroidX and Jetpack Compose
+(Apache License 2.0) and MaterialKolor (https://github.com/jordond/MaterialKolor).
+
+Screenshots show Sintel and Big Buck Bunny, (c) Blender Foundation, CC BY 3.0.
+
+Download badges in docs/badges belong to their owners and are used only to link to each download:
+get-it-on-github.png by Kunzisoft (https://github.com/Kunzisoft/Github-badge), CC BY-SA 3.0, shows the GitHub logo.
+badge_obtainium.png from Obtainium (https://github.com/ImranR98/Obtainium).
+get-it-on.png from F-Droid. en_badge_web_generic.png from Google. IzzyOnDroid.png from IzzyOnDroid.
+Google Play and the Google Play logo are trademarks of Google LLC.
