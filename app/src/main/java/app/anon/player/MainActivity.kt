@@ -43,11 +43,11 @@ import app.anon.player.library.SearchScreen
 import app.anon.player.player.PlayerScreen
 import app.anon.player.settings.AppearanceScreen
 import app.anon.player.settings.SettingsScreen
-import app.anon.player.ui.theme.AnonPlayerTheme
+import app.anon.player.ui.theme.ShoebillTheme
 import app.anon.player.vault.VaultScreen
-import app.anon.player.ui.theme.AnonTheme
+import app.anon.player.ui.theme.BrandTheme
 
-/** Every screen of the flow doc (design/out/anon-player.html). Only MainActivity pushes/pops routes. */
+/** Every screen of the app. Only MainActivity pushes/pops routes. */
 sealed interface Route {
     data object Home : Route
     data class Folder(val name: String) : Route
@@ -85,7 +85,7 @@ class MainActivity : FragmentActivity() { // FragmentActivity: BiometricPrompt (
         }
         setContent {
             // layout direction comes from the locale (Lang): RTL in Arabic, LTR in English; times/seek bars stay LTR
-            AnonTheme {
+            BrandTheme {
                 Surface(Modifier, color = MaterialTheme.colorScheme.background) {
                     // debug/test entry: adb shell am start -n <pkg>/app.anon.player.MainActivity --es route settings|appearance|search|vault
                     val start = remember { startRoute(routeOf(intent)) }
@@ -129,7 +129,7 @@ class MainActivity : FragmentActivity() { // FragmentActivity: BiometricPrompt (
                         )
                         is Route.Folder -> FolderScreen(r.name, onBack = pop, onPlay = play)
                         Route.Search -> SearchScreen(onBack = pop, onPlay = play)
-                        is Route.Player -> key(r) { AnonPlayerTheme { PlayerScreen(uri = r.uri, title = r.title, onBack = pop, private = r.private, queue = r.queue) } }
+                        is Route.Player -> key(r) { ShoebillTheme { PlayerScreen(uri = r.uri, title = r.title, onBack = pop, private = r.private, queue = r.queue) } }
                         Route.Settings -> SettingsScreen(onBack = pop, onAppearance = { push(Route.Appearance) })
                         Route.Appearance -> AppearanceScreen(onBack = pop)
                         Route.Vault -> VaultScreen(onBack = pop, onPlay = { u, title -> push(Route.Player(u, title, private = true)) })

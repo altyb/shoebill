@@ -6,7 +6,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import app.anon.player.ui.sharedVideo
-import app.anon.player.ui.AnonLoader
+import app.anon.player.ui.BrandLoader
 import kotlin.math.roundToInt
 import android.app.Activity
 import android.content.pm.ActivityInfo
@@ -299,7 +299,7 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
         notice = Notice(context.getString(R.string.player_sleep_done))
     }
 
-    // UI state for qa/e2e.py (shows up in the debug AnonState line through mpv user-data)
+    // UI state for qa/e2e.py (shows up in the debug BrandState line through mpv user-data)
     LaunchedEffect(overlayVisible, panel, locked) {
         player.setString("user-data/anon/ui", "controls=${if (overlayVisible) 1 else 0},panel=${panel ?: "none"},locked=${if (locked) 1 else 0}")
     }
@@ -514,7 +514,7 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
         val buffering by player.buffering.collectAsStateWithLifecycle()
         var showBuffering by remember { mutableStateOf(false) }
         LaunchedEffect(buffering) { if (buffering) { delay(400); showBuffering = true } else showBuffering = false }
-        AnimatedVisibility(showBuffering, Modifier.align(Alignment.Center), enter = fadeIn(), exit = fadeOut()) { AnonLoader() }
+        AnimatedVisibility(showBuffering, Modifier.align(Alignment.Center), enter = fadeIn(), exit = fadeOut()) { BrandLoader() }
 
         AnimatedVisibility(
             visible = overlayVisible && panel == null && !searchOpen && !inPip,

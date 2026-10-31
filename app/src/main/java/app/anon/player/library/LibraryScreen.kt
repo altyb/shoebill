@@ -3,7 +3,7 @@ package app.anon.player.library
 import app.anon.player.R
 import androidx.compose.ui.res.stringResource
 
-import app.anon.player.ui.AnonLoader
+import app.anon.player.ui.BrandLoader
 import android.Manifest
 import android.content.Context
 import android.content.Intent
@@ -84,7 +84,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.anon.player.data.FileState
 import app.anon.player.ui.EmptyState
-import app.anon.player.ui.theme.AnonAmber
+import app.anon.player.ui.theme.BrandAmber
 import kotlinx.coroutines.launch
 
 private enum class Access { Full, Partial, None }
@@ -159,7 +159,7 @@ fun VideoGate(content: @Composable (List<Video>) -> Unit) {
         val inset = if (access == Access.Partial) Modifier.consumeWindowInsets(WindowInsets.statusBars) else Modifier
         Box(Modifier.weight(1f).then(inset)) {
             when {
-                list == null -> CenteredGate { AnonLoader() }
+                list == null -> CenteredGate { BrandLoader() }
                 list.isEmpty() -> EmptyState(Icons.Rounded.VideoLibrary, stringResource(R.string.lib_no_videos))
                 else -> content(list)
             }
@@ -198,7 +198,7 @@ fun highlight(name: String, query: String): AnnotatedString = buildAnnotatedStri
     if (query.isNotBlank()) {
         var i = name.indexOf(query, ignoreCase = true)
         while (i >= 0) {
-            addStyle(SpanStyle(background = AnonAmber.copy(alpha = 0.45f), fontWeight = FontWeight.SemiBold), i, i + query.length)
+            addStyle(SpanStyle(background = BrandAmber.copy(alpha = 0.45f), fontWeight = FontWeight.SemiBold), i, i + query.length)
             i = name.indexOf(query, i + query.length, ignoreCase = true)
         }
     }
@@ -226,7 +226,7 @@ fun DurationBadge(ms: Long, modifier: Modifier = Modifier) {
 @Composable
 fun ProgressLine(fraction: Float, modifier: Modifier = Modifier) {
     Box(modifier.fillMaxWidth().height(3.dp).background(Color.Black.copy(alpha = 0.4f))) {
-        Box(Modifier.fillMaxWidth(fraction).fillMaxHeight().background(AnonAmber))
+        Box(Modifier.fillMaxWidth(fraction).fillMaxHeight().background(BrandAmber))
     }
 }
 

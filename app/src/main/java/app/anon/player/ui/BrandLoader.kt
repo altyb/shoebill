@@ -36,7 +36,7 @@ import androidx.compose.ui.unit.dp
  * design/logo/make.py) so it takes the theme colour; the eyes are cut out, so any background shows through.
  */
 @Composable
-fun AnonLoader(modifier: Modifier = Modifier, size: Dp = 56.dp, color: Color = MaterialTheme.colorScheme.primary) {
+fun BrandLoader(modifier: Modifier = Modifier, size: Dp = 56.dp, color: Color = MaterialTheme.colorScheme.primary) {
     val triangle = remember { PathParser().parsePathString(LogoPaths.TRIANGLE).toPath() }
     val eyes = remember {
         listOf(LogoPaths.EYE0, LogoPaths.EYE1).map { PathParser().parsePathString(it).toPath() }

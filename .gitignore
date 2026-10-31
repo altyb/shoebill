@@ -18,3 +18,7 @@ qa/REPORT-player.md
 qa/monkey*.txt
 design/logo/ref/
 design/logo/choose.html
+
+# Working design files
+design/*
+!design/logo/

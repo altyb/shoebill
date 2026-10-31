@@ -27,16 +27,16 @@ import com.materialkolor.PaletteStyle
 import com.materialkolor.dynamicColorScheme
 
 // From design/scheme.json "amber" (not an M3 role; used by app code directly).
-val AnonAmber = Color(0xFFE0AE27)
+val BrandAmber = Color(0xFFE0AE27)
 
 /** Seed used when the wallpaper source is asked for on Android < 12 (design ش-18). */
-const val ANON_SEED = 0xFF0B6E69.toInt()
+const val BRAND_SEED = 0xFF0B6E69.toInt()
 
 data class Preset(val name: String, val seed: Int)
 
-/** The 12 ready palettes from design/themes.json and the ش-18 spec. */
-val AnonPresets = listOf(
-    Preset("Anon", ANON_SEED),
+/** The 12 ready palettes and the ش-18 spec. */
+val BrandPresets = listOf(
+    Preset("Shoebill", BRAND_SEED),
     Preset("Ocean", 0xFF1E5BC6.toInt()),
     Preset("Indigo", 0xFF4C4FB8.toInt()),
     Preset("Violet", 0xFF7A4BC4.toInt()),
@@ -84,7 +84,7 @@ fun buildScheme(context: Context, s: Settings, dark: Boolean): ColorScheme {
             base.copy(background = Color.Black, surface = Color.Black, surfaceDim = Color.Black, surfaceContainerLowest = Color.Black)
         } else base
     }
-    val seed = if (s.colorSource == ColorSource.Wallpaper) ANON_SEED else s.seed
+    val seed = if (s.colorSource == ColorSource.Wallpaper) BRAND_SEED else s.seed
     return seedScheme(seed, dark, amoled, s.style, s.contrast)
 }
 
@@ -109,7 +109,7 @@ private fun ColorScheme.animated(): ColorScheme = copy(
 
 /** App theme: reads AppSettings reactively, so changes apply at once without a restart. */
 @Composable
-fun AnonTheme(content: @Composable () -> Unit) {
+fun BrandTheme(content: @Composable () -> Unit) {
     val context = LocalContext.current
     val s by AppSettings.get(context).settings.collectAsState()
     val dark = s.isDark(isSystemInDarkTheme())
@@ -119,7 +119,7 @@ fun AnonTheme(content: @Composable () -> Unit) {
 
 /** The player is always dark (ق-18), with the same seed and style as the app. */
 @Composable
-fun AnonPlayerTheme(content: @Composable () -> Unit) {
+fun ShoebillTheme(content: @Composable () -> Unit) {
     val context = LocalContext.current
     val s by AppSettings.get(context).settings.collectAsState()
     val scheme = remember(s) { buildScheme(context, s, dark = true) }

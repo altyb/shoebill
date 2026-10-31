@@ -32,7 +32,7 @@
   <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4.png" width="47%" alt="Subtitle style">
 </p>
 
-Formerly Anon Player. Installed copies update in place and keep their data. Sister app: [Hudhud Keyboard](https://github.com/altyb/hudhud).
+Sister app: [Hudhud Keyboard](https://github.com/altyb/hudhud).
 
 ## Features
 
@@ -110,7 +110,7 @@ JDK 17+ and the Android SDK.
 | `full` | Asks once for "All files access", so moving files into the vault deletes the originals silently. |
 | `play` | No "All files access" (Play policy); Android shows its delete dialog when you move files in. |
 
-Release signing reads `~/.secrets/anon-player-release.properties`
+Release signing reads `~/.secrets/shoebill-release.properties`
 (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`); without it, release builds use the debug key.
 
 Tests:

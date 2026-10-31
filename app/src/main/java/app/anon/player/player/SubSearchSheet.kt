@@ -3,7 +3,7 @@ package app.anon.player.player
 import app.anon.player.R
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import app.anon.player.ui.AnonLoader
+import app.anon.player.ui.BrandLoader
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -212,7 +212,7 @@ private fun SearchContent(
         message?.takeIf { keyed.isNotEmpty() && it != noResults }?.let { Text(it, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(vertical = 8.dp)) }
         if (loading) {
             Spacer(Modifier.height(12.dp))
-            AnonLoader(Modifier.align(Alignment.CenterHorizontally), 44.dp)
+            BrandLoader(Modifier.align(Alignment.CenterHorizontally), 44.dp)
         }
         when {
             keyed.isEmpty() -> EmptyState(
