@@ -6,17 +6,17 @@ plugins {
 }
 
 android {
-    namespace = "app.anon.player"
+    namespace = "dev.altayeb.shoebill"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "app.anon.player"
+        applicationId = "dev.altayeb.shoebill"
         minSdk = 26
         targetSdk = 36
-        versionCode = 4
-        versionName = "0.3.0"
-        // phones by default; the emulator build passes -PanonAbis=x86_64
-        ndk { abiFilters += (providers.gradleProperty("anonAbis").orNull ?: "arm64-v8a,armeabi-v7a").split(",") }
+        versionCode = 5
+        versionName = "0.4.0"
+        // phones by default; the emulator build passes -PdevAbis=x86_64
+        ndk { abiFilters += (providers.gradleProperty("devAbis").orNull ?: "arm64-v8a,armeabi-v7a").split(",") }
         // each worktree agent installs as its own app: ./gradlew installDebug -PdevSuffix=.player
         providers.gradleProperty("devSuffix").orNull?.let { applicationIdSuffix = it }
         // a test copy installed next to the real app must not look like it on the home screen

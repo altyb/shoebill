@@ -19,4 +19,4 @@ tasks.test {
 }
 
 // The code under test lives in the app.
-kotlin.sourceSets["main"].kotlin.srcDir("../app/src/main/java/app/anon/player/subs")
+kotlin.sourceSets["main"].kotlin.srcDir("../app/src/main/java/dev/altayeb/shoebill/subs")
