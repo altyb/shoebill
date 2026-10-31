@@ -144,3 +144,5 @@ Much of this code was written with an AI coding assistant (Claude) under my dire
 ## License
 
 GPL-3.0-or-later. See [LICENSE](LICENSE).
+
+Rights holders can report a problem to altybanony@gmail.com.
