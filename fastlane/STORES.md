@@ -1,28 +1,20 @@
 # Publishing checklist
 
-Order: GitHub release → IzzyOnDroid → F-Droid (main repo) → Google Play.
+Order: GitHub release → F-Droid (main repo, from 2027-01-30) → Google Play.
 
 ## 1. GitHub release
 
 Tag `v0.1.0`, attach `app-full-release.apk` (arm64-v8a + armeabi-v7a, signed with the release key).
 Signing certificate SHA-256: `AE:C6:44:AE:81:38:A6:FD:30:19:03:DD:15:3F:BC:18:10:65:E9:BE:24:53:73:B4:8E:C5:D1:E6:C6:53:2B:75`
 
-## 2. IzzyOnDroid (F-Droid client, accepts prebuilt libraries)
+## 2. IzzyOnDroid: not eligible
 
-Open an issue at https://gitlab.com/IzzyOnDroid/repo/-/issues with:
-
-> **App:** Shoebill — https://github.com/altyb/shoebill
-> **License:** GPL-3.0-or-later
-> **Description:** Private video player on libmpv, with an encrypted vault (AES-256-GCM, Android Keystore),
-> decoy/wipe PIN, subtitle search and styling. No ads, no trackers, no analytics.
-> **APK:** attached to GitHub releases (`app-full-release.apk`), fastlane metadata in the repo.
-> **Anti-features:** none known. Network use: subtitle search (OpenSubtitles, SubDL, Jimaku) with the user's own
-> API keys, and network links the user enters.
-
-Izzy's scanner checks the APK for trackers and proprietary libraries; there are none (no Google Play Services,
-no Firebase).
+Its [inclusion policy](https://izzyondroid.org/docs/general/AppInclusionPolicy/) rejects apps whose code was written with generative AI, and the 52 MB APK is over its 30 MB limit. Do not submit without honest disclosure.
 
 ## 3. F-Droid main repository
+
+Not before 2027-01-30: Quality point 6 of the inclusion policy asks for 3 months of active development unless the app has proven users. First commit was 2026-10-30. Disclosing AI assistance is encouraged.
+
 
 F-Droid builds every app from source, including native libraries. `dev.jdtech.mpv:libmpv` is a prebuilt AAR, so
 the recipe must build libmpv and FFmpeg from source (as mpv-android's recipe does in fdroiddata). Steps:

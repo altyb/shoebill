@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/altyb/shoebill/releases/latest"><img src="docs/badges/github.png" height="64" alt="Get it on GitHub"></a>
   <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/altyb/shoebill"><img src="docs/badges/obtainium.png" height="64" alt="Get it on Obtainium"></a>
-  <!-- Turn on once listed. docs/badges/izzy.png, fdroid.png, play.png -->
+  <!-- Turn on once listed. docs/badges/fdroid.png, play.png -->
 </p>
 
 <p align="center">
@@ -72,7 +72,6 @@ Settings, or let it follow the phone.
 
 - **GitHub:** download the APK from [Releases](../../releases/latest). Android 8.0 or newer.
 - **[Obtainium](https://github.com/ImranR98/Obtainium):** add `https://github.com/altyb/shoebill` to get updates.
-- F-Droid (IzzyOnDroid) and Google Play: coming.
 
 Use `shoebill-0.2.0.apk` from GitHub. The Google Play version cannot ask for "All files access", so moving
 files into the vault shows Android's delete dialog each time.
