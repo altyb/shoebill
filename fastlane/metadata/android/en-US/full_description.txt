@@ -17,7 +17,7 @@ Vault
 - Decoy PIN opens a second vault; wipe PIN erases the real one.
 - 5 wrong PINs lock it (30 s, doubling up to 1 h). Changing the phone's clock does not end the wait.
 - Videos play straight from the encrypted file; nothing decrypted is written to disk.
-- Encrypted backup and restore (`.anonvault` file, password-protected).
+- Encrypted backup and restore (`.shoebillvault` file, password-protected).
 - Screenshots and screen recording blocked inside the vault.
 
 

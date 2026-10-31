@@ -18,7 +18,7 @@ Not before 2027-01-30: Quality point 6 of the inclusion policy asks for 3 months
 
 F-Droid builds every app from source, including native libraries. `dev.jdtech.mpv:libmpv` is a prebuilt AAR, so
 the recipe must build libmpv and FFmpeg from source (as mpv-android's recipe does in fdroiddata). Steps:
-1. Fork https://gitlab.com/fdroid/fdroiddata, add `metadata/app.anon.player.yml` with a `srclibs` entry for
+1. Fork https://gitlab.com/fdroid/fdroiddata, add `metadata/dev.altayeb.shoebill.yml` with a `srclibs` entry for
    libmpv-android and its build scripts.
 2. Open a merge request. Expect review rounds; this is the slowest store.
 

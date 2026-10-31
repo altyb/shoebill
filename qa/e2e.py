@@ -4,21 +4,21 @@
 
     python3 qa/e2e.py            # all cases
     python3 qa/e2e.py T4 T6      # some cases
-Results: table on stdout + qa/e2e-report.md. Needs the debug build installed (./gradlew installFullDebug) and adb on PATH. Keeps app data unless ANON_CLEAR=1.
+Results: table on stdout + qa/e2e-report.md. Needs the debug build installed (./gradlew installFullDebug) and adb on PATH. Keeps app data unless SHOEBILL_CLEAR=1.
 Buttons are found by their Arabic labels: set the app language to Arabic (Settings → Language) first.
 """
 import os, re, subprocess, sys, time, xml.etree.ElementTree as ET
 
 SERIAL = os.environ["ANDROID_SERIAL"]  # the device to test
-PKG = os.environ.get("ANON_PKG", "app.anon.player")
-# ANON_CLEAR=1 wipes app data first (pm clear) and allows the monkey case. Never on a phone whose vault matters.
-CLEAN = os.environ.get("ANON_CLEAR") == "1"
-ACT = f"{PKG}/app.anon.player.MainActivity"
+PKG = os.environ.get("SHOEBILL_PKG", "dev.altayeb.shoebill")
+# SHOEBILL_CLEAR=1 wipes app data first (pm clear) and allows the monkey case. Never on a phone whose vault matters.
+CLEAN = os.environ.get("SHOEBILL_CLEAR") == "1"
+ACT = f"{PKG}/dev.altayeb.shoebill.MainActivity"
 HERE = os.path.dirname(os.path.abspath(__file__))
 # MediaStore ids of two test videos: A = HEVC 10-bit + two audio tracks + ASS subtitles, B = HEVC + one subtitle.
 # qa/make-media.sh creates both and prints their ids.
-VID_A, VID_B = int(os.environ["ANON_VIDEO_A"]), int(os.environ["ANON_VIDEO_B"])
-B_MIN = float(os.environ.get("ANON_B_MIN", 1))  # B's length in minutes, to tell the two files apart
+VID_A, VID_B = int(os.environ["SHOEBILL_VIDEO_A"]), int(os.environ["SHOEBILL_VIDEO_B"])
+B_MIN = float(os.environ.get("SHOEBILL_B_MIN", 1))  # B's length in minutes, to tell the two files apart
 
 
 def adb(*a, check=False):
@@ -111,8 +111,8 @@ def screen():
 
 
 def ui():
-    """controls / panel / locked as reported by the app (user-data/anon/ui in the BrandState line)."""
-    raw = state().get("user-data/anon/ui", "").strip('"')  # mpv returns user-data strings JSON-quoted
+    """controls / panel / locked as reported by the app (user-data/shoebill/ui in the BrandState line)."""
+    raw = state().get("user-data/shoebill/ui", "").strip('"')  # mpv returns user-data strings JSON-quoted
     return dict(kv.split("=", 1) for kv in raw.split(",") if "=" in kv)
 
 

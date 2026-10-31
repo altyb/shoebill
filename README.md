@@ -65,7 +65,7 @@ Settings, or let it follow the phone.
 - Decoy PIN opens a second vault; wipe PIN erases the real one.
 - 5 wrong PINs lock it (30 s, doubling up to 1 h). Changing the phone's clock does not end the wait.
 - Videos play straight from the encrypted file; nothing decrypted is written to disk.
-- Encrypted backup and restore (`.anonvault` file, password-protected).
+- Encrypted backup and restore (`.shoebillvault` file, password-protected).
 - Screenshots and screen recording blocked inside the vault.
 
 ## Install
@@ -76,6 +76,8 @@ Settings, or let it follow the phone.
 
 Use the GitHub APK. The Google Play version cannot ask for "All files access", so moving
 files into the vault shows Android's delete dialog each time.
+
+**Installed a version before 0.4.0?** It will not update, because the app ID changed. In the old app open Vault settings and tap Back up. Install the new app, restore the file there, and check your files before removing the old one.
 
 ## Privacy
 
@@ -118,7 +120,7 @@ Tests:
 - `cd subs-tests && ./gradlew test` (subtitle search and parsing)
 - `cd library-tests && ./gradlew test` (library logic)
 - `qa/e2e.py`: end-to-end player checks on a device or emulator. `qa/make-media.sh` creates the test videos;
-  build with `-PanonAbis=x86_64` for the emulator.
+  build with `-PdevAbis=x86_64` for the emulator.
 
 ## Known limits
 
