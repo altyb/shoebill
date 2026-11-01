@@ -83,6 +83,7 @@ class DlPrefs(c: Context) {
 object Probe {
     fun info(c: Context, url: String, proxy: String?): Preview {
         DownloadQueue.ensureReady(c)
+        DownloadQueue.refreshSoon(c)
         val req = YoutubeDLRequest(url).addOption("--no-playlist")
         proxy?.let { req.addOption("--proxy", it) }
         val i = YoutubeDL.getInstance().getInfo(req)
@@ -98,6 +99,7 @@ object Probe {
     /** The videos behind a playlist link, without reading each one. */
     fun playlist(c: Context, url: String, proxy: String?): Preview? {
         DownloadQueue.ensureReady(c)
+        DownloadQueue.refreshSoon(c)
         val req = YoutubeDLRequest(url).addOption("--flat-playlist").addOption("--yes-playlist").addOption("-J").addOption("--no-warnings")
         proxy?.let { req.addOption("--proxy", it) }
         val root = org.json.JSONObject(YoutubeDL.getInstance().execute(req).out)
@@ -207,6 +209,9 @@ object DownloadQueue {
     }
 
     /** Sites change often and an old yt-dlp fails with errors like HTTP 403, so it renews itself weekly. No network or no release: carry on with what we have. */
+    /** The bundled yt-dlp ages fast and old ones read sites badly, so reading a link also renews it, without making that read wait. */
+    fun refreshSoon(c: Context) { scope.launch { runCatching { updateIfStale(c.applicationContext) } } }
+
     private fun updateIfStale(c: Context) {
         val prefs = c.getSharedPreferences("downloads", Context.MODE_PRIVATE)
         val now = System.currentTimeMillis()
