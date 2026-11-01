@@ -3,6 +3,14 @@ Player
 - Plays what mpv plays: HEVC 10-bit, H.264, VP9, TrueHD/EAC3/DTS, ASS/PGS subtitles, network streams (http, HLS, rtsp).
 - Gestures for seeking, volume and brightness; double-tap to skip; speed; audio and subtitle tracks.
 - Screen lock, picture-in-picture, background audio, resume where you stopped, playlists.
+- Chapter marks, deinterlace, picture controls, frame stepping.
+
+Music
+- Albums, artists, genres, playlists, a queue and a mini player. Android Auto browsing (not yet tried in a car).
+- ReplayGain turns loud tracks down, never up.
+
+Network
+- Browse SMB, WebDAV, SFTP and FTP sources. Cast to DLNA TVs.
 
 Subtitles
 - Search OpenSubtitles, SubDL and Jimaku (with your own free API keys).

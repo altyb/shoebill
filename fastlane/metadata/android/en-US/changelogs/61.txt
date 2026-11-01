@@ -1,0 +1,1 @@
+Music tab, downloader (GitHub build), WebDAV, SFTP and FTP sources, ReplayGain, Android Auto browsing (not yet tried in a car), chapter marks, deinterlace, picture controls, new settings pages. One APK per CPU plus a universal one.
