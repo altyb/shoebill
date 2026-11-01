@@ -21,3 +21,4 @@ tasks.test {
 kotlin.sourceSets["main"].kotlin.srcDir("../app/src/main/java/dev/altayeb/shoebill/library/logic")
 kotlin.sourceSets["main"].kotlin.srcDir("../app/src/main/java/dev/altayeb/shoebill/player/cast/logic")
 kotlin.sourceSets["main"].kotlin.srcDir("../app/src/full/java/dev/altayeb/shoebill/download/logic")
+kotlin.sourceSets["main"].kotlin.srcDir("../app/src/main/java/dev/altayeb/shoebill/player/logic")

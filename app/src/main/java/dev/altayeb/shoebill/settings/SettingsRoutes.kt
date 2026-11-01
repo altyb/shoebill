@@ -195,12 +195,13 @@ fun SettingsScreen(onBack: () -> Unit, onAppearance: () -> Unit) {
                         }
                     }
                     GroupTitle(stringResource(R.string.video_group_screen))
-                    val vs = groupShapes(4)
+                    val vs = groupShapes(5)
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         ChoiceRow(stringResource(R.string.video_orientation), vs[0], listOf(0 to stringResource(R.string.video_o_landscape), 1 to stringResource(R.string.video_o_auto), 2 to stringResource(R.string.video_o_follow), 3 to stringResource(R.string.video_o_portrait)), s.orientation) { v -> app.update { it.copy(orientation = v) } }
                         ChoiceRow(stringResource(R.string.settings_hide_delay), vs[1], listOf(3, 5, 10).map { it to stringResource(R.string.settings_seconds, it) }, s.controlsHideSec) { v -> app.update { it.copy(controlsHideSec = v) } }
                         SwitchRow(stringResource(R.string.video_remaining), vs[2], s.showRemaining, stringResource(R.string.video_remaining_sub)) { v -> app.update { it.copy(showRemaining = v) } }
                         SwitchRow(stringResource(R.string.video_brightness), vs[3], s.rememberBrightness, stringResource(R.string.video_brightness_sub)) { v -> app.update { it.copy(rememberBrightness = v) } }
+                        ChoiceRow(stringResource(R.string.player_deinterlace), vs[4], listOf(false to stringResource(R.string.off), true to stringResource(R.string.player_deint_auto)), s.deinterlace) { v -> app.update { it.copy(deinterlace = v) } }
                     }
                     GroupTitle(stringResource(R.string.video_group_language))
                     val la = groupShapes(3)

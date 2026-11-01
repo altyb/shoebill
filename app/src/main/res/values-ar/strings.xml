@@ -262,4 +262,18 @@
     <string name="video_max_volume">أعلى مستوى للصوت</string>
     <string name="video_pip_blocked">صورة داخل صورة متوقفة لهذا التطبيق</string>
     <string name="video_pip_blocked_sub">انقر لتفعيلها من إعدادات أندرويد</string>
+    <string name="player_deinterlace">إزالة التشابك</string>
+    <string name="player_deint_auto">تلقائي</string>
+    <string name="player_deint_hw_note">فك الترميز المباشر بالعتاد لا يزيل التشابك. استخدم HW+ لتفعيله.</string>
+    <string name="player_picture">الصورة</string>
+    <string name="player_pic_brightness">السطوع</string>
+    <string name="player_pic_contrast">التباين</string>
+    <string name="player_pic_saturation">التشبع</string>
+    <string name="player_pic_gamma">جاما</string>
+    <string name="player_pic_reset">إعادة ضبط الصورة</string>
+    <string name="player_scaling">جودة التكبير</string>
+    <string name="player_scale_fast">سريع</string>
+    <string name="player_scale_balanced">متوازن</string>
+    <string name="player_scale_sharp">الأعلى حدة</string>
+    <string name="player_scale_warn">الأعلى حدة يستهلك بطارية أكثر وقد يتقطع على الهواتف القديمة.</string>
 </resources>

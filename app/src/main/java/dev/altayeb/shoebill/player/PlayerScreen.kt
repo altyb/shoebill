@@ -118,6 +118,9 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
     var decoderLabel by remember { mutableStateOf("HW+") }
     var abA by remember { mutableStateOf<Double?>(null) }
     var abB by remember { mutableStateOf<Double?>(null) }
+    // read once per file on FILE_LOADED (mpv reads block), never per frame
+    var chapters by remember { mutableStateOf<List<Pair<String, Double>>>(emptyList()) }
+    val chapterSecs = remember(chapters) { chapters.map { it.second } }
     var sleepUntil by remember { mutableStateOf<Long?>(null) }
     var sleepMinutes by remember { mutableStateOf<Int?>(null) }
     var prevFile by remember { mutableStateOf<Pair<Uri, String>?>(null) }
@@ -183,7 +186,7 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
 
     fun openFile(u: Uri, t: String) {
         saveState()
-        notice = null; endDismissed = false; abA = null; abB = null; videoCodec = null
+        notice = null; endDismissed = false; abA = null; abB = null; chapters = emptyList(); videoCodec = null
         player.setString("ab-loop-a", "no")
         player.setString("ab-loop-b", "no")
         current = u
@@ -243,6 +246,7 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
         if (loads == 0) return@withContext
         val fs = store.get(current.toString())
         player.setString("hwdec", fs?.hwdec ?: settingsState.value.decoder.hwdec)
+        player.setString("deinterlace", if (settingsState.value.deinterlace) "auto" else "no")
         attachSiblingSubs(context, player, current)
         fs?.subtitle?.let { s ->
             if (s.startsWith("/")) {
@@ -271,6 +275,8 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
         videoCodec = player.getString("video-codec")?.substringBefore(" / ") // "H.264 / AVC / MPEG-4 AVC / …" -> "H.264"
         decoderLabel = Decoder.values().firstOrNull { it.hwdec == player.getString("hwdec") }?.let { decoderName(it) } ?: "HW+"
     } }
+
+    LaunchedEffect(loads) { if (loads > 0) chapters = withContext(Dispatchers.IO) { player.chapters() } }
 
     LaunchedEffect(loads, trackVersion, panel) {
         subLabel = player.tracks().firstOrNull { it.type == "sub" && it.selected }?.let { it.lang ?: it.title ?: context.getString(R.string.player_subtitle_fallback) } ?: context.getString(R.string.off)
@@ -593,6 +599,7 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
                     shownSec = seekPreview ?: position,
                     abA = abA,
                     abB = abB,
+                    chapterSecs = chapterSecs,
                     hasPrev = prevFile != null,
                     hasNext = nextFile != null,
                     onBack = onBack,
@@ -630,6 +637,7 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
             volume = volume,
             abA = abA,
             abB = abB,
+            chapters = chapters,
             onTracksChanged = { trackVersion++ },
             onAddSub = { subPicker.launch(arrayOf("*/*")) },
             onSearch = { panel = null; searchOpen = true },
