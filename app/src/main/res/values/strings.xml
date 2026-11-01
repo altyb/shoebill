@@ -121,6 +121,7 @@
     <string name="dl_finishing">Finishing</string>
     <string name="dl_done">Saved to your library</string>
     <string name="dl_failed">Failed: %1$s</string>
+    <string name="dl_sidecar_failed">Could not save %1$s</string>
     <string name="dl_cancelled">Cancelled</string>
     <string name="dl_cancel">Cancel</string>
     <string name="dl_retry">Try again</string>
@@ -239,7 +240,7 @@
     <string name="dl_autosubs">Include auto-generated subtitles</string>
     <string name="dl_autosubs_sub">Used when a video has no written ones</string>
     <string name="dl_sub_files">Keep subtitles as files</string>
-    <string name="dl_sub_files_sub">Saved beside the video as .srt or .vtt, not embedded in it</string>
+    <string name="dl_sub_files_sub">Saved as .srt or .vtt in Download/Shoebill (beside the video on Android 9 and older), not embedded in it</string>
     <string name="dl_sublangs">Subtitle languages</string>
     <string name="dl_sublangs_hint">Example: ar.*,en.* or all</string>
     <string name="dl_sponsor_what">What to remove</string>
