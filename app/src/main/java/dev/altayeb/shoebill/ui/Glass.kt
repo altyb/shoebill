@@ -51,12 +51,15 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.ColorFilter
+import dev.altayeb.shoebill.ui.theme.Radius
 
 // ponytail: translucent tint + hairline border, not a real backdrop blur. Blur can't sample the mpv SurfaceView;
 // add Haze/RenderEffect only for screens without video behind.
 /** Frosted-glass surface: translucent tinted gradient, 1 dp light edge. */
 @Composable
-fun Modifier.glass(shape: Shape = dev.altayeb.shoebill.ui.theme.Radius.XL): Modifier {
+fun Modifier.glass(shape: Shape = Radius.XL): Modifier {
     val c = MaterialTheme.colorScheme.surfaceContainer
     return clip(shape)
         .background(Brush.verticalGradient(listOf(c.copy(alpha = 0.90f), c.copy(alpha = 0.80f))))
@@ -125,7 +128,7 @@ fun SearchPill(
 fun EmptyState(art: Int, title: String, modifier: Modifier = Modifier, body: String? = null, action: @Composable () -> Unit = {}) =
     EmptyState(title, modifier, body, action) {
         // Brand art is one flat shape, tinted from the theme so it works in every colour scheme.
-        androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(art), null, Modifier.size(160.dp), colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(MaterialTheme.colorScheme.primary))
+        Image(androidx.compose.ui.res.painterResource(art), null, Modifier.size(160.dp), colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary))
     }
 
 @Composable

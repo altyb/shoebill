@@ -80,6 +80,15 @@ import dev.altayeb.shoebill.ui.theme.Preset
 import dev.altayeb.shoebill.ui.theme.isDark
 import dev.altayeb.shoebill.ui.theme.seedScheme
 import androidx.compose.foundation.selection.selectable
+import android.app.Activity
+import android.content.ContextWrapper
+import android.content.Intent
+import android.net.Uri
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import dev.altayeb.shoebill.download.DownloadFeature
+import dev.altayeb.shoebill.ui.theme.Radius
+import kotlinx.coroutines.Dispatchers
 
 // Entry points MainActivity calls (exact signatures).
 
@@ -93,14 +102,14 @@ fun SettingsScreen(onBack: () -> Unit, onAppearance: () -> Unit) {
     var licenses by remember { mutableStateOf(false) }
     var backupNote by remember { mutableStateOf<Int?>(null) }
     val backupScope = androidx.compose.runtime.rememberCoroutineScope()
-    val saveBackup = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/json")) { uri ->
-        if (uri != null) backupScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+    val saveBackup = androidx.activity.compose.rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri != null) backupScope.launch(Dispatchers.IO) {
             val ok = runCatching { context.contentResolver.openOutputStream(uri)!!.use { SettingsBackup.write(context, it) } }.isSuccess
             backupNote = if (ok) R.string.settings_backup_saved else R.string.settings_backup_failed
         }
     }
-    val openBackup = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) backupScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+    val openBackup = androidx.activity.compose.rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) backupScope.launch(Dispatchers.IO) {
             val ok = runCatching { context.contentResolver.openInputStream(uri)!!.use { SettingsBackup.read(context, it) } }.isSuccess
             backupNote = if (ok) R.string.settings_backup_restored else R.string.settings_backup_bad
         }
@@ -120,7 +129,7 @@ fun SettingsScreen(onBack: () -> Unit, onAppearance: () -> Unit) {
         )
     }) { pad ->
         val motion = MaterialTheme.motionScheme
-        androidx.compose.animation.AnimatedContent(page, Modifier.padding(pad), transitionSpec = {
+        AnimatedContent(page, Modifier.padding(pad), transitionSpec = {
             androidx.compose.animation.fadeIn(motion.defaultEffectsSpec()) togetherWith androidx.compose.animation.fadeOut(motion.fastEffectsSpec())
         }, label = "settingsPage") { p ->
         Column(
@@ -131,7 +140,7 @@ fun SettingsScreen(onBack: () -> Unit, onAppearance: () -> Unit) {
                 0 -> {
                     TipCard(R.drawable.art_empty, stringResource(R.string.tip_hub))
                     val cs = MaterialTheme.colorScheme
-                    val hasDl = dev.altayeb.shoebill.download.DownloadFeature.ENABLED
+                    val hasDl = DownloadFeature.ENABLED
                     val hub = groupShapes(if (hasDl) 6 else 5)
                     var n = 0
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -174,7 +183,7 @@ fun SettingsScreen(onBack: () -> Unit, onAppearance: () -> Unit) {
                 }
                 3 -> {
                     TipCard(R.drawable.art_download, stringResource(R.string.tip_download))
-                    dev.altayeb.shoebill.download.DownloadFeature.SettingsSection()
+                    DownloadFeature.SettingsSection()
                 }
                 4 -> {
                     GroupTitle(stringResource(R.string.language))
@@ -195,7 +204,7 @@ fun SettingsScreen(onBack: () -> Unit, onAppearance: () -> Unit) {
                 else -> {
                     GroupTitle(stringResource(R.string.settings_about))
                     val about = groupShapes(6)
-                    val open = { url: String -> runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))) } }
+                    val open = { url: String -> runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) } }
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         SettingRow(title = stringResource(R.string.settings_version), shape = about[0], trailing = { Text(version, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant) })
                         SettingRow(title = stringResource(R.string.settings_privacy_policy), shape = about[1], subtitle = stringResource(R.string.settings_privacy_policy_sub), onClick = { open("https://github.com/altyb/shoebill/blob/main/PRIVACY.md") })
@@ -258,7 +267,7 @@ fun SettingsScreen(onBack: () -> Unit, onAppearance: () -> Unit) {
     }
 
     if (langDialog) {
-        val activity = context as? android.app.Activity ?: (context as? android.content.ContextWrapper)?.baseContext as? android.app.Activity
+        val activity = context as? Activity ?: (context as? ContextWrapper)?.baseContext as? Activity
         AlertDialog(
             onDismissRequest = { langDialog = false },
             title = { Text(stringResource(R.string.language)) },
@@ -420,7 +429,7 @@ private fun <T> Choice(options: List<Pair<T, String>>, selected: T, onSelect: (T
 private fun PreviewCard() {
     val c = MaterialTheme.colorScheme
     Card(
-        shape = dev.altayeb.shoebill.ui.theme.Radius.XL,
+        shape = Radius.XL,
         colors = CardDefaults.cardColors(containerColor = c.surfaceContainer),
     ) {
         Row(Modifier.fillMaxWidth().padding(16.dp).height(110.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -433,7 +442,7 @@ private fun PreviewCard() {
 
 @Composable
 private fun Block(label: String, bg: Color, fg: Color, modifier: Modifier) {
-    Box(modifier.clip(dev.altayeb.shoebill.ui.theme.Radius.L).background(bg), contentAlignment = Alignment.BottomStart) {
+    Box(modifier.clip(Radius.L).background(bg), contentAlignment = Alignment.BottomStart) {
         Text(label, color = fg, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(12.dp))
     }
 }

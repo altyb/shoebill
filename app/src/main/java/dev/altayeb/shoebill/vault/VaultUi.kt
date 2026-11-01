@@ -68,6 +68,13 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import java.time.LocalDate
+import android.os.Build
+import android.provider.DocumentsContract
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.platform.LocalContext
+import dev.altayeb.shoebill.settings.ChoiceRow
+import dev.altayeb.shoebill.settings.TipCard
+import dev.altayeb.shoebill.ui.theme.Radius
 
 /** First run: the rule ق-16 has to be acknowledged before the key exists. */
 @Composable
@@ -156,7 +163,7 @@ fun UnlockScreen(
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(R.string.vault_fingerprint))
                 }
-                if (android.os.Build.VERSION.SDK_INT >= 30) {
+                if (Build.VERSION.SDK_INT >= 30) {
                     TextButton(onClick = onPin) { Text(stringResource(R.string.vault_use_pin)) }
                 }
             }
@@ -241,7 +248,7 @@ fun VaultSettings(
             navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) } },
         )
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            dev.altayeb.shoebill.settings.TipCard(R.drawable.art_vault, stringResource(R.string.tip_vault))
+            TipCard(R.drawable.art_vault, stringResource(R.string.tip_vault))
             GroupTitle(stringResource(R.string.vault_access))
             SettingRow(if (pinOnly) stringResource(R.string.vault_pin) else stringResource(R.string.vault_fingerprint_or_device), groupShapes(1)[0])
             if (space == VaultSpace.Real) {
@@ -259,7 +266,7 @@ fun VaultSettings(
             GroupTitle(stringResource(R.string.vault_protection))
             val guard = groupShapes(2)
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                dev.altayeb.shoebill.settings.ChoiceRow(stringResource(R.string.vault_auto_lock), guard[0], AutoLock.entries.map { it to stringResource(it.label) }, autoLock, onAutoLock)
+                ChoiceRow(stringResource(R.string.vault_auto_lock), guard[0], AutoLock.entries.map { it to stringResource(it.label) }, autoLock, onAutoLock)
                 // Always on in the vault; shown so people know, not offered as a choice.
                 SettingRow(stringResource(R.string.vault_block_screenshots), guard[1], trailing = { Switch(checked = true, onCheckedChange = null, enabled = false) })
             }
@@ -292,10 +299,10 @@ fun VaultSettings(
     }
 
     pendingExport?.let { uri ->
-        val cr = androidx.compose.ui.platform.LocalContext.current.contentResolver
+        val cr = LocalContext.current.contentResolver
         // cancelled: the file picker already created an empty file, remove it
         PasswordDialog(stringResource(R.string.vault_encrypted_backup), confirm = true, onDismiss = {
-            runCatching { android.provider.DocumentsContract.deleteDocument(cr, uri) }
+            runCatching { DocumentsContract.deleteDocument(cr, uri) }
             pendingExport = null
         }) { pw ->
             restoring = false
@@ -326,7 +333,7 @@ fun VaultSettings(
 }
 
 @Composable
-private fun PinRoleRow(label: String, subtitle: String?, subtitleIsError: Boolean, isSet: Boolean, enabled: Boolean, shape: androidx.compose.ui.graphics.Shape, onSet: () -> Unit, onRemove: () -> Unit) {
+private fun PinRoleRow(label: String, subtitle: String?, subtitleIsError: Boolean, isSet: Boolean, enabled: Boolean, shape: Shape, onSet: () -> Unit, onRemove: () -> Unit) {
     // Buttons sit under the text, not beside it: long hints stay readable on narrow phones and in Arabic.
     Surface(Modifier.fillMaxWidth(), shape = shape, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
         Column(Modifier.padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 4.dp)) {
@@ -387,16 +394,16 @@ fun KeyLevel.label(): Int = when (this) {
 /** "Open from the phone app": *#*#code#*#* in the dialer opens the vault (SecretCodeReceiver). */
 @Composable
 private fun DialCodeRow() {
-    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val ctx = LocalContext.current
     var code by remember { mutableStateOf(SecretCodeReceiver.dialCode(ctx).orEmpty()) }
     var saved by remember { mutableStateOf(SecretCodeReceiver.dialCode(ctx)) }
-    androidx.compose.material3.Surface(Modifier.fillMaxWidth(), shape = dev.altayeb.shoebill.ui.theme.Radius.L, color = MaterialTheme.colorScheme.surfaceContainerHigh) { androidx.compose.foundation.layout.Column(Modifier.padding(16.dp), verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
+    Surface(Modifier.fillMaxWidth(), shape = Radius.L, color = MaterialTheme.colorScheme.surfaceContainerHigh) { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
     Text(stringResource(R.string.vault_dial_title), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
     Row(verticalAlignment = Alignment.CenterVertically) {
         OutlinedTextField(
             value = code, onValueChange = { v -> code = v.filter(Char::isDigit).take(8) },
             singleLine = true, label = { Text(stringResource(R.string.vault_dial_hint)) },
-            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
             modifier = Modifier.weight(1f),
         )
         TextButton(enabled = code.length in 4..8 && code != saved, onClick = { SecretCodeReceiver.setDialCode(ctx, code); saved = code }) { Text(stringResource(R.string.save)) }

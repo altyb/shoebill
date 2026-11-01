@@ -56,6 +56,14 @@ import dev.altayeb.shoebill.ui.PanelHeader
 import dev.altayeb.shoebill.ui.glass
 import java.io.File
 import java.util.Locale
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material3.Button
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
+import dev.altayeb.shoebill.player.cast.CastDialog
+import dev.altayeb.shoebill.ui.theme.Radius
+import java.math.BigDecimal
+import java.math.RoundingMode
 
 /** Side sheet, 372 dp, 28 dp corners, over the video, which keeps playing (ق-07). */
 @Composable
@@ -90,7 +98,7 @@ fun SidePanel(
     }
     GlassScrim(visible = panel != null, onDismiss = onClose)
     // the panel sits on the end edge: slide from the right in LTR, from the left in RTL
-    val side = if (androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl) -1 else 1
+    val side = if (LocalLayoutDirection.current == LayoutDirection.Rtl) -1 else 1
     AnimatedVisibility(
         visible = panel != null,
         modifier = Modifier.fillMaxSize(),
@@ -100,7 +108,7 @@ fun SidePanel(
         Box(Modifier.fillMaxSize()) {
             Box(
                 modifier = Modifier.align(Alignment.CenterEnd).padding(12.dp).width(372.dp).fillMaxHeight()
-                    .glass(dev.altayeb.shoebill.ui.theme.Radius.XL),
+                    .glass(Radius.XL),
             ) {
                 Column(Modifier.padding(20.dp).verticalScroll(rememberScrollState())) {
                     PanelHeader(title, onClose)
@@ -128,7 +136,7 @@ private fun trackLabel(t: Track): String {
 private fun TrackRow(label: String, selected: Boolean, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
-        shape = dev.altayeb.shoebill.ui.theme.Radius.L,
+        shape = Radius.L,
         color = if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.White.copy(alpha = 0.06f),
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
     ) {
@@ -159,7 +167,7 @@ private fun SubsPanel(
     startTab: Int,
 ) {
     var tab by remember { mutableStateOf(startTab) }
-    SecondaryTabRow(selectedTabIndex = tab, containerColor = androidx.compose.ui.graphics.Color.Transparent) {
+    SecondaryTabRow(selectedTabIndex = tab, containerColor = Color.Transparent) {
         listOf(R.string.sub_tab_track, R.string.sub_tab_style, R.string.sub_tab_timing).forEachIndexed { i, name ->
             Tab(selected = tab == i, onClick = { tab = i }, text = { Text(stringResource(name)) })
         }
@@ -241,9 +249,9 @@ private fun AudioPanel(player: MpvPlayer, trackVersion: Int, speed: Double, volu
         listOf(0.5, 0.75, 1.0, 1.25, 1.5, 2.0).forEach { s ->
             val on = kotlin.math.abs(speed - s) < 0.01
             if (on) {
-                androidx.compose.material3.Button(onClick = { player.setSpeed(s) }, contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp, 0.dp)) { Text(speedText(s)) }
+                Button(onClick = { player.setSpeed(s) }, contentPadding = PaddingValues(0.dp, 0.dp)) { Text(speedText(s)) }
             } else {
-                FilledTonalButton(onClick = { player.setSpeed(s) }, contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp, 0.dp)) { Text(speedText(s)) }
+                FilledTonalButton(onClick = { player.setSpeed(s) }, contentPadding = PaddingValues(0.dp, 0.dp)) { Text(speedText(s)) }
             }
         }
     }
@@ -283,7 +291,7 @@ private fun AudioDelayAndEq(player: MpvPlayer) {
     }
 }
 
-internal fun speedText(s: Double) = java.math.BigDecimal(s).setScale(2, java.math.RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() + "×"
+internal fun speedText(s: Double) = BigDecimal(s).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() + "×"
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -304,14 +312,14 @@ private fun OptionsPanel(
     var casting by remember { mutableStateOf(false) }
     player.shareableUri?.let { u ->
         FilledTonalButton(onClick = { casting = true }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.cast_title)) }
-        if (casting) dev.altayeb.shoebill.player.cast.CastDialog(u, player.shareableTitle, { player.setPaused(true) }) { casting = false }
+        if (casting) CastDialog(u, player.shareableTitle, { player.setPaused(true) }) { casting = false }
     }
     SectionTitle(stringResource(R.string.player_decoder))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Decoder.values().forEach { d ->
             val on = hw == d.hwdec
             val onClick = { hw = d.hwdec; player.setString("hwdec", d.hwdec); onDecoder(d) }
-            if (on) androidx.compose.material3.Button(onClick = onClick) { Text(decoderName(d)) }
+            if (on) Button(onClick = onClick) { Text(decoderName(d)) }
             else FilledTonalButton(onClick = onClick) { Text(decoderName(d)) }
         }
     }
@@ -319,9 +327,9 @@ private fun OptionsPanel(
     if (chapters.isNotEmpty()) {
         SectionTitle(stringResource(R.string.player_chapters))
         chapters.forEachIndexed { i, (title, sec) ->
-            androidx.compose.material3.TextButton(onClick = { player.seekTo(sec) }, modifier = Modifier.fillMaxWidth()) {
+            TextButton(onClick = { player.seekTo(sec) }, modifier = Modifier.fillMaxWidth()) {
                 Text(title.ifEmpty { stringResource(R.string.player_chapter_n, i + 1) }, Modifier.weight(1f), maxLines = 1)
-                Text("%d:%02d".format(java.util.Locale.ROOT, sec.toInt() / 60, sec.toInt() % 60))
+                Text("%d:%02d".format(Locale.ROOT, sec.toInt() / 60, sec.toInt() % 60))
             }
         }
     }
@@ -345,7 +353,7 @@ private fun OptionsPanel(
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         listOf("-1" to stringResource(R.string.player_aspect_auto), "16:9" to "16:9", "4:3" to "4:3", "2.35:1" to "2.35").forEach { (v, label) ->
             val onClick = { aspect = v; player.setString("video-aspect-override", v) }
-            if (aspect == v) androidx.compose.material3.Button(onClick = onClick) { Text(label) }
+            if (aspect == v) Button(onClick = onClick) { Text(label) }
             else FilledTonalButton(onClick = onClick) { Text(label) }
         }
     }

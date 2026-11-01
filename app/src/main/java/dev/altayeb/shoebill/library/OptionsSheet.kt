@@ -56,6 +56,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.text.DateFormat
 import java.util.Date
+import dev.altayeb.shoebill.ui.theme.Radius
 
 /** ش-05: options for one video. Rename/trash/share actions come from the parent screen. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -74,7 +75,7 @@ fun OptionsSheet(
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(Modifier.padding(start = 24.dp, end = 24.dp, bottom = 24.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Thumb(video.uri, Modifier.size(width = 96.dp, height = 54.dp), dev.altayeb.shoebill.ui.theme.Radius.S,
+                Thumb(video.uri, Modifier.size(width = 96.dp, height = 54.dp), Radius.S,
                     durationMs = video.durationMs, savedPosMs = state?.positionMs ?: -1)
                 Column(Modifier.weight(1f).padding(start = 16.dp)) {
                     LtrText(AnnotatedString(video.name), MaterialTheme.typography.titleMedium, maxLines = 2)

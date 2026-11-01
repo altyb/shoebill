@@ -72,6 +72,7 @@ import dev.altayeb.shoebill.data.PlaybackStore
 import dev.altayeb.shoebill.ui.EmptyState
 import dev.altayeb.shoebill.ui.SearchPill
 import kotlinx.coroutines.launch
+import dev.altayeb.shoebill.ui.theme.Radius
 
 private enum class SortBy(@StringRes val label: Int) { Name(R.string.lib_name), Date(R.string.lib_date), Size(R.string.lib_size), Duration(R.string.lib_duration) }
 private enum class QuickFilter(@StringRes val label: Int) { All(R.string.lib_filter_all), Unplayed(R.string.lib_filter_unplayed), FourK(R.string.lib_filter_4k) }
@@ -207,7 +208,7 @@ fun FolderBody(folder: String, onBack: () -> Unit, onPlay: (Uri, String) -> Unit
             if (selected.isNotEmpty()) {
                 Surface(
                     modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
-                    shape = dev.altayeb.shoebill.ui.theme.Radius.XL,
+                    shape = Radius.XL,
                     color = MaterialTheme.colorScheme.surfaceContainerHighest,
                     shadowElevation = 6.dp,
                 ) {

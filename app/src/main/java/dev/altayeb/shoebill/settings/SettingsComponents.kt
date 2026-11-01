@@ -22,6 +22,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.FilterChip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.vector.ImageVector
+import dev.altayeb.shoebill.ui.theme.Radius
 
 /** Android 16 grouped list: 24 dp outer corners, 4 dp inner corners. */
 fun groupShapes(count: Int): List<Shape> = List(count) { i ->
@@ -91,9 +99,9 @@ fun <T> ChoiceRow(title: String, shape: Shape, options: List<Pair<T, String>>, s
     Surface(Modifier.fillMaxWidth(), shape = shape, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
         Column(Modifier.padding(16.dp)) {
             Text(title, style = MaterialTheme.typography.bodyLarge)
-            androidx.compose.foundation.layout.Spacer(Modifier.padding(top = 8.dp))
-            Row(Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
-                options.forEach { (v, label) -> androidx.compose.material3.FilterChip(v == selected, { pick(v) }, { Text(label) }) }
+            Spacer(Modifier.padding(top = 8.dp))
+            Row(Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                options.forEach { (v, label) -> FilterChip(v == selected, { pick(v) }, { Text(label) }) }
             }
         }
     }
@@ -101,13 +109,13 @@ fun <T> ChoiceRow(title: String, shape: Shape, options: List<Pair<T, String>>, s
 
 /** One part of the app on the settings hub. Each part keeps its own colour role, so the list reads at a glance. */
 @Composable
-fun HubRow(icon: androidx.compose.ui.graphics.vector.ImageVector, container: androidx.compose.ui.graphics.Color, content: androidx.compose.ui.graphics.Color, title: String, subtitle: String, shape: Shape, onClick: () -> Unit) {
+fun HubRow(icon: ImageVector, container: Color, content: Color, title: String, subtitle: String, shape: Shape, onClick: () -> Unit) {
     Surface(onClick = onClick, modifier = Modifier.fillMaxWidth(), shape = shape, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Surface(Modifier.size(44.dp), shape = dev.altayeb.shoebill.ui.theme.Radius.M, color = container, contentColor = content) {
-                androidx.compose.foundation.layout.Box(contentAlignment = Alignment.Center) { Icon(icon, null) }
+            Surface(Modifier.size(44.dp), shape = Radius.M, color = container, contentColor = content) {
+                Box(contentAlignment = Alignment.Center) { Icon(icon, null) }
             }
-            androidx.compose.foundation.layout.Spacer(Modifier.width(16.dp))
+            Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
                 Text(title, style = MaterialTheme.typography.titleMedium)
                 Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
@@ -120,10 +128,10 @@ fun HubRow(icon: androidx.compose.ui.graphics.vector.ImageVector, container: and
 @Composable
 fun TipCard(art: Int, text: String) {
     val cs = MaterialTheme.colorScheme
-    Surface(Modifier.fillMaxWidth(), shape = dev.altayeb.shoebill.ui.theme.Radius.L, color = cs.secondaryContainer, contentColor = cs.onSecondaryContainer) {
+    Surface(Modifier.fillMaxWidth(), shape = Radius.L, color = cs.secondaryContainer, contentColor = cs.onSecondaryContainer) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(art), null, Modifier.size(56.dp), colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(cs.onSecondaryContainer))
-            androidx.compose.foundation.layout.Spacer(Modifier.width(16.dp))
+            Image(androidx.compose.ui.res.painterResource(art), null, Modifier.size(56.dp), colorFilter = ColorFilter.tint(cs.onSecondaryContainer))
+            Spacer(Modifier.width(16.dp))
             Text(text, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
         }
     }

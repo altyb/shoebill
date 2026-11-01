@@ -103,6 +103,11 @@ import androidx.compose.ui.res.pluralStringResource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Locale
+import android.os.Environment
+import android.Manifest.permission.READ_MEDIA_IMAGES
+import android.Manifest.permission.READ_MEDIA_VIDEO
+import androidx.activity.result.PickVisualMediaRequest
+import dev.altayeb.shoebill.ui.theme.Radius
 
 private const val READ_IMAGES = "android.permission.READ_MEDIA_IMAGES"
 private const val READ_VIDEO = "android.permission.READ_MEDIA_VIDEO"
@@ -135,7 +140,7 @@ fun VaultGrid(
     }
     val openPicker = {
         onBeginSystemHop()
-        picker.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
+        picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
     }
     // Media permissions are asked once, before the first picker; the picker opens whatever the answer is.
     var permAsked by rememberSaveable { mutableStateOf(false) }
@@ -165,7 +170,7 @@ fun VaultGrid(
         onEndSystemHop()
         addFilesNow()
     }
-    val needsAllFiles = { dev.altayeb.shoebill.BuildConfig.ALL_FILES && Build.VERSION.SDK_INT >= 30 && !android.os.Environment.isExternalStorageManager() }
+    val needsAllFiles = { dev.altayeb.shoebill.BuildConfig.ALL_FILES && Build.VERSION.SDK_INT >= 30 && !Environment.isExternalStorageManager() }
     if (allFilesDialog) {
         AlertDialog(
             onDismissRequest = { allFilesDialog = false },
@@ -389,7 +394,7 @@ fun VaultGrid(
 private fun Tile(e: VaultEntry, thumb: ByteArray?, selected: Boolean, onClick: () -> Unit, onLong: () -> Unit, modifier: Modifier = Modifier) {
     val img = remember(thumb) { thumb?.let { BitmapFactory.decodeByteArray(it, 0, it.size)?.asImageBitmap() } }
     val scale by animateFloatAsState(if (selected) 0.94f else 1f, label = "tileScale")
-    val shape = dev.altayeb.shoebill.ui.theme.Radius.S
+    val shape = Radius.S
     Box(
         modifier.aspectRatio(16f / 9f)
             .graphicsLayer { scaleX = scale; scaleY = scale }
@@ -408,7 +413,7 @@ private fun Tile(e: VaultEntry, thumb: ByteArray?, selected: Boolean, onClick: (
         if (e.kind == "video") {
             Text(
                 formatDuration(e.durationMs),
-                Modifier.align(Alignment.BottomEnd).padding(4.dp).background(Color(0xB3000000), dev.altayeb.shoebill.ui.theme.Radius.XS).padding(horizontal = 8.dp, vertical = 2.dp),
+                Modifier.align(Alignment.BottomEnd).padding(4.dp).background(Color(0xB3000000), Radius.XS).padding(horizontal = 8.dp, vertical = 2.dp),
                 color = Color.White, style = MaterialTheme.typography.labelSmall,
             )
         } else {

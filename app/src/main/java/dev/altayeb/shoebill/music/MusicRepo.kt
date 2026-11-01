@@ -12,6 +12,9 @@ import dev.altayeb.shoebill.library.logic.PlaylistCodec
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import android.os.Build
+import java.io.ByteArrayOutputStream
+import java.io.InputStream
 
 data class Song(
     val id: Long, val title: String, val artist: String, val album: String, val albumId: Long,
@@ -29,7 +32,7 @@ suspend fun querySongs(context: Context): List<Song> = withContext(Dispatchers.I
     val m = MediaStore.Audio.Media.TITLE
     val cols = arrayOf(MediaStore.Audio.Media._ID, m, MediaStore.Audio.Media.ARTIST, MediaStore.Audio.Media.ALBUM, MediaStore.Audio.Media.ALBUM_ID,
         MediaStore.Audio.Media.DURATION, MediaStore.Audio.Media.TRACK, MediaStore.Audio.Media.DATA,
-        *(if (android.os.Build.VERSION.SDK_INT >= 30) arrayOf(MediaStore.Audio.Media.GENRE) else emptyArray()))
+        *(if (Build.VERSION.SDK_INT >= 30) arrayOf(MediaStore.Audio.Media.GENRE) else emptyArray()))
     val out = ArrayList<Song>()
     context.contentResolver.query(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, cols, "${MediaStore.Audio.Media.IS_MUSIC} != 0", null, null)?.use { c ->
         while (c.moveToNext()) {
@@ -78,8 +81,8 @@ object Lyrics {
         }.getOrNull()
     }
 
-    private fun java.io.InputStream.readNBytesCompat(max: Int): ByteArray {
-        val out = java.io.ByteArrayOutputStream()
+    private fun InputStream.readNBytesCompat(max: Int): ByteArray {
+        val out = ByteArrayOutputStream()
         val buf = ByteArray(8192)
         while (out.size() < max) { val n = read(buf); if (n < 0) break; out.write(buf, 0, n) }
         return out.toByteArray()

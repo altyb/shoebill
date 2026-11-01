@@ -1,4 +1,5 @@
 package dev.altayeb.shoebill.download.logic
+import java.util.Locale
 
 enum class Quality(val height: Int?, val audio: String?) {
     BEST(null, null), P1080(1080, null), P720(720, null), P480(480, null), M4A(null, "m4a"), MP3(null, "mp3")
@@ -58,14 +59,14 @@ object DownloadLogic {
 
     fun formatLabel(f: Fmt): String = listOfNotNull(
         if (f.audioOnly) "${f.tbr.takeIf { it > 0 } ?: "?"} kbps" else "${f.height}p",
-        f.ext.uppercase(java.util.Locale.ROOT),
+        f.ext.uppercase(Locale.ROOT),
         f.size.takeIf { it > 0 }?.let { size(it) },
     ).joinToString(" · ")
 
     fun size(b: Long): String = when {
-        b >= 1L shl 30 -> "%.1f GB".format(java.util.Locale.ROOT, b / (1L shl 30).toDouble())
-        b >= 1L shl 20 -> "%d MB".format(java.util.Locale.ROOT, b / (1L shl 20))
-        else -> "%d KB".format(java.util.Locale.ROOT, b / 1024)
+        b >= 1L shl 30 -> "%.1f GB".format(Locale.ROOT, b / (1L shl 30).toDouble())
+        b >= 1L shl 20 -> "%d MB".format(Locale.ROOT, b / (1L shl 20))
+        else -> "%d KB".format(Locale.ROOT, b / 1024)
     }
 
     fun looksLikePlaylist(url: String): Boolean = Regex("""[?&]list=|/playlist\b|/sets/""").containsMatchIn(url)
@@ -89,7 +90,7 @@ object DownloadLogic {
     fun time(seconds: Long): String {
         val t = seconds.coerceAtLeast(0)
         val h = t / 3600; val m = t % 3600 / 60; val x = t % 60
-        return if (h > 0) "%d:%02d:%02d".format(java.util.Locale.ROOT, h, m, x) else "%d:%02d".format(java.util.Locale.ROOT, m, x)
+        return if (h > 0) "%d:%02d:%02d".format(Locale.ROOT, h, m, x) else "%d:%02d".format(Locale.ROOT, m, x)
     }
 
     fun isAudioFile(name: String) = name.substringAfterLast('.', "").lowercase() in setOf("m4a", "mp3", "opus", "ogg", "flac", "wav", "aac")

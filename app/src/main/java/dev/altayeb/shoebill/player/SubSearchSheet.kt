@@ -69,6 +69,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import androidx.compose.runtime.CompositionLocalProvider
+import dev.altayeb.shoebill.ui.theme.Radius
 
 private val LANGS = listOf("ar" to "عربي", "en" to "English", "fr" to "Français", "es" to "Español", "de" to "Deutsch", "tr" to "Türkçe")
 
@@ -95,7 +97,7 @@ fun SubSearchSheet(
         Box(Modifier.fillMaxSize()) {
             Box(
                 modifier = Modifier.align(Alignment.CenterEnd).padding(12.dp).widthIn(max = 470.dp).fillMaxHeight()
-                    .glass(dev.altayeb.shoebill.ui.theme.Radius.XL),
+                    .glass(Radius.XL),
             ) {
                 SearchContent(player, videoName, hash, keys, hidden, onHide, onApplied, onClose)
             }
@@ -245,14 +247,14 @@ private fun SearchContent(
 private fun ResultRow(r: SubResult, busy: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Surface(
         onClick = onClick,
-        shape = dev.altayeb.shoebill.ui.theme.Radius.L,
+        shape = Radius.L,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         modifier = modifier.fillMaxWidth().padding(vertical = 4.dp),
     ) {
         Row(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 // release names are LTR even inside the Arabic UI (ق-04)
-                androidx.compose.runtime.CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                     Text(r.releaseName, style = MaterialTheme.typography.bodyLarge, maxLines = 2)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

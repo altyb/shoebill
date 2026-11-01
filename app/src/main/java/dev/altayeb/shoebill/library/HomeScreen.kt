@@ -101,6 +101,18 @@ import androidx.compose.ui.platform.LocalContext
 import dev.altayeb.shoebill.data.FileState
 import dev.altayeb.shoebill.data.PlaybackStore
 import dev.altayeb.shoebill.ui.theme.BrandAmber
+import androidx.compose.foundation.text.TextAutoSize
+import androidx.compose.material3.ShortNavigationBar
+import androidx.compose.material3.ShortNavigationBarItem
+import androidx.compose.runtime.LaunchedEffect
+import dev.altayeb.shoebill.download.DownloadFeature
+import dev.altayeb.shoebill.download.SharedLink
+import dev.altayeb.shoebill.music.MUSIC_TAB
+import dev.altayeb.shoebill.music.MiniPlayer
+import dev.altayeb.shoebill.music.MusicHost
+import dev.altayeb.shoebill.music.MusicSheet
+import dev.altayeb.shoebill.music.MusicTab
+import dev.altayeb.shoebill.ui.theme.Radius
 
 // Index order is what HomeScreen switches on. Downloads exists only in the full build, so it stays last.
 private val homeTabs = listOf(
@@ -108,7 +120,7 @@ private val homeTabs = listOf(
     R.string.lib_tab_playlists to Icons.Rounded.PlaylistPlay,
     R.string.lib_tab_network to Icons.Rounded.Lan,
     R.string.lib_tab_music to Icons.Rounded.MusicNote,
-) + if (dev.altayeb.shoebill.download.DownloadFeature.ENABLED) listOf(R.string.lib_tab_downloads to Icons.Rounded.Download) else emptyList()
+) + if (DownloadFeature.ENABLED) listOf(R.string.lib_tab_downloads to Icons.Rounded.Download) else emptyList()
 
 /** ش-02: the home screen. Tabs 2 and 3 are placeholders for now. */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -125,8 +137,8 @@ fun HomeScreen(
     val states by PlaybackStore.get(ctx).all.collectAsStateWithLifecycle()
     var tab by rememberSaveable { mutableIntStateOf(0) }
     // A link shared to the app opens on Downloads.
-    val shared by dev.altayeb.shoebill.download.SharedLink.value.collectAsStateWithLifecycle()
-    androidx.compose.runtime.LaunchedEffect(shared) { if (shared != null && dev.altayeb.shoebill.download.DownloadFeature.ENABLED) tab = 4 }
+    val shared by SharedLink.value.collectAsStateWithLifecycle()
+    LaunchedEffect(shared) { if (shared != null && DownloadFeature.ENABLED) tab = 4 }
     val scroll = TopAppBarDefaults.pinnedScrollBehavior()
     val existing = remember(videos) { videos.mapTo(HashSet()) { it.key } }
     // Continue-watching skips files that were trashed or removed since they were played.
@@ -173,8 +185,8 @@ fun HomeScreen(
         when (tab) {
             1 -> { PlaylistsTab(onPlayQueue, Modifier.padding(pad)); return@AnimatedContent }
             2 -> { NetworkTab(onPlay, Modifier.padding(pad)); return@AnimatedContent }
-            dev.altayeb.shoebill.music.MUSIC_TAB -> { dev.altayeb.shoebill.music.MusicTab(music, Modifier.padding(pad)); return@AnimatedContent }
-            4 -> { dev.altayeb.shoebill.download.DownloadFeature.Tab(Modifier.padding(pad)); return@AnimatedContent }
+            MUSIC_TAB -> { MusicTab(music, Modifier.padding(pad)); return@AnimatedContent }
+            4 -> { DownloadFeature.Tab(Modifier.padding(pad)); return@AnimatedContent }
         }
         LazyColumn(
             Modifier.fillMaxSize().padding(pad),
@@ -183,7 +195,7 @@ fun HomeScreen(
             item {
                 Surface(
                     onClick = onSearch,
-                    shape = dev.altayeb.shoebill.ui.theme.Radius.XL,
+                    shape = Radius.XL,
                     color = MaterialTheme.colorScheme.surfaceContainerHighest,
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                 ) {
@@ -231,7 +243,7 @@ fun HomeScreen(
         }
         }
     }
-    dev.altayeb.shoebill.music.MusicSheet(music, dockHeight)
+    MusicSheet(music, dockHeight)
     }
 }
 
@@ -267,7 +279,7 @@ private fun ContinueCarousel(items: List<FileState>, onPlay: (Uri, String) -> Un
         val frac = if (f.durationMs > 0) (f.positionMs.toFloat() / f.durationMs).coerceIn(0f, 1f) else 0f
         val src = remember { MutableInteractionSource() }
         Box(
-            Modifier.fillMaxSize().clip(dev.altayeb.shoebill.ui.theme.Radius.XL).pressScale(src)
+            Modifier.fillMaxSize().clip(Radius.XL).pressScale(src)
                 .clickable(interactionSource = src, indication = LocalIndication.current) { onPlay(uri, f.title) }
         ) {
             Thumb(uri, Modifier.fillMaxSize(), durationMs = f.durationMs, savedPosMs = f.positionMs, shared = true)
@@ -300,7 +312,7 @@ private fun FolderRow(f: FolderInfo, shape: Shape, modifier: Modifier, onClick: 
         modifier = modifier.fillMaxWidth().pressScale(src),
     ) {
         Row(Modifier.padding(horizontal = 12.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Thumb(f.cover.uri, Modifier.fillMaxWidth(0.36f).widthIn(max = 128.dp).aspectRatio(16f / 9f), dev.altayeb.shoebill.ui.theme.Radius.M,
+            Thumb(f.cover.uri, Modifier.fillMaxWidth(0.36f).widthIn(max = 128.dp).aspectRatio(16f / 9f), Radius.M,
                 durationMs = f.cover.durationMs)
             Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
                 Text(f.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -319,20 +331,20 @@ private fun FolderRow(f: FolderInfo, shape: Shape, modifier: Modifier, onClick: 
 }
 
 /** One surface from the mini player down to the tabs. The tabs are Material 3 Expressive's own bar, with its own motion. */
-@OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun HomeDock(music: dev.altayeb.shoebill.music.MusicHost, tab: Int, modifier: Modifier, onTab: (Int) -> Unit) {
+private fun HomeDock(music: MusicHost, tab: Int, modifier: Modifier, onTab: (Int) -> Unit) {
     val cs = MaterialTheme.colorScheme
     Surface(modifier, shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp), color = cs.surfaceContainer) {
         Column(Modifier.animateContentSize(MaterialTheme.motionScheme.defaultSpatialSpec())) {
-            if (music.hasTrack) dev.altayeb.shoebill.music.MiniPlayer(music)
-            androidx.compose.material3.ShortNavigationBar(containerColor = Color.Transparent) {
+            if (music.hasTrack) MiniPlayer(music)
+            ShortNavigationBar(containerColor = Color.Transparent) {
                 homeTabs.forEachIndexed { i, (labelRes, icon) ->
-                    androidx.compose.material3.ShortNavigationBarItem(
+                    ShortNavigationBarItem(
                         selected = tab == i,
                         onClick = { onTab(i) },
                         icon = { Icon(icon, null) },
-                        label = { Text(stringResource(labelRes), maxLines = 1, softWrap = false, autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = 9.sp, maxFontSize = MaterialTheme.typography.labelMedium.fontSize)) }, // shrinks only when five labels cannot fit
+                        label = { Text(stringResource(labelRes), maxLines = 1, softWrap = false, autoSize = TextAutoSize.StepBased(minFontSize = 9.sp, maxFontSize = MaterialTheme.typography.labelMedium.fontSize)) }, // shrinks only when five labels cannot fit
                     )
                 }
             }

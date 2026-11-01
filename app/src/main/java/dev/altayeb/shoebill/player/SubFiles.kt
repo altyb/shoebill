@@ -12,6 +12,7 @@ import java.io.FileInputStream
 import java.io.RandomAccessFile
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
+import android.content.ContentUris
 
 data class VideoHash(val hash: String, val size: Long)
 
@@ -60,10 +61,10 @@ fun prefsKeyStore(context: Context): KeyStore {
 
 /** Sibling subtitles: same base name, extension srt/ass/ssa/vtt (covers `.srt`, `.ar.srt`, `.ara.srt`). API 29+ for RELATIVE_PATH. */
 fun siblingSubtitleUris(context: Context, video: Uri): List<Uri> = runCatching {
-    val id = android.content.ContentUris.parseId(video)
+    val id = ContentUris.parseId(video)
     val cr = context.contentResolver
     val videoRow = cr.query(
-        android.content.ContentUris.withAppendedId(MediaStore.Files.getContentUri("external"), id),
+        ContentUris.withAppendedId(MediaStore.Files.getContentUri("external"), id),
         arrayOf(MediaStore.MediaColumns.DISPLAY_NAME, MediaStore.MediaColumns.RELATIVE_PATH), null, null, null,
     )?.use { c -> if (c.moveToFirst()) c.getString(0) to c.getString(1) else null } ?: return@runCatching emptyList()
     val stem = videoRow.first.substringBeforeLast('.')
@@ -74,7 +75,7 @@ fun siblingSubtitleUris(context: Context, video: Uri): List<Uri> = runCatching {
             while (c.moveToNext()) {
                 val name = c.getString(1) ?: continue
                 if (name.startsWith("$stem.") && name.substringAfterLast('.').lowercase() in SUB_EXT)
-                    add(android.content.ContentUris.withAppendedId(files, c.getLong(0)))
+                    add(ContentUris.withAppendedId(files, c.getLong(0)))
             }
         }
     } ?: emptyList()
