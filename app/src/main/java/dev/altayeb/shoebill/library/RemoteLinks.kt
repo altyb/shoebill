@@ -55,6 +55,14 @@ private const val MAX_LISTING = 4 shl 20
 private const val SKIP_LIMIT = 1L shl 20
 private const val PROPFIND_BODY = """<?xml version="1.0" encoding="utf-8"?><d:propfind xmlns:d="DAV:"><d:prop><d:resourcetype/><d:getcontentlength/></d:prop></d:propfind>"""
 
+/** One client for every WebDAV link: each OkHttpClient owns a thread pool and a connection pool that outlive the link. Holds no credentials. */
+private val webDavHttp by lazy {
+    OkHttpClient.Builder()
+        .connectTimeout(TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
+        .readTimeout(TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
+        .build()
+}
+
 /**
  * WebDAV over OkHttp. The password goes in an Authorization header, never in the URL, and mpv never sees it: playback
  * reads through the proxy in [SmbProvider]. OkHttp drops that header if a redirect leaves the host.
@@ -63,10 +71,7 @@ class WebDavLink(private val c: Context, base: String, user: String, pass: Strin
     private val base = base.trimEnd('/')
     private val auth = if (user.isEmpty()) null else Credentials.basic(user, pass, Charsets.UTF_8)
     private val rootPath = RemoteLogic.hrefSegments(URL(this.base).path)
-    private val http = OkHttpClient.Builder()
-        .connectTimeout(TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
-        .readTimeout(TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
-        .build()
+    private val http get() = webDavHttp
 
     private fun segs(path: String): List<String> = RemoteLogic.segments(path) ?: throw IOException(c.getString(R.string.remote_bad_path))
 
