@@ -11,6 +11,9 @@ Source and build scripts for this exact build: https://github.com/jarnedemeuleme
 (tag v1.0.0, commit fcf6745703)
 
 Network shares use smbj (https://github.com/hierynomus/smbj, Apache License 2.0) and Bouncy Castle (MIT-style licence).
+SFTP uses sshj (https://github.com/hierynomus/sshj, Apache License 2.0), version 0.40.0.
+FTP uses Apache Commons Net (https://commons.apache.org/proper/commons-net/, Apache License 2.0), version 3.12.0.
+WebDAV uses OkHttp (https://square.github.io/okhttp/, Apache License 2.0), version 4.12.0.
 
 It also includes Tink (https://github.com/tink-crypto/tink-java), AndroidX and Jetpack Compose
 (Apache License 2.0) and MaterialKolor (https://github.com/jordond/MaterialKolor).
