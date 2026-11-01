@@ -10,7 +10,15 @@ data class DownloadOptions(
     val subtitles: Boolean = false,
     val limit: String? = null, // yt-dlp --limit-rate value, such as 1M
     val proxy: String? = null,
+    val formatId: String? = null, // one exact format picked from the list; overrides quality
+    val formatAudioOnly: Boolean = false,
 )
+
+/** One format yt-dlp offers. Size is 0 when the site does not say. */
+data class Fmt(val id: String, val ext: String, val height: Int, val hasVideo: Boolean, val hasAudio: Boolean, val tbr: Int, val size: Long) {
+    val audioOnly get() = !hasVideo
+}
+data class PlEntry(val url: String, val title: String, val durationSec: Long, val thumb: String?)
 
 object DownloadLogic {
     private val URL = Regex("""(?i)\bhttps?://[^\s<>"']+""")
@@ -26,7 +34,11 @@ object DownloadLogic {
         a += if (o.playlist) "--yes-playlist" else "--no-playlist"
         o.limit?.let { a += listOf("--limit-rate", it) }
         o.proxy?.let { a += listOf("--proxy", it) }
-        if (o.quality.audio != null) {
+        if (o.formatId != null) {
+            a += listOf("-f", if (o.formatAudioOnly) o.formatId else "${o.formatId}+ba/${o.formatId}")
+            if (!o.formatAudioOnly) a += listOf("--merge-output-format", "mkv")
+            a += "--embed-metadata"
+        } else if (o.quality.audio != null) {
             a += listOf("-f", "ba/b", "-x", "--audio-format", o.quality.audio, "--embed-metadata", "--embed-thumbnail")
         } else {
             val h = o.quality.height
@@ -36,6 +48,25 @@ object DownloadLogic {
         }
         return a
     }
+
+    /** What is worth showing: storyboards and duplicates gone, best of each height and container, video first. */
+    fun formats(all: List<Fmt>): List<Fmt> = all.filter { it.hasVideo || it.hasAudio }
+        .groupBy { Triple(it.height, it.ext.lowercase(), it.audioOnly) }.values.map { g -> g.maxByOrNull { it.size.takeIf { s -> s > 0 } ?: it.tbr.toLong() }!! }
+        .sortedWith(compareBy<Fmt> { it.audioOnly }.thenByDescending { it.height }.thenByDescending { it.tbr })
+
+    fun formatLabel(f: Fmt): String = listOfNotNull(
+        if (f.audioOnly) "${f.tbr.takeIf { it > 0 } ?: "?"} kbps" else "${f.height}p",
+        f.ext.uppercase(java.util.Locale.ROOT),
+        f.size.takeIf { it > 0 }?.let { size(it) },
+    ).joinToString(" · ")
+
+    fun size(b: Long): String = when {
+        b >= 1L shl 30 -> "%.1f GB".format(java.util.Locale.ROOT, b / (1L shl 30).toDouble())
+        b >= 1L shl 20 -> "%d MB".format(java.util.Locale.ROOT, b / (1L shl 20))
+        else -> "%d KB".format(java.util.Locale.ROOT, b / 1024)
+    }
+
+    fun looksLikePlaylist(url: String): Boolean = Regex("""[?&]list=|/playlist\b|/sets/""").containsMatchIn(url)
 
     val LIMITS = listOf("500K", "1M", "2M", "5M")
     private val PROXY = Regex("""(?i)^(https?|socks4a?|socks5h?)://([^\s/@]+@)?[^\s/:@]+:([0-9]{1,5})/?$""")

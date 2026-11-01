@@ -1,4 +1,4 @@
-@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
 
 package dev.altayeb.shoebill.music
 
@@ -128,7 +128,7 @@ fun MusicTab(host: MusicHost, modifier: Modifier = Modifier) {
     LaunchedEffect(Unit) { host.songs = querySongs(ctx) }
     Box(modifier.fillMaxSize()) {
         val all = host.songs
-        if (all == null) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+        if (all == null) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { androidx.compose.material3.LoadingIndicator() }
         else if (all.isEmpty()) Text(stringResource(R.string.music_empty), Modifier.fillMaxWidth().padding(32.dp), textAlign = TextAlign.Center)
         else Library(all, host.controller)
     }
@@ -176,7 +176,7 @@ private fun play(c: MediaController?, list: List<Song>, index: Int) {
     c.play()
 }
 
-private enum class LibTab(val label: Int) { Songs(R.string.music_songs), Albums(R.string.music_albums), Artists(R.string.music_artists), Folders(R.string.music_folders), Lists(R.string.music_lists) }
+private enum class LibTab(val label: Int) { Songs(R.string.music_songs), Albums(R.string.music_albums), Artists(R.string.music_artists), Genres(R.string.music_genres), Folders(R.string.music_folders), Lists(R.string.music_lists) }
 
 @Composable
 private fun Library(all: List<Song>, c: MediaController?) {
@@ -208,7 +208,8 @@ private fun Library(all: List<Song>, c: MediaController?) {
         fun groups(key: (Song) -> String) = hits.groupBy(key).toSortedMap(NaturalOrder).map { it.key to it.value }
         when (tab) {
             LibTab.Songs -> SongList(hits, c) { addTo = it }
-            LibTab.Albums -> GroupList(groups { it.album }) { n, s -> open = n to s.sortedWith(compareBy<Song> { it.track }.thenBy(NaturalOrder) { it.title }) }
+            LibTab.Albums -> AlbumGrid(groups { it.album }) { n, s -> open = n to s.sortedWith(compareBy<Song> { it.track }.thenBy(NaturalOrder) { it.title }) }
+            LibTab.Genres -> GroupList(hits.filter { it.genre.isNotBlank() }.groupBy { it.genre }.toSortedMap(NaturalOrder).map { it.key to it.value }) { n, s -> open = n to s }
             LibTab.Artists -> GroupList(groups { it.artist.ifEmpty { "—" } }) { n, s -> open = n to s }
             LibTab.Folders -> GroupList(groups { it.folder }) { n, s -> open = n to s }
             LibTab.Lists -> {
@@ -238,6 +239,27 @@ private fun Library(all: List<Song>, c: MediaController?) {
 private fun SongList(songs: List<Song>, c: MediaController?, onLong: (Song) -> Unit) {
     LazyColumn(Modifier.fillMaxSize()) {
         itemsIndexed(songs, key = { _, s -> s.id }) { i, s -> SongRow(s, { play(c, songs, i) }, { onLong(s) }) }
+    }
+}
+
+@Composable
+private fun AlbumGrid(groups: List<Pair<String, List<Song>>>, open: (String, List<Song>) -> Unit) {
+    androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+        androidx.compose.foundation.lazy.grid.GridCells.Adaptive(150.dp), Modifier.fillMaxSize(),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        items(groups.size, key = { groups[it].first }) { i ->
+            val (name, songs) = groups[i]
+            androidx.compose.foundation.layout.BoxWithConstraints(Modifier.clip(RoundedCornerShape(12.dp)).clickable { open(name, songs) }) {
+                val side = maxWidth.value.toInt()
+                Column {
+                    songs.firstOrNull()?.let { Art(it, side) }
+                    Text(name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
+                    Text(songs.first().artist.ifEmpty { stringResource(R.string.music_count, songs.size) }, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
     }
 }
 
@@ -322,10 +344,12 @@ fun MiniPlayer(host: MusicHost) {
         }
         IconButton(onClick = { c.seekToNext() }) { Icon(Icons.Rounded.SkipNext, stringResource(R.string.player_next)) }
     }
-    val cs = MaterialTheme.colorScheme
-    Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(2.dp).clip(RoundedCornerShape(1.dp)).background(cs.outlineVariant)) {
-        Box(Modifier.fillMaxWidth((s.position.toFloat() / s.duration.coerceAtLeast(1)).coerceIn(0f, 1f)).fillMaxHeight().background(cs.primary))
-    }
+    // Moves while playing and lies flat when paused, which is also the only way to tell the two apart at a glance.
+    androidx.compose.material3.LinearWavyProgressIndicator(
+        progress = { (s.position.toFloat() / s.duration.coerceAtLeast(1)).coerceIn(0f, 1f) },
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        amplitude = { if (s.playing) 1f else 0f },
+    )
 }
 
 /**
@@ -423,11 +447,11 @@ private fun NowPlaying(c: MediaController, s: PlayerState, all: List<Song>, modi
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
                     IconToggleButton(s.shuffle, { c.shuffleModeEnabled = it }) { Icon(Icons.Rounded.Shuffle, stringResource(R.string.music_shuffle)) }
-                    IconButton(onClick = { c.seekToPrevious() }) { Icon(Icons.Rounded.SkipPrevious, stringResource(R.string.player_previous), Modifier.size(36.dp)) }
-                    FilledIconButton(onClick = { if (s.playing) c.pause() else c.play() }, Modifier.size(72.dp)) {
+                    IconButton(onClick = { c.seekToPrevious() }, shapes = androidx.compose.material3.IconButtonDefaults.shapes()) { Icon(Icons.Rounded.SkipPrevious, stringResource(R.string.player_previous), Modifier.size(36.dp)) }
+                    FilledIconButton(onClick = { if (s.playing) c.pause() else c.play() }, modifier = Modifier.size(72.dp), shapes = androidx.compose.material3.IconButtonDefaults.shapes()) {
                         Icon(if (s.playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, stringResource(if (s.playing) R.string.pause else R.string.play), Modifier.size(40.dp))
                     }
-                    IconButton(onClick = { c.seekToNext() }) { Icon(Icons.Rounded.SkipNext, stringResource(R.string.player_next), Modifier.size(36.dp)) }
+                    IconButton(onClick = { c.seekToNext() }, shapes = androidx.compose.material3.IconButtonDefaults.shapes()) { Icon(Icons.Rounded.SkipNext, stringResource(R.string.player_next), Modifier.size(36.dp)) }
                     IconButton(onClick = { c.repeatMode = (s.repeat + 1) % 3 }) {
                         Icon(if (s.repeat == Player.REPEAT_MODE_ONE) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat, stringResource(R.string.music_repeat),
                             tint = if (s.repeat == Player.REPEAT_MODE_OFF) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary)

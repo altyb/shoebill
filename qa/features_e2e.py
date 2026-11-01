@@ -61,6 +61,16 @@ def sec_nowplaying():
     tap("Sound"); time.sleep(1); ok("sound page has speed and sleep", find("15") is not None, texts()[:14])
     back(); adb("shell", "input", "keyevent", "KEYCODE_MEDIA_PAUSE")
 
+def open_more():
+    """The controls hide about as fast as a screen dump runs, so a tap on More can miss. Retry until the panel is really open."""
+    for _ in range(8):
+        tap_xy(540, 540); time.sleep(.5)
+        more = find("More")
+        if more is None: continue
+        tap_xy(*center(more)); time.sleep(1.5)
+        if find("Decoder") is not None: return
+    raise AssertionError("More panel never opened")
+
 def sec_player():
     vid = adb("shell", "content", "query", "--uri", "content://media/external/video/media", "--projection", "_id:_display_name")
     m = re.search(r"_id=(\d+), _display_name=v1\.mp4", vid); assert m, vid[:300]
@@ -71,11 +81,7 @@ def sec_player():
         return dict(re.findall(r"(\S+?)=(\S*)", l[-1].split("BrandState: ", 1)[1])) if l else {}
     s = st(); ok("video plays", float(s.get("time-pos") or 0) > 0, s)
     if find("Got it", exact=True) is not None: tap("Got it", exact=True); time.sleep(1)  # Android's first full-screen hint
-    for _ in range(6):  # the controls hide about as fast as a screen dump runs, so tap from this dump, not a new one
-        tap_xy(540, 540); time.sleep(.6)
-        more = find("More")
-        if more is not None: tap_xy(*center(more)); break
-    time.sleep(1.5); wait("Next frame", 6)
+    open_more(); wait("Next frame", 6)
     t0 = None
     n = find("Next frame"); 
     if n is not None:
@@ -176,6 +182,35 @@ def sec_network():
     prefs()
     ok("no crash in network", not crashed())
 
+def sec_extras():
+    """Tabs, album grid, chapters, formats, playlist picker, saved history."""
+    home(); tab("Music"); wait("Song 1", 15)
+    tap("Albums", exact=True); time.sleep(1); ok("album grid opens", find("Album X") is not None, texts()[:12]); shot("albums")
+    tap("Album X"); wait("Song 3", 6); ok("album opens its songs", True); back(); time.sleep(.5)
+    vid = adb("shell", "content", "query", "--uri", "content://media/external/video/media", "--projection", "_id:_display_name")
+    m = re.search(r"_id=(\d+), _display_name=ch\.mp4", vid); assert m, "seed ch.mp4"
+    adb("shell", "am", "start", "-S", "-a", "android.intent.action.VIEW", "-t", "video/*", "-d", f"content://media/external/video/media/{m.group(1)}", "-n", f"{PKG}/.MainActivity"); time.sleep(6)
+    open_more(); wait("Chapters", 8); ok("chapters listed with titles", find("Intro part") is not None and find("Second part") is not None, texts()[:14]); shot("chapters")
+    tap("Second part"); time.sleep(2)
+    l = [x for x in adb("logcat", "-d", "-s", "BrandState").splitlines() if "BrandState:" in x]
+    pos = float(re.search(r"time-pos=([0-9.]+)", l[-1])[1]); ok("chapter jumps to its start", 120 <= pos < 135, pos)
+    url = "https://www.youtube.com/watch?v=aqz-KE-bpKQ"
+    adb("shell", "am", "start", "-S", "-a", "android.intent.action.VIEW", "-d", url, "-n", f"{PKG}/.MainActivity"); time.sleep(3)
+    wait("All formats", 90); tap("All formats"); time.sleep(1); shot("formats")
+    labels = [t for t in texts() if re.search(r"\d+p · ", t)]
+    ok("real formats listed", len(labels) >= 3, texts()[:16])
+    tap("Cancel", exact=True); time.sleep(1)
+    pl = os.environ["PLAYLIST"]
+    adb("shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", f"'{pl}'", "-n", f"{PKG}/.MainActivity"); time.sleep(3)
+    wait("selected", 90); shot("playlist"); first = texts()
+    ok("playlist picker counts videos", any(re.match(r"\d+ of \d+ selected", t) for t in first), first[:10])
+    tap("Cancel", exact=True); time.sleep(1)
+    before = " ".join(texts())
+    adb("shell", "am", "start", "-S", "-n", f"{PKG}/.MainActivity"); time.sleep(3); tab("Downloads"); time.sleep(2)
+    t = texts(); ok("history survives a restart", "Saved to your library" in " ".join(t), t[:12])
+    tap("Audio", exact=True); time.sleep(1); ok("audio filter leaves the video out", find("Big_Buck_Bunny") is None, texts()[:12]); shot("history")
+    ok("no crash in extras", not crashed())
+
 def sec_download():
     home(); tab("Downloads")
     tap("Download", exact=True); time.sleep(1); ok("empty link names the field", find("Link: enter") is not None, texts()[:10])
@@ -186,7 +221,7 @@ def sec_download():
     ok("youtube audio as MP3 reaches Music/Shoebill", r and "mp3" in adb("shell", "ls", "/sdcard/Music/Shoebill", check=False), t)
     ok("no crash in downloads", not crashed())
 
-S = dict(music=sec_music, nowplaying=sec_nowplaying, player=sec_player, download=sec_download, link=sec_link, network=sec_network)
+S = dict(music=sec_music, nowplaying=sec_nowplaying, player=sec_player, download=sec_download, link=sec_link, network=sec_network, extras=sec_extras)
 adb("logcat", "-c", "-b", "crash", check=False)
 for s in sys.argv[1:] or S:
     print("==", s, flush=True)

@@ -104,4 +104,31 @@ class MediaLogicTest {
     @Test fun times() {
         assertEquals("0:05", DownloadLogic.time(5)); assertEquals("1:01:01", DownloadLogic.time(3661)); assertEquals("0:00", DownloadLogic.time(-3))
     }
+
+    @Test fun formatListKeepsBestOfEach() {
+        val l = DownloadLogic.formats(listOf(
+            dev.altayeb.shoebill.download.logic.Fmt("sb", "mhtml", 90, false, false, 0, 0),
+            dev.altayeb.shoebill.download.logic.Fmt("a1", "m4a", 0, false, true, 128, 3_000_000),
+            dev.altayeb.shoebill.download.logic.Fmt("v1", "mp4", 720, true, false, 900, 50_000_000),
+            dev.altayeb.shoebill.download.logic.Fmt("v2", "mp4", 720, true, false, 800, 90_000_000),
+            dev.altayeb.shoebill.download.logic.Fmt("v3", "webm", 1080, true, false, 2000, 0),
+        ))
+        assertEquals(listOf("v3", "v2", "a1"), l.map { it.id })
+        assertEquals("720p · MP4 · 85 MB", DownloadLogic.formatLabel(l[1]))
+        assertEquals("128 kbps · M4A · 2 MB", DownloadLogic.formatLabel(l[2]))
+    }
+
+    @Test fun pickedFormatOverridesQuality() {
+        val v = DownloadLogic.args(DownloadOptions(quality = Quality.MP3, formatId = "137"), "/o")
+        assertEquals("137+ba/137", v[v.indexOf("-f") + 1]); assertFalse("-x" in v)
+        val a = DownloadLogic.args(DownloadOptions(formatId = "140", formatAudioOnly = true), "/o")
+        assertEquals("140", a[a.indexOf("-f") + 1]); assertFalse("--merge-output-format" in a)
+    }
+
+    @Test fun playlistLinks() {
+        assertTrue(DownloadLogic.looksLikePlaylist("https://www.youtube.com/playlist?list=PL1"))
+        assertTrue(DownloadLogic.looksLikePlaylist("https://www.youtube.com/watch?v=a&list=PL1"))
+        assertTrue(DownloadLogic.looksLikePlaylist("https://soundcloud.com/x/sets/y"))
+        assertFalse(DownloadLogic.looksLikePlaylist("https://www.youtube.com/watch?v=a"))
+    }
 }

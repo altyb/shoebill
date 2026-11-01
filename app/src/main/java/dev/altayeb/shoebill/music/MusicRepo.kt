@@ -15,7 +15,7 @@ import java.io.File
 
 data class Song(
     val id: Long, val title: String, val artist: String, val album: String, val albumId: Long,
-    val durationMs: Long, val track: Int, val folder: String, val path: String?,
+    val durationMs: Long, val track: Int, val folder: String, val path: String?, val genre: String = "",
 ) {
     val uri: Uri get() = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id)
     val art: Uri get() = ContentUris.withAppendedId("content://media/external/audio/albumart".toUri(), albumId)
@@ -28,13 +28,14 @@ data class Song(
 suspend fun querySongs(context: Context): List<Song> = withContext(Dispatchers.IO) {
     val m = MediaStore.Audio.Media.TITLE
     val cols = arrayOf(MediaStore.Audio.Media._ID, m, MediaStore.Audio.Media.ARTIST, MediaStore.Audio.Media.ALBUM, MediaStore.Audio.Media.ALBUM_ID,
-        MediaStore.Audio.Media.DURATION, MediaStore.Audio.Media.TRACK, MediaStore.Audio.Media.DATA)
+        MediaStore.Audio.Media.DURATION, MediaStore.Audio.Media.TRACK, MediaStore.Audio.Media.DATA,
+        *(if (android.os.Build.VERSION.SDK_INT >= 30) arrayOf(MediaStore.Audio.Media.GENRE) else emptyArray()))
     val out = ArrayList<Song>()
     context.contentResolver.query(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, cols, "${MediaStore.Audio.Media.IS_MUSIC} != 0", null, null)?.use { c ->
         while (c.moveToNext()) {
             val path = c.getString(7)
             out += Song(c.getLong(0), c.getString(1).orEmpty(), c.getString(2)?.takeIf { it != "<unknown>" }.orEmpty(), c.getString(3).orEmpty(), c.getLong(4),
-                c.getLong(5), c.getInt(6) % 1000, path?.let { File(it).parentFile?.name }.orEmpty(), path)
+                c.getLong(5), c.getInt(6) % 1000, path?.let { File(it).parentFile?.name }.orEmpty(), path, if (c.columnCount > 8) c.getString(8).orEmpty() else "")
         }
     }
     out.sortedWith(compareBy(NaturalOrder) { it.title })

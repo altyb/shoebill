@@ -1,7 +1,10 @@
-@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class, androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
 
 package dev.altayeb.shoebill.download
 
+import androidx.compose.foundation.clickable
+import dev.altayeb.shoebill.download.logic.Fmt
+import dev.altayeb.shoebill.download.logic.PlEntry
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -60,9 +63,9 @@ enum class DlState { Waiting, Running, Finishing, Done, Failed, Cancelled }
 data class DlJob(
     val id: String, val url: String, val options: DownloadOptions, val state: DlState = DlState.Waiting, val percent: Int = 0,
     val title: String = "", val error: String = "", val uploader: String = "", val thumb: String? = null,
-    val speed: String? = null, val etaSec: Long = -1,
+    val speed: String? = null, val etaSec: Long = -1, val audio: Boolean = false, val fileUri: String? = null,
 )
-data class Preview(val title: String, val uploader: String, val thumb: String?, val durationSec: Long)
+data class Preview(val title: String, val uploader: String, val thumb: String?, val durationSec: Long, val formats: List<Fmt> = emptyList(), val entries: List<PlEntry> = emptyList())
 
 /** Download choices live in Settings; the configure sheet starts from them. Not in the settings backup: the proxy can hold a password. */
 class DlPrefs(c: Context) {
@@ -83,7 +86,30 @@ object Probe {
         val req = YoutubeDLRequest(url).addOption("--no-playlist")
         proxy?.let { req.addOption("--proxy", it) }
         val i = YoutubeDL.getInstance().getInfo(req)
-        return Preview(i.title ?: url, i.uploader.orEmpty(), i.thumbnail, (i.duration).toLong())
+        val formats = i.formats.orEmpty().mapNotNull { f ->
+            val id = f.formatId ?: return@mapNotNull null
+            val v = f.vcodec.orEmpty().let { it.isNotEmpty() && it != "none" }
+            val a = f.acodec.orEmpty().let { it.isNotEmpty() && it != "none" }
+            Fmt(id, f.ext.orEmpty(), f.height, v, a, f.tbr, f.fileSize.takeIf { it > 0 } ?: f.fileSizeApproximate)
+        }
+        return Preview(i.title ?: url, i.uploader.orEmpty(), i.thumbnail, (i.duration).toLong(), DownloadLogic.formats(formats))
+    }
+
+    /** The videos behind a playlist link, without reading each one. */
+    fun playlist(c: Context, url: String, proxy: String?): Preview? {
+        DownloadQueue.ensureReady(c)
+        val req = YoutubeDLRequest(url).addOption("--flat-playlist").addOption("--yes-playlist").addOption("-J").addOption("--no-warnings")
+        proxy?.let { req.addOption("--proxy", it) }
+        val root = org.json.JSONObject(YoutubeDL.getInstance().execute(req).out)
+        val list = root.optJSONArray("entries") ?: return null
+        val entries = (0 until list.length()).mapNotNull { n ->
+            val e = list.optJSONObject(n) ?: return@mapNotNull null
+            val u = e.optString("url").takeIf { it.startsWith("http") } ?: e.optString("webpage_url").takeIf { it.startsWith("http") } ?: return@mapNotNull null
+            val t = e.optJSONArray("thumbnails")?.let { a -> a.optJSONObject(a.length() - 1)?.optString("url") }
+            PlEntry(u, e.optString("title").ifEmpty { u }, e.optDouble("duration", 0.0).toLong(), t)
+        }
+        if (entries.size < 2) return null
+        return Preview(root.optString("title").ifEmpty { url }, root.optString("uploader"), entries.first().thumb, 0, entries = entries)
     }
 
     private val cache = android.util.LruCache<String, android.graphics.Bitmap>(24)
@@ -117,13 +143,41 @@ object DownloadQueue {
     @Volatile private var ready = false
     @Volatile private var active: String? = null
 
+    private var historyFile: File? = null
+
+    /** Finished downloads outlive the app. No proxy in here: it can hold a password, and retry reads the current setting. */
+    @Synchronized fun loadHistory(c: Context) {
+        if (historyFile != null) return
+        val f = File(c.filesDir, "download-history.json"); historyFile = f
+        val prefs = DlPrefs(c)
+        val a = runCatching { org.json.JSONArray(f.readText()) }.getOrNull() ?: return
+        val old = (0 until a.length()).mapNotNull { n ->
+            val o = a.optJSONObject(n) ?: return@mapNotNull null
+            DlJob(o.getString("id"), o.getString("url"), DownloadOptions(prefs.quality, false, false, prefs.limit, prefs.proxy.ifBlank { null }),
+                runCatching { DlState.valueOf(o.getString("state")) }.getOrDefault(DlState.Done), 100,
+                o.optString("title"), o.optString("error"), o.optString("uploader"), o.optString("thumb").ifEmpty { null },
+                audio = o.optBoolean("audio"), fileUri = o.optString("uri").ifEmpty { null })
+        }
+        jobs.update { old + it }
+    }
+
+    private fun saveHistory() {
+        val f = historyFile ?: return
+        val a = org.json.JSONArray()
+        jobs.value.filter { it.state == DlState.Done || it.state == DlState.Failed }.takeLast(200).forEach { j ->
+            a.put(org.json.JSONObject().put("id", j.id).put("url", j.url).put("state", j.state.name).put("title", j.title).put("error", j.error)
+                .put("uploader", j.uploader).put("thumb", j.thumb.orEmpty()).put("audio", j.audio).put("uri", j.fileUri.orEmpty()))
+        }
+        runCatching { f.writeText(a.toString()) }
+    }
+
     fun add(c: Context, url: String, o: DownloadOptions, preview: Preview? = null) {
         jobs.update { it + DlJob(UUID.randomUUID().toString(), url, o, title = preview?.title.orEmpty(), uploader = preview?.uploader.orEmpty(), thumb = preview?.thumb) }
         pump(c.applicationContext)
     }
 
     fun retry(c: Context, j: DlJob) { change(j.id) { it.copy(state = DlState.Waiting, percent = 0, error = "") }; pump(c.applicationContext) }
-    fun clearFinished() = jobs.update { l -> l.filter { it.state in setOf(DlState.Waiting, DlState.Running, DlState.Finishing) } }
+    fun clearFinished() { jobs.update { l -> l.filter { it.state in setOf(DlState.Waiting, DlState.Running, DlState.Finishing) } }; saveHistory() }
 
     fun cancel(j: DlJob) {
         if (j.state == DlState.Waiting) change(j.id) { it.copy(state = DlState.Cancelled) }
@@ -181,13 +235,15 @@ object DownloadQueue {
             change(j.id) { it.copy(state = DlState.Finishing, percent = 100) }
             val files = out.listFiles().orEmpty().filter { DownloadLogic.isMediaFile(it.name) }
             check(files.isNotEmpty()) { "no file was produced" }
-            files.forEach { publish(c, it) }
-            change(j.id) { it.copy(state = DlState.Done, title = it.title.ifEmpty { files.first().nameWithoutExtension }) }
+            val saved = files.map { publish(c, it) }
+            change(j.id) { it.copy(state = DlState.Done, title = it.title.ifEmpty { files.first().nameWithoutExtension }, audio = DownloadLogic.isAudioFile(files.first().name), fileUri = saved.first()) }
+            saveHistory()
             VideoIndex.refresh(c)
         } catch (e: Throwable) { // a broken runtime throws LinkageError; that must fail the job, not kill music and video too
             if (jobs.value.firstOrNull { it.id == j.id }?.state != DlState.Cancelled) {
                 val line = e.message.orEmpty().lineSequence().lastOrNull { it.startsWith("ERROR") } ?: e.message.orEmpty().lineSequence().lastOrNull { it.isNotBlank() } ?: e.javaClass.simpleName
                 change(j.id) { it.copy(state = DlState.Failed, error = DownloadLogic.scrub(line, j.options.proxy).take(200)) }
+                saveHistory()
             }
         } finally {
             out.deleteRecursively()
@@ -195,7 +251,7 @@ object DownloadQueue {
     }
 
     /** Pending until fully copied, so a kill mid-copy never leaves half a file in the library. */
-    private fun publish(c: Context, f: File) {
+    private fun publish(c: Context, f: File): String {
         val audio = DownloadLogic.isAudioFile(f.name)
         val r = c.contentResolver
         if (Build.VERSION.SDK_INT >= 29) {
@@ -210,6 +266,7 @@ object DownloadQueue {
             try {
                 r.openOutputStream(uri)!!.use { o -> f.inputStream().use { it.copyTo(o) } }
                 r.update(uri, ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }, null, null)
+                return uri.toString()
             } catch (e: Exception) {
                 r.delete(uri, null, null)
                 throw e
@@ -219,6 +276,7 @@ object DownloadQueue {
             val to = File(dir, f.name)
             f.copyTo(to, overwrite = true)
             android.media.MediaScannerConnection.scanFile(c, arrayOf(to.path), null, null)
+            return android.net.Uri.fromFile(to).toString()
         }
     }
 }
@@ -313,7 +371,9 @@ object DownloadFeature {
             DownloadLogic.firstUrl(s)?.let { url = it; bad = false; sheetUrl = it }
             SharedLink.value.value = null
         }
+        LaunchedEffect(Unit) { withContext(Dispatchers.IO) { DownloadQueue.loadHistory(ctx) } }
         val jobs by DownloadQueue.jobs.collectAsStateWithLifecycle()
+        var kind by remember { mutableStateOf(0) } // 0 all, 1 video, 2 audio
         val notify = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { }
         val cs = MaterialTheme.colorScheme
         val hero = jobs.firstOrNull { it.state == DlState.Running || it.state == DlState.Finishing }
@@ -341,9 +401,12 @@ object DownloadFeature {
                         Text(stringResource(R.string.dl_queue), Modifier.weight(1f), style = MaterialTheme.typography.titleSmall)
                         TextButton(onClick = { DownloadQueue.clearFinished() }) { Text(stringResource(R.string.dl_clear)) }
                     }
+                    if (others.any { it.state == DlState.Done }) Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf(R.string.dl_all, R.string.dl_video, R.string.dl_audio).forEachIndexed { i, l -> FilterChip(kind == i, { kind = i }, { Text(stringResource(l)) }) }
+                    }
                 }
             }
-            items(jobs.filter { it !== hero }.reversed(), key = { it.id }) { j -> JobCard(j, Modifier.animateItem()) }
+            items(jobs.filter { it !== hero && (kind == 0 || (it.state == DlState.Done && it.audio == (kind == 2))) }.reversed(), key = { it.id }) { j -> JobCard(j, Modifier.animateItem()) }
             if (jobs.isEmpty()) item(key = "none") { Text(stringResource(R.string.dl_none), color = cs.onSurfaceVariant) }
         }
         sheetUrl?.let { u -> ConfigureSheet(u, { sheetUrl = null }) { url = "" } }
@@ -360,14 +423,21 @@ object DownloadFeature {
         var subs by remember { mutableStateOf(prefs.subtitles) }
         var info by remember { mutableStateOf<Preview?>(null) }
         var error by remember { mutableStateOf<String?>(null) }
+        var format by remember { mutableStateOf<Fmt?>(null) }
+        var showFormats by remember { mutableStateOf(false) }
+        val unpicked = remember { androidx.compose.runtime.mutableStateListOf<String>() }
         LaunchedEffect(url) {
-            withContext(Dispatchers.IO) { runCatching { Probe.info(ctx, url, proxy) } }
+            withContext(Dispatchers.IO) { runCatching {
+                (if (DownloadLogic.looksLikePlaylist(url)) runCatching { Probe.playlist(ctx, url, proxy) }.getOrNull() else null) ?: Probe.info(ctx, url, proxy)
+            } }
                 .onSuccess { info = it }
                 .onFailure { e -> error = DownloadLogic.scrub(e.message.orEmpty().lineSequence().lastOrNull { it.startsWith("ERROR") } ?: ctx.getString(R.string.dl_no_preview), proxy).take(200) }
         }
         ModalBottomSheet(onDismissRequest = close) {
-            Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                val i = info
+            val i = info
+            val entries = i?.entries.orEmpty()
+            // The buttons stay in reach however long the format or playlist list gets.
+            Column(Modifier.fillMaxWidth().weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 when {
                     i != null -> {
                         if (i.thumb != null) Box {
@@ -379,21 +449,52 @@ object DownloadFeature {
                     }
                     error != null -> Text(error!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
                     else -> Row(verticalAlignment = Alignment.CenterVertically) {
-                        CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp); Spacer(Modifier.width(12.dp)); Text(stringResource(R.string.dl_reading))
+                        androidx.compose.material3.LoadingIndicator(Modifier.size(32.dp)); Spacer(Modifier.width(12.dp)); Text(stringResource(R.string.dl_reading))
                     }
                 }
+                if (entries.isNotEmpty()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(stringResource(R.string.dl_pick_count, entries.size - unpicked.size, entries.size), Modifier.weight(1f), style = MaterialTheme.typography.titleSmall)
+                        TextButton(onClick = { if (unpicked.isEmpty()) unpicked.addAll(entries.map { it.url }) else unpicked.clear() }) {
+                            Text(stringResource(if (unpicked.isEmpty()) R.string.dl_select_none else R.string.dl_select_all))
+                        }
+                    }
+                    // Lazy, so a 250-video playlist fetches only the thumbnails on screen.
+                    LazyColumn(Modifier.fillMaxWidth().heightIn(max = 340.dp)) { items(entries, key = { it.url }) { e ->
+                        Row(Modifier.fillMaxWidth().clickable { if (!unpicked.remove(e.url)) unpicked.add(e.url) }, verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(e.url !in unpicked, null, Modifier.padding(horizontal = 8.dp, vertical = 10.dp))
+                            Thumb(e.thumb, proxy, Modifier.width(80.dp).aspectRatio(16f / 9f).clip(RoundedCornerShape(8.dp)))
+                            Spacer(Modifier.width(10.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(e.title, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
+                                if (e.durationSec > 0) Text(DownloadLogic.time(e.durationSec), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    } }
+                }
                 Text(stringResource(R.string.dl_quality), style = MaterialTheme.typography.titleSmall)
-                QualityChips(quality) { quality = it }
-                Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(playlist, { playlist = it }); Text(stringResource(R.string.dl_playlist)) }
+                QualityChips(quality) { quality = it; format = null }
+                val fmts = i?.formats.orEmpty()
+                if (fmts.isNotEmpty()) {
+                    TextButton(onClick = { showFormats = !showFormats }) { Text(stringResource(R.string.dl_all_formats, fmts.size)) }
+                    if (showFormats) androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        fmts.forEach { f -> FilterChip(format == f, { format = f.takeIf { format != it } }, { Text(DownloadLogic.formatLabel(f)) }) }
+                    }
+                }
+                if (entries.isEmpty()) Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(playlist, { playlist = it }); Text(stringResource(R.string.dl_playlist)) }
                 if (quality.audio == null) Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(subs, { subs = it }); Text(stringResource(R.string.dl_subs)) }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            }
+                Row(Modifier.padding(horizontal = 20.dp).padding(bottom = 20.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = close, Modifier.weight(1f)) { Text(stringResource(R.string.dl_cancel)) }
                     Button(onClick = {
-                        DownloadQueue.add(ctx, url, DownloadOptions(quality, playlist, subs, prefs.limit, proxy), info)
+                        val base = DownloadOptions(quality, playlist, subs, prefs.limit, proxy, format?.id, format?.audioOnly == true)
+                        if (entries.isEmpty()) DownloadQueue.add(ctx, url, base, info)
+                        else entries.filter { it.url !in unpicked }.forEach { e ->
+                            DownloadQueue.add(ctx, e.url, base.copy(playlist = false), Preview(e.title, i?.uploader.orEmpty(), e.thumb, e.durationSec))
+                        }
                         started(); close()
-                    }, Modifier.weight(1f)) { Text(stringResource(R.string.dl_start)) }
+                    }, Modifier.weight(1f), enabled = entries.isEmpty() || unpicked.size < entries.size) { Text(stringResource(R.string.dl_start)) }
                 }
-            }
         }
     }
 
@@ -452,7 +553,12 @@ object DownloadFeature {
     @Composable
     private fun JobCard(j: DlJob, modifier: Modifier) {
         val ctx = LocalContext.current
-        Surface(modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
+        val open: () -> Unit = {
+            runCatching {
+                ctx.startActivity(Intent.createChooser(Intent(Intent.ACTION_VIEW).setDataAndType(android.net.Uri.parse(j.fileUri), if (j.audio) "audio/*" else "video/*").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), null))
+            }
+        }
+        Surface(modifier.fillMaxWidth().then(if (j.state == DlState.Done && j.fileUri != null) Modifier.clickable(onClick = open) else Modifier), shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
             Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Thumb(j.thumb, j.options.proxy, Modifier.width(112.dp).aspectRatio(16f / 9f).clip(RoundedCornerShape(10.dp)))
                 Spacer(Modifier.width(10.dp))

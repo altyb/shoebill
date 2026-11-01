@@ -124,4 +124,14 @@
     <string name="dl_proxy_hint">اختياري. مثال: socks5://127.0.0.1:1080</string>
     <string name="dl_bad_proxy">الوكيل: استخدم http أو https أو socks4 أو socks5 مع العنوان والمنفذ. مثال: socks5://127.0.0.1:1080</string>
     <string name="dl_open_links">فتح روابط مواقع الفيديو في Shoebill</string>
+    <string name="music_genres">الأنواع</string>
+    <string name="player_chapters">الفصول</string>
+    <string name="player_chapter_n">الفصل %1$d</string>
+    <string name="dl_all">الكل</string>
+    <string name="dl_video">فيديو</string>
+    <string name="dl_audio">صوت</string>
+    <string name="dl_pick_count">تم اختيار %1$d من %2$d</string>
+    <string name="dl_select_all">تحديد الكل</string>
+    <string name="dl_select_none">إلغاء التحديد</string>
+    <string name="dl_all_formats">كل الصيغ (%1$d)</string>
 </resources>
