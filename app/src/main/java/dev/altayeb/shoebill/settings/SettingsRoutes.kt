@@ -18,6 +18,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import dev.altayeb.shoebill.Lang
 import dev.altayeb.shoebill.R
 import dev.altayeb.shoebill.data.PlaybackStore
+import dev.altayeb.shoebill.library.logic.GainMode
 import android.content.Context
 import android.os.Build
 import kotlinx.coroutines.launch
@@ -249,6 +250,12 @@ fun SettingsScreen(onBack: () -> Unit, onAppearance: () -> Unit) {
                         SwitchRow(stringResource(R.string.music_morph), np[0], s.coverMorph, stringResource(R.string.music_morph_sub)) { v -> app.update { it.copy(coverMorph = v) } }
                         SwitchRow(stringResource(R.string.music_lyrics_large), np[1], s.lyricsLarge) { v -> app.update { it.copy(lyricsLarge = v) } }
                         SwitchRow(stringResource(R.string.music_screen_on), np[2], s.keepScreenOnMusic, stringResource(R.string.music_screen_on_sub)) { v -> app.update { it.copy(keepScreenOnMusic = v) } }
+                    }
+                    GroupTitle(stringResource(R.string.music_group_volume))
+                    val rg = groupShapes(2)
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        ChoiceRow(stringResource(R.string.music_normalize), rg[0], listOf(GainMode.Off to stringResource(R.string.off), GainMode.Track to stringResource(R.string.music_norm_track), GainMode.Album to stringResource(R.string.music_norm_album)), s.replayGain) { v -> app.update { it.copy(replayGain = v) } }
+                        ChoiceRow(stringResource(R.string.music_preamp), rg[1], listOf(-6, -3, 0, 3).map { it to (if (it > 0) "+$it dB" else "$it dB") }, s.replayGainPreamp) { v -> app.update { it.copy(replayGainPreamp = v) } }
                     }
                 }
                 3 -> {

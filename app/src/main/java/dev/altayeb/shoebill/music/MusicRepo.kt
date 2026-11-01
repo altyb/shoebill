@@ -24,7 +24,7 @@ data class Song(
     val art: Uri get() = ContentUris.withAppendedId("content://media/external/audio/albumart".toUri(), albumId)
 
     fun item(): MediaItem = MediaItem.Builder().setMediaId(id.toString()).setUri(uri).setMediaMetadata(
-        MediaMetadata.Builder().setTitle(title).setArtist(artist).setAlbumTitle(album).setArtworkUri(art).build(),
+        MediaMetadata.Builder().setTitle(title).setArtist(artist).setAlbumTitle(album).setArtworkUri(art).setIsPlayable(true).build(),
     ).build()
 }
 

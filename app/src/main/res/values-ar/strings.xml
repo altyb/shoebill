@@ -183,6 +183,11 @@
     <string name="music_folders_shown_sub">ألغِ تحديد مجلد لإخفاء صوتياته، مثل الرسائل الصوتية أو النغمات.</string>
     <string name="music_morph">تغيير شكل الغلاف عند الإيقاف</string>
     <string name="music_morph_sub">مربع أثناء التشغيل وشكل ناعم عند الإيقاف</string>
+    <string name="music_group_volume">تسوية مستوى الصوت</string>
+    <string name="music_normalize">استخدام وسوم ReplayGain</string>
+    <string name="music_norm_track">المقطع</string>
+    <string name="music_norm_album">الألبوم</string>
+    <string name="music_preamp">التعديل المسبق</string>
     <string name="music_lyrics_large">كلمات أكبر</string>
     <string name="music_screen_on">إبقاء الشاشة مضاءة</string>
     <string name="music_screen_on_sub">أثناء فتح صفحة الأغنية</string>

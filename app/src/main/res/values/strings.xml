@@ -184,6 +184,11 @@
     <string name="music_folders_shown_sub">Untick a folder to hide its audio, such as voice notes or ringtones.</string>
     <string name="music_morph">Change the cover shape when paused</string>
     <string name="music_morph_sub">Square while playing, soft shape when paused</string>
+    <string name="music_group_volume">Volume normalization</string>
+    <string name="music_normalize">Use ReplayGain tags</string>
+    <string name="music_norm_track">Track</string>
+    <string name="music_norm_album">Album</string>
+    <string name="music_preamp">Pre-amp</string>
     <string name="music_lyrics_large">Larger lyrics</string>
     <string name="music_screen_on">Keep the screen on</string>
     <string name="music_screen_on_sub">While the song page is open</string>
