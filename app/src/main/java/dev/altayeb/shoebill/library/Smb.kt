@@ -35,6 +35,8 @@ import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
+import android.webkit.MimeTypeMap
+import java.io.FileNotFoundException
 
 data class SmbServer(val id: String, val host: String, val port: Int, val share: String, val user: String)
 data class SmbEntry(val name: String, val dir: Boolean, val size: Long)
@@ -132,9 +134,9 @@ class SmbProvider : ContentProvider() {
     override fun onCreate() = true
 
     override fun openFile(uri: Uri, mode: String): ParcelFileDescriptor {
-        val ctx = context ?: throw java.io.FileNotFoundException()
+        val ctx = context ?: throw FileNotFoundException()
         val seg = uri.pathSegments
-        val server = SmbStore.list(ctx).firstOrNull { it.id == seg.firstOrNull() } ?: throw java.io.FileNotFoundException("unknown share")
+        val server = SmbStore.list(ctx).firstOrNull { it.id == seg.firstOrNull() } ?: throw FileNotFoundException("unknown share")
         val path = seg.drop(1).joinToString("\\")
         try {
             val link = SmbLink(ctx, server)
@@ -158,11 +160,11 @@ class SmbProvider : ContentProvider() {
             return ctx.getSystemService(StorageManager::class.java)
                 .openProxyFileDescriptor(ParcelFileDescriptor.MODE_READ_ONLY, cb, handler)
         } catch (e: Exception) {
-            throw java.io.FileNotFoundException(e.message)
+            throw FileNotFoundException(e.message)
         }
     }
 
-    override fun getType(uri: Uri): String = android.webkit.MimeTypeMap.getSingleton()
+    override fun getType(uri: Uri): String = MimeTypeMap.getSingleton()
         .getMimeTypeFromExtension(uri.lastPathSegment.orEmpty().substringAfterLast('.').lowercase()) ?: "video/mp4"
 
     override fun query(u: Uri, p: Array<String>?, s: String?, a: Array<String>?, o: String?): Cursor? = null

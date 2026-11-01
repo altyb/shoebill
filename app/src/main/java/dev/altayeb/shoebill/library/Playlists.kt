@@ -72,6 +72,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
+import dev.altayeb.shoebill.ui.theme.Radius
 
 data class Playlist(val id: String, val name: String, val items: List<String>)
 
@@ -188,7 +189,7 @@ private fun PlaylistRow(p: Playlist, onOpen: () -> Unit, onRename: () -> Unit, o
     val cs = MaterialTheme.colorScheme
     var menu by remember(p.id) { mutableStateOf(false) }
     Surface(
-        shape = dev.altayeb.shoebill.ui.theme.Radius.L,
+        shape = Radius.L,
         color = cs.surfaceContainer,
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
             .combinedClickable(onClick = onOpen, onLongClick = { menu = true }),

@@ -35,6 +35,7 @@ import java.net.NetworkInterface
 import java.net.SocketTimeoutException
 import java.net.URL
 import java.nio.ByteBuffer
+import java.io.IOException
 
 /** One cast at a time, for the whole app: it outlives the dialog and stops from the same dialog. */
 object Casting {
@@ -80,7 +81,7 @@ object Casting {
         val url: String
         val mime: String
         if (uri.scheme == "content") {
-            val pfd = context.contentResolver.openFileDescriptor(uri, "r") ?: throw java.io.IOException("cannot open")
+            val pfd = context.contentResolver.openFileDescriptor(uri, "r") ?: throw IOException("cannot open")
             val ch = FileInputStream(pfd.fileDescriptor).channel
             mime = context.contentResolver.getType(uri) ?: "video/mp4"
             val source = object : CastSource {
@@ -88,7 +89,7 @@ object Casting {
                 override fun read(offset: Long, buf: ByteArray, len: Int) =
                     synchronized(ch) { ch.read(ByteBuffer.wrap(buf, 0, len), offset) }
             }
-            val ip = lanAddress() ?: throw java.io.IOException("no Wi-Fi address")
+            val ip = lanAddress() ?: throw IOException("no Wi-Fi address")
             server = CastServer(source, mime, ip).also { it.start() }
             url = server.url
         } else {

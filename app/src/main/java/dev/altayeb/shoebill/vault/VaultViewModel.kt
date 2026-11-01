@@ -40,6 +40,15 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
 import java.io.ByteArrayOutputStream
 import java.io.IOException
+import android.content.Context
+import android.os.Handler
+import android.os.HandlerThread
+import android.os.ParcelFileDescriptor
+import android.os.SystemClock
+import android.os.storage.StorageManager
+import java.io.File
+import java.nio.channels.SeekableByteChannel
+import kotlinx.coroutines.sync.Mutex
 
 enum class AutoLock(val seconds: Long, val label: Int) {
     Immediately(0, R.string.vault_lock_now), OneMinute(60, R.string.vault_lock_1min), FiveMinutes(300, R.string.vault_lock_5min),
@@ -83,16 +92,16 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
     private fun str(id: Int, vararg args: Any): String = getApplication<Application>().getString(id, *args)
     private fun plural(id: Int, n: Int): String = getApplication<Application>().resources.getQuantityString(id, n, n)
 
-    private val prefs = app.getSharedPreferences("vault", android.content.Context.MODE_PRIVATE)
+    private val prefs = app.getSharedPreferences("vault", Context.MODE_PRIVATE)
     private val pins = PinStore(object : PinStore.Storage {
-        private val sp = app.getSharedPreferences("vault_pin", android.content.Context.MODE_PRIVATE)
+        private val sp = app.getSharedPreferences("vault_pin", Context.MODE_PRIVATE)
         override fun get(key: String): String? = sp.getString(key, null)
         override fun put(key: String, value: String?) {
             val e = sp.edit()
             if (value == null) e.remove(key) else e.putString(key, value)
             e.commit() // failed-attempt counters must survive a process kill
         }
-    }, android.os.SystemClock::elapsedRealtime, 150_000, pepper = PinPepper::mac)
+    }, SystemClock::elapsedRealtime, 150_000, pepper = PinPepper::mac)
     private val _ui = MutableStateFlow(
         VaultUi(
             phase = if (gated()) Phase.Locked else Phase.Setup,
@@ -106,14 +115,14 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
 
     private var repo: VaultRepo? = null
     // open vault file descriptors (one per playback); closing the channel ends the read side, so lock() kills playback
-    private val openChannels = mutableListOf<java.nio.channels.SeekableByteChannel>()
-    private val fdThread by lazy { android.os.HandlerThread("vault-fd").apply { start() } }
+    private val openChannels = mutableListOf<SeekableByteChannel>()
+    private val fdThread by lazy { HandlerThread("vault-fd").apply { start() } }
     private var opJob: Job? = null
     private var lockJob: Job? = null
     private var waiter: CompletableDeferred<Boolean>? = null
     private var systemHop = false // our own picker / delete dialog stops the activity: not a reason to lock
     // every repo read/write runs under this, and lock() wipes the keys under it too: a wipe never lands mid-write
-    private val opMutex = kotlinx.coroutines.sync.Mutex()
+    private val opMutex = Mutex()
     @Volatile private var gen = 0 // bumped by lock(): an unlock that started before it must not open the vault after it
 
     private val activityCallbacks = object : Application.ActivityLifecycleCallbacks {
@@ -204,7 +213,7 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
         val app = getApplication<Application>()
         val alias = KeystoreMasterKey.activeAlias(app, VaultSpace.Real)
         if (!KeystoreMasterKey.exists(alias)) return false
-        val dir = java.io.File(app.noBackupFilesDir, VaultSpace.Real.dir)
+        val dir = File(app.noBackupFilesDir, VaultSpace.Real.dir)
         // missing or empty only: list() is also null on an I/O error, and then the vault must be kept
         if (!dir.exists() || dir.list()?.isEmpty() == true) {
             KeystoreMasterKey.delete(alias)
@@ -256,7 +265,7 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
                     // The decoy must behave exactly like the real vault: same unlock mode. An empty decoy is re-keyed to match.
                     if (space == VaultSpace.Decoy) {
                         val realMode = KeystoreMasterKey.pinOnly(app, VaultSpace.Real)
-                        val decoyDir = java.io.File(app.noBackupFilesDir, VaultSpace.Decoy.dir)
+                        val decoyDir = File(app.noBackupFilesDir, VaultSpace.Decoy.dir)
                         if (KeystoreMasterKey.pinOnly(app, VaultSpace.Decoy) != realMode && decoyDir.list().isNullOrEmpty()) {
                             KeystoreMasterKey.delete(VaultSpace.Decoy.alias)
                             KeystoreMasterKey.delete(KeystoreMasterKey.pinOnlyAlias(VaultSpace.Decoy.alias))
@@ -276,7 +285,7 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
                 is PinStore.Result.Wrong ->
                     _ui.update { it.copy(pinBusy = false, pinError = plural(R.plurals.vault_wrong_pin, r.attemptsLeft)) }
                 is PinStore.Result.LockedOut ->
-                    _ui.update { it.copy(pinBusy = false, lockedUntil = System.currentTimeMillis() + (r.untilMs - android.os.SystemClock.elapsedRealtime()), pinError = str(R.string.vault_too_many_attempts)) }
+                    _ui.update { it.copy(pinBusy = false, lockedUntil = System.currentTimeMillis() + (r.untilMs - SystemClock.elapsedRealtime()), pinError = str(R.string.vault_too_many_attempts)) }
             }
         }
     }
@@ -598,9 +607,9 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
         authed { r.warmKey(e) }
         val ch = r.openChannel(e)
         synchronized(openChannels) { openChannels += ch }
-        val sm = getApplication<Application>().getSystemService(android.os.storage.StorageManager::class.java)
+        val sm = getApplication<Application>().getSystemService(StorageManager::class.java)
         val pfd = sm.openProxyFileDescriptor(
-            android.os.ParcelFileDescriptor.MODE_READ_ONLY, VaultFdCallback(ch, e.size), android.os.Handler(fdThread.looper),
+            ParcelFileDescriptor.MODE_READ_ONLY, VaultFdCallback(ch, e.size), Handler(fdThread.looper),
         )
         val name = r.nameOf(e)
         // the player takes ownership of the fd (mpv's fdclose://)

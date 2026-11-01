@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Matrix
 
 /**
  * The mark filling up from the bottom and draining again, tinted from the theme.
@@ -42,7 +43,7 @@ fun BrandLoader(modifier: Modifier = Modifier, size: Dp = 56.dp, color: Color = 
     val body = remember {
         PathParser().parsePathString(LogoPaths.BODY).toPath().apply {
             fillType = PathFillType.EvenOdd
-            transform(androidx.compose.ui.graphics.Matrix().apply { translate(0f, LogoPaths.SIZE); scale(0.1f, -0.1f) })
+            transform(Matrix().apply { translate(0f, LogoPaths.SIZE); scale(0.1f, -0.1f) })
         }
     }
     val fill = rememberInfiniteTransition(label = "shoebill-loader")

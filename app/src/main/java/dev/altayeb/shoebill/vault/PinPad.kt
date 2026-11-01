@@ -58,6 +58,7 @@ import androidx.compose.ui.res.stringResource
 import dev.altayeb.shoebill.ui.BrandLoader
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
+import androidx.compose.ui.unit.Dp
 
 private const val PIN_MIN = 4
 private const val PIN_MAX = 16
@@ -245,7 +246,7 @@ private fun PinDot(filled: Boolean) {
 }
 
 @Composable
-private fun PinKey(size: androidx.compose.ui.unit.Dp, enabled: Boolean, onClick: () -> Unit, content: @Composable () -> Unit) {
+private fun PinKey(size: Dp, enabled: Boolean, onClick: () -> Unit, content: @Composable () -> Unit) {
     Surface(
         onClick = onClick,
         enabled = enabled,

@@ -86,6 +86,8 @@ import dev.altayeb.shoebill.data.FileState
 import dev.altayeb.shoebill.ui.EmptyState
 import dev.altayeb.shoebill.ui.theme.BrandAmber
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.CompositionLocalProvider
+import dev.altayeb.shoebill.ui.theme.Radius
 
 private enum class Access { Full, Partial, None }
 
@@ -206,7 +208,7 @@ fun highlight(name: String, query: String): AnnotatedString = buildAnnotatedStri
 /** File names are LTR even inside the RTL UI. */
 @Composable
 fun LtrText(text: AnnotatedString, style: TextStyle, maxLines: Int, color: Color = Color.Unspecified) {
-    androidx.compose.runtime.CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         Text(
             text = text, style = style, maxLines = maxLines, overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Start, color = color,
@@ -216,7 +218,7 @@ fun LtrText(text: AnnotatedString, style: TextStyle, maxLines: Int, color: Color
 
 @Composable
 fun DurationBadge(ms: Long, modifier: Modifier = Modifier) {
-    Surface(modifier = modifier, shape = dev.altayeb.shoebill.ui.theme.Radius.XS, color = Color.Black.copy(alpha = 0.7f)) {
+    Surface(modifier = modifier, shape = Radius.XS, color = Color.Black.copy(alpha = 0.7f)) {
         Text(formatTime(ms), color = Color.White, style = MaterialTheme.typography.labelSmall,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 1.dp))
     }
@@ -231,7 +233,7 @@ fun ProgressLine(fraction: Float, modifier: Modifier = Modifier) {
 
 @Composable
 fun TagChip(text: String) {
-    Surface(shape = dev.altayeb.shoebill.ui.theme.Radius.XS, color = MaterialTheme.colorScheme.secondaryContainer) {
+    Surface(shape = Radius.XS, color = MaterialTheme.colorScheme.secondaryContainer) {
         Text(text, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSecondaryContainer,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
     }
@@ -270,7 +272,7 @@ fun VideoRow(
     ) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(width = 128.dp, height = 72.dp)) {
-                Thumb(v.uri, Modifier.fillMaxSize(), dev.altayeb.shoebill.ui.theme.Radius.S,
+                Thumb(v.uri, Modifier.fillMaxSize(), Radius.S,
                     durationMs = v.durationMs, savedPosMs = state?.positionMs ?: -1, shared = true)
                 DurationBadge(v.durationMs, Modifier.align(Alignment.BottomEnd).padding(4.dp))
                 if (p.partial) ProgressLine(p.fraction, Modifier.align(Alignment.BottomStart))
@@ -313,8 +315,8 @@ fun VideoCard(
         )
     ) {
         Box(
-            Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(dev.altayeb.shoebill.ui.theme.Radius.L)
-                .then(if (selected) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, dev.altayeb.shoebill.ui.theme.Radius.L) else Modifier)
+            Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(Radius.L)
+                .then(if (selected) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, Radius.L) else Modifier)
         ) {
             Thumb(v.uri, Modifier.fillMaxSize(), durationMs = v.durationMs, savedPosMs = state?.positionMs ?: -1, shared = true)
             DurationBadge(v.durationMs, Modifier.align(Alignment.BottomEnd).padding(8.dp))

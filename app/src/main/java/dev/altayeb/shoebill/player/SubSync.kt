@@ -45,6 +45,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.Locale
+import androidx.compose.ui.text.style.TextAlign
+import dev.altayeb.shoebill.ui.theme.Radius
 
 @Composable
 fun SubTimingTab(player: MpvPlayer, subFile: File?) {
@@ -100,9 +102,9 @@ fun SubTimingTab(player: MpvPlayer, subFile: File?) {
             }
         }
         Spacer(Modifier.height(12.dp))
-        Surface(shape = dev.altayeb.shoebill.ui.theme.Radius.L, color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {
+        Surface(shape = Radius.L, color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(cue.ifBlank { stringResource(R.string.sub_no_cue) }, style = MaterialTheme.typography.titleMedium, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                Text(cue.ifBlank { stringResource(R.string.sub_no_cue) }, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = { player.command("sub-seek", "-1") }) { Text(stringResource(R.string.player_previous)) }

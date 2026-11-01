@@ -94,9 +94,25 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.max
+import android.graphics.Bitmap
+import android.media.MediaMetadataRetriever
+import android.net.Uri
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.foundation.Image
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledIconToggleButton
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.BiasAlignment
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import dev.altayeb.shoebill.ui.theme.PlayerColors
+import dev.altayeb.shoebill.ui.theme.Radius
+import kotlinx.coroutines.Dispatchers
 
 /** Behind every control, so white icons stay readable on any picture, a white frame included (about 5:1 at worst). */
-private val ControlSurface = dev.altayeb.shoebill.ui.theme.PlayerColors.Surface
+private val ControlSurface = PlayerColors.Surface
 
 enum class Panel { Subs, Audio, Options }
 enum class HudKind { Brightness, Volume, Seek, Tap }
@@ -111,7 +127,7 @@ class Notice(val text: String, val action: String? = null, val onAction: () -> U
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun Controls(
-    scope: androidx.compose.animation.AnimatedVisibilityScope,
+    scope: AnimatedVisibilityScope,
     player: MpvPlayer,
     title: String,
     codec: String?,
@@ -161,14 +177,14 @@ fun Controls(
         // Bars run to the screen edges with nothing floating above or below them. Cutouts are padded inside the surface.
         // top bar
         Surface(Modifier.slideFrom(top = true), shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp), color = ControlSurface) { Row(Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.displayCutout).padding(horizontal = 4.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back), tint = dev.altayeb.shoebill.ui.theme.PlayerColors.On) }
+            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back), tint = PlayerColors.On) }
             Column(Modifier.weight(1f).padding(horizontal = 4.dp)) {
-                Text(title, color = dev.altayeb.shoebill.ui.theme.PlayerColors.On, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                codec?.let { Text(it, color = dev.altayeb.shoebill.ui.theme.PlayerColors.On.copy(alpha = 0.7f), style = MaterialTheme.typography.labelMedium) }
+                Text(title, color = PlayerColors.On, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                codec?.let { Text(it, color = PlayerColors.On.copy(alpha = 0.7f), style = MaterialTheme.typography.labelMedium) }
             }
-            IconButton(onClick = { onPanel(Panel.Subs) }) { Icon(Icons.Rounded.Subtitles, stringResource(R.string.player_subtitles), tint = dev.altayeb.shoebill.ui.theme.PlayerColors.On) }
-            IconButton(onClick = { onPanel(Panel.Audio) }) { Icon(Icons.Rounded.Audiotrack, stringResource(R.string.player_audio), tint = dev.altayeb.shoebill.ui.theme.PlayerColors.On) }
-            IconButton(onClick = { onPanel(Panel.Options) }) { Icon(Icons.Rounded.MoreVert, stringResource(R.string.player_more), tint = dev.altayeb.shoebill.ui.theme.PlayerColors.On) }
+            IconButton(onClick = { onPanel(Panel.Subs) }) { Icon(Icons.Rounded.Subtitles, stringResource(R.string.player_subtitles), tint = PlayerColors.On) }
+            IconButton(onClick = { onPanel(Panel.Audio) }) { Icon(Icons.Rounded.Audiotrack, stringResource(R.string.player_audio), tint = PlayerColors.On) }
+            IconButton(onClick = { onPanel(Panel.Options) }) { Icon(Icons.Rounded.MoreVert, stringResource(R.string.player_more), tint = PlayerColors.On) }
         } }
 
         Spacer(Modifier.weight(1f))
@@ -178,15 +194,15 @@ fun Controls(
             Row(Modifier.fillMaxWidth().then(popIn), horizontalArrangement = Arrangement.Center) { Surface(shape = RoundedCornerShape(50), color = ControlSurface) {
                 // Fixed sizes, so the row is symmetric on every phone: 4 x 48 + 72 + gaps + 8 inset = 296 dp, fits any 328 dp width.
                 Row(Modifier.padding(8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    @Composable fun Side(icon: androidx.compose.ui.graphics.vector.ImageVector, label: Int, enabled: Boolean, onClick: () -> Unit) {
+                    @Composable fun Side(icon: ImageVector, label: Int, enabled: Boolean, onClick: () -> Unit) {
                         IconButton(onClick = onClick, enabled = enabled, modifier = Modifier.size(48.dp), shapes = IconButtonDefaults.shapes()) {
-                            Icon(icon, stringResource(label), tint = dev.altayeb.shoebill.ui.theme.PlayerColors.On.copy(alpha = if (enabled) 1f else 0.38f), modifier = Modifier.size(28.dp))
+                            Icon(icon, stringResource(label), tint = PlayerColors.On.copy(alpha = if (enabled) 1f else 0.38f), modifier = Modifier.size(28.dp))
                         }
                     }
                     Side(Icons.Rounded.SkipPrevious, R.string.player_previous, hasPrev, onPrev)
                     Side(Icons.Rounded.Replay10, R.string.player_rewind_10, true) { player.seekBy(-10.0) }
                     // Round when paused, square while playing: the stock toggle shapes.
-                    androidx.compose.material3.FilledIconToggleButton(
+                    FilledIconToggleButton(
                         checked = !paused && !eof,
                         onCheckedChange = { if (eof) { player.seekTo(0.0); player.setPaused(false) } else player.togglePause() },
                         modifier = Modifier.size(72.dp),
@@ -196,7 +212,7 @@ fun Controls(
                             checkedContainerColor = MaterialTheme.colorScheme.primaryContainer, checkedContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                         ),
                     ) {
-                        androidx.compose.animation.AnimatedContent(
+                        AnimatedContent(
                             when { eof -> 2; paused -> 0; else -> 1 },
                             transitionSpec = {
                                 (androidx.compose.animation.scaleIn(motion.fastSpatialSpec(), initialScale = 0.6f) + fadeIn(motion.fastEffectsSpec())) togetherWith fadeOut(motion.fastEffectsSpec())
@@ -226,23 +242,23 @@ fun Controls(
                 // Every edge lands 16 in: bar and times directly, icon row at 4 because a 48 dp button holds its icon 12 in.
                 Box(Modifier.padding(horizontal = 16.dp)) { SeekBar(durationSec, shownSec, paused, abA, abB, { scrubbing = true; onScrub(it) }, { scrubbing = false; onScrubEnd(it) }) }
                 Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(formatTime((shownSec * 1000).toLong()), color = dev.altayeb.shoebill.ui.theme.PlayerColors.On, style = MaterialTheme.typography.labelLarge)
+                    Text(formatTime((shownSec * 1000).toLong()), color = PlayerColors.On, style = MaterialTheme.typography.labelLarge)
                     Text(
                         "-" + formatTime((max(0.0, durationSec - shownSec) * 1000).toLong()),
-                        color = dev.altayeb.shoebill.ui.theme.PlayerColors.On, style = MaterialTheme.typography.labelLarge,
+                        color = PlayerColors.On, style = MaterialTheme.typography.labelLarge,
                     )
                 }
                 Spacer(Modifier.height(4.dp))
                 Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Pill {
-                        IconButton(onClick = onLock, shapes = IconButtonDefaults.shapes()) { Icon(Icons.Rounded.Lock, stringResource(R.string.player_lock), tint = dev.altayeb.shoebill.ui.theme.PlayerColors.On) }
-                        IconButton(onClick = onRotate, shapes = IconButtonDefaults.shapes()) { Icon(Icons.Rounded.ScreenRotation, stringResource(R.string.player_rotate), tint = dev.altayeb.shoebill.ui.theme.PlayerColors.On) }
-                        IconButton(onClick = onAspect, shapes = IconButtonDefaults.shapes()) { Icon(Icons.Rounded.AspectRatio, stringResource(R.string.player_aspect), tint = dev.altayeb.shoebill.ui.theme.PlayerColors.On) }
+                        IconButton(onClick = onLock, shapes = IconButtonDefaults.shapes()) { Icon(Icons.Rounded.Lock, stringResource(R.string.player_lock), tint = PlayerColors.On) }
+                        IconButton(onClick = onRotate, shapes = IconButtonDefaults.shapes()) { Icon(Icons.Rounded.ScreenRotation, stringResource(R.string.player_rotate), tint = PlayerColors.On) }
+                        IconButton(onClick = onAspect, shapes = IconButtonDefaults.shapes()) { Icon(Icons.Rounded.AspectRatio, stringResource(R.string.player_aspect), tint = PlayerColors.On) }
                     }
                     Pill {
-                        TextButton(onClick = { onPanel(Panel.Subs) }, Modifier.widthIn(max = 96.dp)) { Text(subLabel, color = dev.altayeb.shoebill.ui.theme.PlayerColors.On, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-                        TextButton(onClick = { onPanel(Panel.Audio) }) { Text(speedLabel, color = dev.altayeb.shoebill.ui.theme.PlayerColors.On) }
-                        TextButton(onClick = { onPanel(Panel.Options) }) { Text(decoderLabel, color = dev.altayeb.shoebill.ui.theme.PlayerColors.On) }
+                        TextButton(onClick = { onPanel(Panel.Subs) }, Modifier.widthIn(max = 96.dp)) { Text(subLabel, color = PlayerColors.On, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                        TextButton(onClick = { onPanel(Panel.Audio) }) { Text(speedLabel, color = PlayerColors.On) }
+                        TextButton(onClick = { onPanel(Panel.Options) }) { Text(decoderLabel, color = PlayerColors.On) }
                     }
                 }
             } }
@@ -255,25 +271,25 @@ fun Controls(
  * of it is ever decoded here, and network files would stall on every position.
  */
 @Composable
-private fun SeekPreview(uri: android.net.Uri?, sec: Double, duration: Double, active: Boolean) {
+private fun SeekPreview(uri: Uri?, sec: Double, duration: Double, active: Boolean) {
     if (!active || uri == null || uri.authority != "media" || duration <= 0) return
-    val ctx = androidx.compose.ui.platform.LocalContext.current
-    val retriever = remember(uri) { runCatching { android.media.MediaMetadataRetriever().apply { setDataSource(ctx, uri) } }.getOrNull() }
-    androidx.compose.runtime.DisposableEffect(retriever) { onDispose { runCatching { retriever?.release() } } }
-    var frame by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
+    val ctx = LocalContext.current
+    val retriever = remember(uri) { runCatching { MediaMetadataRetriever().apply { setDataSource(ctx, uri) } }.getOrNull() }
+    DisposableEffect(retriever) { onDispose { runCatching { retriever?.release() } } }
+    var frame by remember { mutableStateOf<Bitmap?>(null) }
     val step = (sec / (duration / 200).coerceAtLeast(1.0)).toInt() // about 200 stops along any video, so a drag does not queue a decode per pixel
-    androidx.compose.runtime.LaunchedEffect(step) {
+    LaunchedEffect(step) {
         delay(80)
-        frame = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            runCatching { retriever?.getFrameAtTime((sec * 1_000_000).toLong(), android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC)?.let {
-                android.graphics.Bitmap.createScaledBitmap(it, 320, (320f * it.height / it.width).toInt().coerceAtLeast(1), true)
+        frame = kotlinx.coroutines.withContext(Dispatchers.IO) {
+            runCatching { retriever?.getFrameAtTime((sec * 1_000_000).toLong(), MediaMetadataRetriever.OPTION_CLOSEST_SYNC)?.let {
+                Bitmap.createScaledBitmap(it, 320, (320f * it.height / it.width).toInt().coerceAtLeast(1), true)
             } }.getOrNull()
         } ?: frame
     }
     val f = frame ?: return
     val x = (sec / duration).toFloat().coerceIn(0f, 1f)
-    Box(Modifier.fillMaxWidth(), contentAlignment = androidx.compose.ui.BiasAlignment(x * 2 - 1, 0f)) {
-        androidx.compose.foundation.Image(f.asImageBitmap(), null, Modifier.width(160.dp).clip(dev.altayeb.shoebill.ui.theme.Radius.S))
+    Box(Modifier.fillMaxWidth(), contentAlignment = BiasAlignment(x * 2 - 1, 0f)) {
+        Image(f.asImageBitmap(), null, Modifier.width(160.dp).clip(Radius.S))
     }
 }
 
@@ -324,12 +340,12 @@ private fun SeekBar(
         if (paused) {
             LinearProgressIndicator(
                 progress = { frac }, modifier = Modifier.fillMaxWidth(),
-                color = dev.altayeb.shoebill.ui.theme.PlayerColors.On, trackColor = dev.altayeb.shoebill.ui.theme.PlayerColors.On.copy(alpha = 0.3f),
+                color = PlayerColors.On, trackColor = PlayerColors.On.copy(alpha = 0.3f),
             )
         } else {
             LinearWavyProgressIndicator(
                 progress = { frac }, modifier = Modifier.fillMaxWidth(),
-                color = dev.altayeb.shoebill.ui.theme.PlayerColors.On, trackColor = dev.altayeb.shoebill.ui.theme.PlayerColors.On.copy(alpha = 0.3f),
+                color = PlayerColors.On, trackColor = PlayerColors.On.copy(alpha = 0.3f),
             )
         }
         Canvas(Modifier.matchParentSize()) {
@@ -367,7 +383,7 @@ fun LockOverlay(onUnlock: () -> Unit) {
             },
             contentAlignment = Alignment.Center,
         ) {
-            androidx.compose.material3.CircularProgressIndicator(
+            CircularProgressIndicator(
                 progress = { ring.value }, modifier = Modifier.matchParentSize(),
                 color = MaterialTheme.colorScheme.primary,
             )
@@ -380,7 +396,7 @@ fun LockOverlay(onUnlock: () -> Unit) {
             }
         }
         Text(
-            stringResource(R.string.player_hold_unlock), color = dev.altayeb.shoebill.ui.theme.PlayerColors.On, style = MaterialTheme.typography.labelLarge,
+            stringResource(R.string.player_hold_unlock), color = PlayerColors.On, style = MaterialTheme.typography.labelLarge,
             modifier = Modifier.padding(top = 96.dp).background(Color.Black.copy(alpha = 0.45f), CircleShape).padding(horizontal = 12.dp, vertical = 8.dp),
         )
     }
@@ -397,12 +413,12 @@ fun GestureHud(hud: Hud?) {
                 Modifier.fillMaxSize().padding(horizontal = 28.dp),
                 contentAlignment = if (left) AbsoluteAlignment.CenterLeft else AbsoluteAlignment.CenterRight, // physical side (ق-05), not RTL start/end
             ) {
-                Surface(shape = dev.altayeb.shoebill.ui.theme.Radius.XL, color = ControlSurface) { Column(Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(if (left) Icons.Rounded.BrightnessMedium else Icons.Rounded.VolumeUp, null, tint = dev.altayeb.shoebill.ui.theme.PlayerColors.On)
+                Surface(shape = Radius.XL, color = ControlSurface) { Column(Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(if (left) Icons.Rounded.BrightnessMedium else Icons.Rounded.VolumeUp, null, tint = PlayerColors.On)
                     Spacer(Modifier.height(8.dp))
                     Box(
                         // the track clips the fill, so a short fill stays inside the rounded shape
-                        Modifier.width(44.dp).height(170.dp).clip(dev.altayeb.shoebill.ui.theme.Radius.L).background(dev.altayeb.shoebill.ui.theme.PlayerColors.On.copy(alpha = 0.25f)),
+                        Modifier.width(44.dp).height(170.dp).clip(Radius.L).background(PlayerColors.On.copy(alpha = 0.25f)),
                         contentAlignment = Alignment.BottomCenter,
                     ) {
                         Box(
@@ -411,13 +427,13 @@ fun GestureHud(hud: Hud?) {
                         )
                     }
                     Spacer(Modifier.height(8.dp))
-                    Text(hud.label, color = dev.altayeb.shoebill.ui.theme.PlayerColors.On, style = MaterialTheme.typography.labelLarge)
+                    Text(hud.label, color = PlayerColors.On, style = MaterialTheme.typography.labelLarge)
                 } }
             }
         }
         HudKind.Seek, HudKind.Tap -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Surface(shape = RoundedCornerShape(50), color = ControlSurface) {
-                Text(hud.label, color = dev.altayeb.shoebill.ui.theme.PlayerColors.On, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp))
+                Text(hud.label, color = PlayerColors.On, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp))
             }
         }
     }
@@ -444,7 +460,7 @@ fun NoticePill(notice: Notice, onDismiss: () -> Unit) {
 @Composable
 fun EndCard(name: String, countdown: Int, onPlayNow: () -> Unit, onCancel: () -> Unit) {
     Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.BottomEnd) {
-        Surface(shape = dev.altayeb.shoebill.ui.theme.Radius.XL, color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.width(300.dp)) {
+        Surface(shape = Radius.XL, color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.width(300.dp)) {
             Column(Modifier.padding(20.dp)) {
                 Text(stringResource(R.string.player_next_in, countdown.toString()), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
                 Text(name, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant)

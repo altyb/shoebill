@@ -67,6 +67,10 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import kotlin.math.abs
 import kotlin.math.ln
+import android.content.pm.ApplicationInfo
+import android.provider.OpenableColumns
+import androidx.compose.material3.MaterialTheme
+import java.util.Locale
 
 private val ASPECTS = listOf("-1", "16:9", "4:3", "2.35:1")
 
@@ -133,7 +137,7 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
         if (picked != null) runCatching {
             val cr = context.contentResolver
             val bytes = cr.openInputStream(picked)!!.use { it.readBytes() }
-            val name = cr.query(picked, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)
+            val name = cr.query(picked, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
                 ?.use { c -> if (c.moveToFirst()) c.getString(0) else null } ?: "sub.srt"
             val file = cacheSubtitle(context, "pick-$name", bytes, name.substringAfterLast('.').lowercase())
             player.command("sub-add", file.absolutePath, "select", name.substringBeforeLast('.'))
@@ -165,7 +169,7 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
     fun loadAt(u: Uri) {
         val fs = if (private) null else store.get(u.toString())
         val resume = settingsState.value.autoResume && fs != null && fs.unfinished
-        player.setString("start", if (resume) "%.3f".format(java.util.Locale.ROOT, fs!!.positionMs / 1000.0) else "none")
+        player.setString("start", if (resume) "%.3f".format(Locale.ROOT, fs!!.positionMs / 1000.0) else "none")
         player.shareableUri = if (private) null else u
         player.onOpenFailed = { notice = Notice(context.getString(R.string.player_open_failed)) }
         player.shareableTitle = currentTitle
@@ -270,7 +274,7 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
 
     // qa/e2e.py turns auto-hide off on debug builds (a uiautomator dump outlasts the 3 s)
     val qaKeepUi = remember {
-        context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0 &&
+        context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0 &&
             File(context.filesDir, "qa_keep_ui").exists()
     }
     // overlay auto-hide: 3 s without touch, never while paused, a panel is open, the finger is on the seek bar, or at the end
@@ -520,8 +524,8 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
         AnimatedVisibility(
             visible = overlayVisible && panel == null && !searchOpen && !inPip,
             modifier = Modifier.fillMaxSize(),
-            enter = fadeIn(androidx.compose.material3.MaterialTheme.motionScheme.defaultEffectsSpec()),
-            exit = fadeOut(androidx.compose.material3.MaterialTheme.motionScheme.fastEffectsSpec()),
+            enter = fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()),
+            exit = fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()),
         ) {
             if (locked) {
                 LockOverlay(onUnlock = { locked = false; overlayVisible = true })
@@ -590,7 +594,7 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
             onAbClear = { abA = null; abB = null; player.setString("ab-loop-a", "no"); player.setString("ab-loop-b", "no") },
             onSleep = { min -> sleepUntil = min?.let { System.currentTimeMillis() + it * 60_000L } },
             onShot = {
-                val file = java.io.File(context.cacheDir, "shot-${System.currentTimeMillis()}.png")
+                val file = File(context.cacheDir, "shot-${System.currentTimeMillis()}.png")
                 player.command("screenshot-to-file", file.absolutePath, "video")
                 notice = Notice(context.getString(R.string.player_shot_saved))
             },

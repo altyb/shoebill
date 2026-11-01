@@ -22,6 +22,7 @@ import java.nio.file.StandardOpenOption.READ
 import java.security.MessageDigest
 import java.util.Base64
 import java.util.UUID
+import java.security.GeneralSecurityException
 
 /** Caches unwrapped keysets while unlocked, so Keystore is only hit when a key is first needed (inside the 30 s window). */
 class SessionKeys(private val hw: MasterKey) : MasterKey {
@@ -413,7 +414,7 @@ private class EitherKey(private val primary: MasterKey, private val fallback: Ma
     override fun wrap(plain: ByteArray): ByteArray = primary.wrap(plain)
     override fun unwrap(wrapped: ByteArray): ByteArray = try {
         primary.unwrap(wrapped)
-    } catch (e: java.security.GeneralSecurityException) {
+    } catch (e: GeneralSecurityException) {
         if (e is android.security.keystore.UserNotAuthenticatedException) throw e // needs a prompt, not the other key
         fallback.unwrap(wrapped)
     }
@@ -427,15 +428,15 @@ private class SoftKey(private val key: ByteArray) : MasterKey {
     fun raw(): ByteArray = key.copyOf()
     fun wipe() { closed = true; key.fill(0) }
     override fun wrap(plain: ByteArray): ByteArray {
-        if (closed) throw java.security.GeneralSecurityException("vault locked")
+        if (closed) throw GeneralSecurityException("vault locked")
         val nonce = ByteArray(12).also { SecureRandom().nextBytes(it) }
         val c = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding")
         c.init(javax.crypto.Cipher.ENCRYPT_MODE, spec, javax.crypto.spec.GCMParameterSpec(128, nonce))
         return nonce + c.doFinal(plain)
     }
     override fun unwrap(wrapped: ByteArray): ByteArray {
-        if (closed) throw java.security.GeneralSecurityException("vault locked")
-        if (wrapped.size < 28) throw java.security.GeneralSecurityException("not a data-key blob")
+        if (closed) throw GeneralSecurityException("vault locked")
+        if (wrapped.size < 28) throw GeneralSecurityException("not a data-key blob")
         val c = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding")
         c.init(javax.crypto.Cipher.DECRYPT_MODE, spec, javax.crypto.spec.GCMParameterSpec(128, wrapped, 0, 12))
         return c.doFinal(wrapped, 12, wrapped.size - 12)

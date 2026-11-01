@@ -8,16 +8,21 @@ import dev.jdtech.mpv.MPVLib
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import android.content.pm.ApplicationInfo
+import android.media.AudioManager
+import android.os.Handler
+import android.os.HandlerThread
+import android.os.ParcelFileDescriptor
 
 data class Track(val id: String, val type: String, val title: String?, val lang: String?, val codec: String?, val selected: Boolean)
 
 /** Thin wrapper over libmpv. Observer callbacks run on an mpv thread: they only write StateFlows. */
 class MpvPlayer(context: Context) : MPVLib.EventObserver {
     // Debug builds log one state line per second (tag BrandState) so qa/player-e2e.sh can assert real player state.
-    private val debuggable = context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0
+    private val debuggable = context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
     // own thread: these reads wait on mpv's core lock, and the UI thread must never wait on mpv for a debug log
-    private val stateThread by lazy { android.os.HandlerThread("shoebill-state").apply { start() } }
-    private val stateHandler by lazy { android.os.Handler(stateThread.looper) }
+    private val stateThread by lazy { HandlerThread("shoebill-state").apply { start() } }
+    private val stateHandler by lazy { Handler(stateThread.looper) }
     private val stateTick = object : Runnable {
         override fun run() {
             val keys = listOf("filename", "duration", "time-pos", "pause", "sid", "aid", "secondary-sid", "sub-delay", "hwdec-current", "volume", "speed",
@@ -55,7 +60,7 @@ class MpvPlayer(context: Context) : MPVLib.EventObserver {
     @Volatile private var destroyed = false
 
     /** Audio session the equalizer attaches to. */
-    private val audioSession = appContext.getSystemService(android.media.AudioManager::class.java).generateAudioSessionId()
+    private val audioSession = appContext.getSystemService(AudioManager::class.java).generateAudioSessionId()
     /** Null on phones without the effect. */
     val fx: AudioFx? by lazy { AudioFx.open(appContext, audioSession) }
     /** The file as other tools may read it; null in the vault, where nothing may leave the player. */
@@ -102,7 +107,7 @@ class MpvPlayer(context: Context) : MPVLib.EventObserver {
             // a network share: opening it talks to the server, which must not happen on the main thread
             Thread({
                 val fd = runCatching { appContext.contentResolver.openFileDescriptor(uri, "r") }.getOrNull()?.detachFd()
-                if (destroyed) { fd?.let { runCatching { android.os.ParcelFileDescriptor.adoptFd(it).close() } } }
+                if (destroyed) { fd?.let { runCatching { ParcelFileDescriptor.adoptFd(it).close() } } }
                 else if (fd == null) onOpenFailed?.invoke()
                 else mpv.command(arrayOf("loadfile", "fdclose://$fd"))
             }, "smb-open").start()

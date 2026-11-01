@@ -161,6 +161,7 @@ def sec_network():
     log = os.environ["PROXY_LOG"]; open(log, "w").close()
     prefs(proxy="http://10.0.2.2:" + os.environ["PROXY_PORT"], limit="500K")
     home(); tab("Downloads"); time.sleep(1)
+    if find("Clear finished") is not None: tap("Clear finished"); time.sleep(1)  # saved history would satisfy the check below
     e = [x for x in nodes() if x.get("class", "").endswith("EditText")][0]; tap_xy(*center(e)); typ(DIRECT); hide_keys()
     tap("Download", exact=True); time.sleep(3); sheet_download(); t0 = time.time(); time.sleep(1)
     end = t0 + 120; speeds = set()

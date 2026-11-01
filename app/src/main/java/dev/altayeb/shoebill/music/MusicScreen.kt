@@ -67,6 +67,32 @@ import dev.altayeb.shoebill.player.AudioFx
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import android.util.LruCache
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.FiniteAnimationSpec
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.gestures.DraggableState
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LinearWavyProgressIndicator
+import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material3.MaterialShapes
+import androidx.compose.ui.graphics.Matrix
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.unit.Density
+import androidx.graphics.shapes.Morph
+import androidx.media3.common.MediaItem
+import dev.altayeb.shoebill.ui.EmptyState
+import dev.altayeb.shoebill.ui.theme.Radius
+import kotlinx.coroutines.CoroutineScope
 
 private fun audioPermission() = if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_AUDIO else Manifest.permission.READ_EXTERNAL_STORAGE
 
@@ -124,14 +150,14 @@ fun MusicTab(host: MusicHost, modifier: Modifier = Modifier) {
     LaunchedEffect(Unit) { host.songs = querySongs(ctx) }
     Box(modifier.fillMaxSize()) {
         val all = host.songs
-        if (all == null) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { androidx.compose.material3.LoadingIndicator() }
-        else if (all.isEmpty()) dev.altayeb.shoebill.ui.EmptyState(R.drawable.art_music, stringResource(R.string.music_empty))
+        if (all == null) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { LoadingIndicator() }
+        else if (all.isEmpty()) EmptyState(R.drawable.art_music, stringResource(R.string.music_empty))
         else Library(all, host.controller)
     }
 }
 
 class PlayerState {
-    var current by mutableStateOf<androidx.media3.common.MediaItem?>(null)
+    var current by mutableStateOf<MediaItem?>(null)
     var playing by mutableStateOf(false)
     var position by mutableLongStateOf(0L)
     var duration by mutableLongStateOf(0L)
@@ -239,28 +265,28 @@ private fun SongList(songs: List<Song>, c: MediaController?, onLong: (Song) -> U
 }
 
 /** One decode per album, so scrolling back never decodes again or flashes the placeholder. */
-private val artCache = android.util.LruCache<Long, Bitmap>(64)
+private val artCache = LruCache<Long, Bitmap>(64)
 
-private class MorphShape(val morph: androidx.graphics.shapes.Morph, val progress: Float) : androidx.compose.ui.graphics.Shape {
-    override fun createOutline(size: androidx.compose.ui.geometry.Size, layoutDirection: androidx.compose.ui.unit.LayoutDirection, density: androidx.compose.ui.unit.Density): androidx.compose.ui.graphics.Outline {
-        val path = androidx.compose.ui.graphics.Path()
+private class MorphShape(val morph: Morph, val progress: Float) : Shape {
+    override fun createOutline(size: androidx.compose.ui.geometry.Size, layoutDirection: LayoutDirection, density: Density): Outline {
+        val path = Path()
         morph.toPath(progress, path)
-        val m = androidx.compose.ui.graphics.Matrix(); m.scale(size.width, size.height)
+        val m = Matrix(); m.scale(size.width, size.height)
         path.transform(m)
-        return androidx.compose.ui.graphics.Outline.Generic(path)
+        return Outline.Generic(path)
     }
 }
 
 @Composable
 private fun AlbumGrid(groups: List<Pair<String, List<Song>>>, open: (String, List<Song>) -> Unit) {
-    androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
-        androidx.compose.foundation.lazy.grid.GridCells.Adaptive(150.dp), Modifier.fillMaxSize(),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+    LazyVerticalGrid(
+        GridCells.Adaptive(150.dp), Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         items(groups.size, key = { groups[it].first }) { i ->
             val (name, songs) = groups[i]
-            androidx.compose.foundation.layout.BoxWithConstraints(Modifier.clip(dev.altayeb.shoebill.ui.theme.Radius.S).clickable { open(name, songs) }) {
+            BoxWithConstraints(Modifier.clip(Radius.S).clickable { open(name, songs) }) {
                 val side = maxWidth.value.toInt()
                 Column {
                     songs.firstOrNull()?.let { Art(it, side) }
@@ -288,7 +314,7 @@ private fun GroupList(groups: List<Pair<String, List<Song>>>, open: (String, Lis
     }
 }
 
-@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SongRow(s: Song, onClick: () -> Unit, onLong: () -> Unit) {
     Row(Modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = onLong).padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -312,20 +338,20 @@ private fun Art(s: Song, sizeDp: Int) {
         }
         value?.let { artCache.put(s.albumId, it) }
     }
-    val shape = dev.altayeb.shoebill.ui.theme.Radius.S
+    val shape = Radius.S
     val b = bmp
     if (b != null) Image(b.asImageBitmap(), null, Modifier.size(sizeDp.dp).clip(shape), contentScale = ContentScale.Crop)
     else Box(Modifier.size(sizeDp.dp).clip(shape).background(MaterialTheme.colorScheme.secondaryContainer), contentAlignment = Alignment.Center) { Icon(Icons.Rounded.MusicNote, null) }
 }
 
-private fun settle(host: MusicHost, scope: kotlinx.coroutines.CoroutineScope, springOpen: androidx.compose.animation.core.FiniteAnimationSpec<Float>, springClose: androidx.compose.animation.core.FiniteAnimationSpec<Float>, velocity: Float = 0f) {
+private fun settle(host: MusicHost, scope: CoroutineScope, springOpen: FiniteAnimationSpec<Float>, springClose: FiniteAnimationSpec<Float>, velocity: Float = 0f) {
     val open = if (kotlin.math.abs(velocity) > 300f) velocity < 0 else host.sheet.value > 0.3f
     scope.launch { host.sheet.animateTo(if (open) 1f else 0f, if (open) springOpen else springClose) }
 }
 
 @Composable
-private fun rememberSheetDrag(host: MusicHost, scope: kotlinx.coroutines.CoroutineScope): androidx.compose.foundation.gestures.DraggableState {
-    val range = androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.height.toFloat().coerceAtLeast(1f)
+private fun rememberSheetDrag(host: MusicHost, scope: CoroutineScope): DraggableState {
+    val range = LocalWindowInfo.current.containerSize.height.toFloat().coerceAtLeast(1f)
     return androidx.compose.foundation.gestures.rememberDraggableState { d ->
         scope.launch { host.sheet.snapTo((host.sheet.value - d / range).coerceIn(0f, 1f)) }
     }
@@ -342,7 +368,7 @@ fun MiniPlayer(host: MusicHost) {
     val sheetClose = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
     Row(
         Modifier.fillMaxWidth()
-            .draggable(drag, androidx.compose.foundation.gestures.Orientation.Vertical, onDragStopped = { settle(host, scope, sheetOpen, sheetClose, it) })
+            .draggable(drag, Orientation.Vertical, onDragStopped = { settle(host, scope, sheetOpen, sheetClose, it) })
             .clickable { scope.launch { host.sheet.animateTo(1f, sheetOpen) } }
             .padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -352,13 +378,13 @@ fun MiniPlayer(host: MusicHost) {
             Text(s.current?.mediaMetadata?.title?.toString().orEmpty(), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleSmall)
             Text(s.current?.mediaMetadata?.artist?.toString().orEmpty(), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        IconButton(onClick = { if (s.playing) c.pause() else c.play() }, shapes = androidx.compose.material3.IconButtonDefaults.shapes()) {
+        IconButton(onClick = { if (s.playing) c.pause() else c.play() }, shapes = IconButtonDefaults.shapes()) {
             Icon(if (s.playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, stringResource(if (s.playing) R.string.pause else R.string.play))
         }
-        IconButton(onClick = { c.seekToNext() }, shapes = androidx.compose.material3.IconButtonDefaults.shapes()) { Icon(Icons.Rounded.SkipNext, stringResource(R.string.player_next)) }
+        IconButton(onClick = { c.seekToNext() }, shapes = IconButtonDefaults.shapes()) { Icon(Icons.Rounded.SkipNext, stringResource(R.string.player_next)) }
     }
     // Moves while playing and lies flat when paused, which is also the only way to tell the two apart at a glance.
-    androidx.compose.material3.LinearWavyProgressIndicator(
+    LinearWavyProgressIndicator(
         progress = { (s.position.toFloat() / s.duration.coerceAtLeast(1)).coerceIn(0f, 1f) },
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         amplitude = { if (s.playing) 1f else 0f },
@@ -388,8 +414,8 @@ fun MusicSheet(host: MusicHost, dockHeight: Int) {
         if (host.songs == null && ContextCompat.checkSelfPermission(ctx, audioPermission()) == PackageManager.PERMISSION_GRANTED) host.songs = querySongs(ctx)
     }
     val drag = rememberSheetDrag(host, scope)
-    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
-        val density = androidx.compose.ui.platform.LocalDensity.current
+    BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+        val density = LocalDensity.current
         val full = constraints.maxHeight.toFloat()
         Surface(
             color = MaterialTheme.colorScheme.surfaceContainer,
@@ -400,7 +426,7 @@ fun MusicSheet(host: MusicHost, dockHeight: Int) {
                     layout(pl.width, h) { pl.place(0, 0) }
                 }
                 .graphicsLayer { shape = RoundedCornerShape(24.dp * (1f - host.sheet.value.coerceIn(0f, 1f))); clip = true }
-                .draggable(drag, androidx.compose.foundation.gestures.Orientation.Vertical, onDragStopped = { settle(host, scope, sheetOpen, sheetClose, it) }),
+                .draggable(drag, Orientation.Vertical, onDragStopped = { settle(host, scope, sheetOpen, sheetClose, it) }),
         ) {
             // Laid out at full size from the first frame and only clipped, so the page never reflows while it grows.
             Box(Modifier.fillMaxSize().wrapContentHeight(Alignment.Top, unbounded = true)) {
@@ -445,13 +471,13 @@ private fun NowPlaying(c: MediaController, s: PlayerState, all: List<Song>, modi
         }
         Box(Modifier.weight(1f).fillMaxWidth().arrive(progress, 0.25f), contentAlignment = Alignment.Center) {
             val motion = MaterialTheme.motionScheme
-            androidx.compose.animation.AnimatedContent(page, transitionSpec = {
+            AnimatedContent(page, transitionSpec = {
                 (androidx.compose.animation.fadeIn(motion.defaultEffectsSpec()) + androidx.compose.animation.scaleIn(motion.defaultSpatialSpec(), initialScale = 0.94f)) togetherWith androidx.compose.animation.fadeOut(motion.fastEffectsSpec())
             }, contentAlignment = Alignment.Center, label = "npPage") { pageNow -> when (pageNow) {
                 // Reads the raw value, so the art alone shows the spring's overshoot past 1.
                 0 -> song?.let {
                     // Paused art relaxes into a cookie; playing art is a plain square. Material's own shape morph.
-                    val morph = remember { androidx.graphics.shapes.Morph(androidx.compose.material3.MaterialShapes.Square, androidx.compose.material3.MaterialShapes.Cookie12Sided) }
+                    val morph = remember { Morph(MaterialShapes.Square, MaterialShapes.Cookie12Sided) }
                     val cookie by androidx.compose.animation.core.animateFloatAsState(if (s.playing) 0f else 1f, MaterialTheme.motionScheme.slowSpatialSpec(), label = "artMorph")
                     Box(Modifier.graphicsLayer { val v = 0.82f + 0.18f * progress(); scaleX = v; scaleY = v }.clip(MorphShape(morph, cookie))) { Art(it, 280) }
                 }
@@ -475,11 +501,11 @@ private fun NowPlaying(c: MediaController, s: PlayerState, all: List<Song>, modi
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
                     IconToggleButton(s.shuffle, { c.shuffleModeEnabled = it }) { Icon(Icons.Rounded.Shuffle, stringResource(R.string.music_shuffle)) }
-                    IconButton(onClick = { c.seekToPrevious() }, shapes = androidx.compose.material3.IconButtonDefaults.shapes()) { Icon(Icons.Rounded.SkipPrevious, stringResource(R.string.player_previous), Modifier.size(36.dp)) }
-                    FilledIconButton(onClick = { if (s.playing) c.pause() else c.play() }, modifier = Modifier.size(72.dp), shapes = androidx.compose.material3.IconButtonDefaults.shapes()) {
+                    IconButton(onClick = { c.seekToPrevious() }, shapes = IconButtonDefaults.shapes()) { Icon(Icons.Rounded.SkipPrevious, stringResource(R.string.player_previous), Modifier.size(36.dp)) }
+                    FilledIconButton(onClick = { if (s.playing) c.pause() else c.play() }, modifier = Modifier.size(72.dp), shapes = IconButtonDefaults.shapes()) {
                         Icon(if (s.playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, stringResource(if (s.playing) R.string.pause else R.string.play), Modifier.size(40.dp))
                     }
-                    IconButton(onClick = { c.seekToNext() }, shapes = androidx.compose.material3.IconButtonDefaults.shapes()) { Icon(Icons.Rounded.SkipNext, stringResource(R.string.player_next), Modifier.size(36.dp)) }
+                    IconButton(onClick = { c.seekToNext() }, shapes = IconButtonDefaults.shapes()) { Icon(Icons.Rounded.SkipNext, stringResource(R.string.player_next), Modifier.size(36.dp)) }
                     IconButton(onClick = { c.repeatMode = (s.repeat + 1) % 3 }) {
                         Icon(if (s.repeat == Player.REPEAT_MODE_ONE) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat, stringResource(R.string.music_repeat),
                             tint = if (s.repeat == Player.REPEAT_MODE_OFF) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary)

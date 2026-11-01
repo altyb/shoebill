@@ -2,12 +2,13 @@ package dev.altayeb.shoebill.player
 
 import android.content.Context
 import android.media.audiofx.Equalizer
+import android.content.SharedPreferences
 
 /**
  * Equalizer on mpv's audio session. This FFmpeg build has its filters compiled out, so mpv's own "af" cannot do it.
  * Band levels live in prefs. Phones without the effect get null from [open] and the panel hides the sliders.
  */
-class AudioFx private constructor(private val eq: Equalizer, private val prefs: android.content.SharedPreferences) {
+class AudioFx private constructor(private val eq: Equalizer, private val prefs: SharedPreferences) {
     val bands: Int get() = eq.numberOfBands.toInt()
     val minLevel: Int get() = eq.bandLevelRange[0].toInt()
     val maxLevel: Int get() = eq.bandLevelRange[1].toInt()

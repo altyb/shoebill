@@ -46,6 +46,12 @@ import dev.altayeb.shoebill.settings.SettingsScreen
 import dev.altayeb.shoebill.ui.theme.ShoebillTheme
 import dev.altayeb.shoebill.vault.VaultScreen
 import dev.altayeb.shoebill.ui.theme.BrandTheme
+import android.content.pm.ApplicationInfo
+import android.provider.OpenableColumns
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import dev.altayeb.shoebill.download.DownloadFeature
+import dev.altayeb.shoebill.download.SharedLink
+import dev.altayeb.shoebill.vault.SecretCodeReceiver
 
 /** Every screen of the app. Only MainActivity pushes/pops routes. */
 sealed interface Route {
@@ -58,7 +64,7 @@ sealed interface Route {
     data object Vault : Route
 }
 
-@OptIn(androidx.compose.animation.ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalSharedTransitionApi::class)
 class MainActivity : FragmentActivity() { // FragmentActivity: BiometricPrompt (vault) needs it
     // Wrapper so each VIEW intent is a new value, even for the same uri.
     private class Incoming(val uri: Uri)
@@ -69,7 +75,7 @@ class MainActivity : FragmentActivity() { // FragmentActivity: BiometricPrompt (
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        if (android.os.Build.VERSION.SDK_INT >= 31) {
+        if (Build.VERSION.SDK_INT >= 31) {
             // Leaves with a quick grow-and-fade instead of the system's plain cut.
             splashScreen.setOnExitAnimationListener { v ->
                 v.animate().alpha(0f).scaleX(1.08f).scaleY(1.08f).setDuration(220).withEndAction { v.remove() }.start()
@@ -168,18 +174,18 @@ class MainActivity : FragmentActivity() { // FragmentActivity: BiometricPrompt (
 
     private fun displayName(uri: Uri): String =
         runCatching {
-            contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
+            contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
                 if (c.moveToFirst()) c.getString(0) else null
             }
         }.getOrNull() ?: uri.lastPathSegment.orEmpty()
 
     /** The dialer code (in-process flag) opens the vault; the "route" extra is a debug/test entry only. */
     private fun routeOf(i: Intent?): String? {
-        if (dev.altayeb.shoebill.vault.SecretCodeReceiver.vaultAsked) {
-            dev.altayeb.shoebill.vault.SecretCodeReceiver.vaultAsked = false
+        if (SecretCodeReceiver.vaultAsked) {
+            SecretCodeReceiver.vaultAsked = false
             return "vault"
         }
-        val debuggable = applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0
+        val debuggable = applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
         return if (debuggable) i?.getStringExtra("route") else null
     }
 
@@ -192,7 +198,7 @@ class MainActivity : FragmentActivity() { // FragmentActivity: BiometricPrompt (
     }
 
     private fun takeViewIntent(i: Intent?) {
-        dev.altayeb.shoebill.download.DownloadFeature.linkFrom(i)?.let { dev.altayeb.shoebill.download.SharedLink.value.value = it; return }
+        DownloadFeature.linkFrom(i)?.let { SharedLink.value.value = it; return }
         val uri = i?.takeIf { it.action == Intent.ACTION_VIEW }?.data ?: return
         incoming.value = Incoming(uri)
     }
