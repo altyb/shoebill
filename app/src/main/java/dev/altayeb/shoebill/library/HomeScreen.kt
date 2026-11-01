@@ -92,7 +92,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.platform.LocalContext
 import dev.altayeb.shoebill.data.FileState
@@ -180,7 +183,7 @@ fun HomeScreen(
             item {
                 Surface(
                     onClick = onSearch,
-                    shape = RoundedCornerShape(28.dp),
+                    shape = dev.altayeb.shoebill.ui.theme.Radius.XL,
                     color = MaterialTheme.colorScheme.surfaceContainerHighest,
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                 ) {
@@ -264,7 +267,7 @@ private fun ContinueCarousel(items: List<FileState>, onPlay: (Uri, String) -> Un
         val frac = if (f.durationMs > 0) (f.positionMs.toFloat() / f.durationMs).coerceIn(0f, 1f) else 0f
         val src = remember { MutableInteractionSource() }
         Box(
-            Modifier.fillMaxSize().clip(RoundedCornerShape(28.dp)).pressScale(src)
+            Modifier.fillMaxSize().clip(dev.altayeb.shoebill.ui.theme.Radius.XL).pressScale(src)
                 .clickable(interactionSource = src, indication = LocalIndication.current) { onPlay(uri, f.title) }
         ) {
             Thumb(uri, Modifier.fillMaxSize(), durationMs = f.durationMs, savedPosMs = f.positionMs, shared = true)
@@ -297,18 +300,18 @@ private fun FolderRow(f: FolderInfo, shape: Shape, modifier: Modifier, onClick: 
         modifier = modifier.fillMaxWidth().pressScale(src),
     ) {
         Row(Modifier.padding(horizontal = 12.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Thumb(f.cover.uri, Modifier.size(width = 128.dp, height = 72.dp), RoundedCornerShape(16.dp),
+            Thumb(f.cover.uri, Modifier.fillMaxWidth(0.36f).widthIn(max = 128.dp).aspectRatio(16f / 9f), dev.altayeb.shoebill.ui.theme.Radius.M,
                 durationMs = f.cover.durationMs)
             Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
                 Text(f.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text("${pluralStringResource(R.plurals.lib_video_count, f.count, f.count)} · ${formatSize(f.bytes)}", style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            if (f.fresh > 0) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
-                    Spacer(Modifier.width(4.dp))
-                    Text(stringResource(R.string.lib_new), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                if (f.fresh > 0) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
+                        Spacer(Modifier.width(4.dp))
+                        Text(stringResource(R.string.lib_new), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    }
                 }
             }
         }
@@ -329,7 +332,7 @@ private fun HomeDock(music: dev.altayeb.shoebill.music.MusicHost, tab: Int, modi
                         selected = tab == i,
                         onClick = { onTab(i) },
                         icon = { Icon(icon, null) },
-                        label = { Text(stringResource(labelRes), maxLines = 1) },
+                        label = { Text(stringResource(labelRes), maxLines = 1, softWrap = false, autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = 9.sp, maxFontSize = MaterialTheme.typography.labelMedium.fontSize)) }, // shrinks only when five labels cannot fit
                     )
                 }
             }

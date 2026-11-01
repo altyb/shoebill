@@ -260,7 +260,7 @@ private fun AlbumGrid(groups: List<Pair<String, List<Song>>>, open: (String, Lis
     ) {
         items(groups.size, key = { groups[it].first }) { i ->
             val (name, songs) = groups[i]
-            androidx.compose.foundation.layout.BoxWithConstraints(Modifier.clip(RoundedCornerShape(12.dp)).clickable { open(name, songs) }) {
+            androidx.compose.foundation.layout.BoxWithConstraints(Modifier.clip(dev.altayeb.shoebill.ui.theme.Radius.S).clickable { open(name, songs) }) {
                 val side = maxWidth.value.toInt()
                 Column {
                     songs.firstOrNull()?.let { Art(it, side) }
@@ -312,7 +312,7 @@ private fun Art(s: Song, sizeDp: Int) {
         }
         value?.let { artCache.put(s.albumId, it) }
     }
-    val shape = RoundedCornerShape(10.dp)
+    val shape = dev.altayeb.shoebill.ui.theme.Radius.S
     val b = bmp
     if (b != null) Image(b.asImageBitmap(), null, Modifier.size(sizeDp.dp).clip(shape), contentScale = ContentScale.Crop)
     else Box(Modifier.size(sizeDp.dp).clip(shape).background(MaterialTheme.colorScheme.secondaryContainer), contentAlignment = Alignment.Center) { Icon(Icons.Rounded.MusicNote, null) }
@@ -426,8 +426,9 @@ private fun NowPlaying(c: MediaController, s: PlayerState, all: List<Song>, modi
     var page by remember { mutableIntStateOf(0) } // 0 art, 1 lyrics, 2 queue, 3 sound
     var lyrics by remember(song) { mutableStateOf<String?>(null) }
     LaunchedEffect(song) { lyrics = song?.let { Lyrics.load(ctx, it) } }
+    val lyricScope = rememberCoroutineScope()
     val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null && song != null) lyrics = kotlinx.coroutines.runBlocking { Lyrics.save(ctx, song, uri) }
+        if (uri != null && song != null) lyricScope.launch { lyrics = Lyrics.save(ctx, song, uri) }
     }
     var sleepAt by remember { mutableLongStateOf(0L) }
     LaunchedEffect(sleepAt) {

@@ -74,7 +74,7 @@ fun OptionsSheet(
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(Modifier.padding(start = 24.dp, end = 24.dp, bottom = 24.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Thumb(video.uri, Modifier.size(width = 96.dp, height = 54.dp), RoundedCornerShape(10.dp),
+                Thumb(video.uri, Modifier.size(width = 96.dp, height = 54.dp), dev.altayeb.shoebill.ui.theme.Radius.S,
                     durationMs = video.durationMs, savedPosMs = state?.positionMs ?: -1)
                 Column(Modifier.weight(1f).padding(start = 16.dp)) {
                     LtrText(AnnotatedString(video.name), MaterialTheme.typography.titleMedium, maxLines = 2)

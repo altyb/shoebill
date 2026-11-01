@@ -1,5 +1,11 @@
 package dev.altayeb.shoebill.vault
 
+import dev.altayeb.shoebill.settings.GroupTitle
+import dev.altayeb.shoebill.settings.SettingRow
+import dev.altayeb.shoebill.settings.SwitchRow
+import dev.altayeb.shoebill.settings.groupShapes
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.material3.Surface
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -11,7 +17,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -235,78 +240,54 @@ fun VaultSettings(
             title = { Text(stringResource(R.string.vault_settings)) },
             navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) } },
         )
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
-            Text(stringResource(R.string.vault_access), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-            Text(if (pinOnly) stringResource(R.string.vault_pin) else stringResource(R.string.vault_fingerprint_or_device))
-            if (space == VaultSpace.Real) DialCodeRow()
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            dev.altayeb.shoebill.settings.TipCard(R.drawable.art_vault, stringResource(R.string.tip_vault))
+            GroupTitle(stringResource(R.string.vault_access))
+            SettingRow(if (pinOnly) stringResource(R.string.vault_pin) else stringResource(R.string.vault_fingerprint_or_device), groupShapes(1)[0])
             if (space == VaultSpace.Real) {
-                Spacer(Modifier.height(12.dp))
-                Text(stringResource(R.string.vault_pin), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                DialCodeRow()
+                GroupTitle(stringResource(R.string.vault_pin))
                 val realSet = PinStore.Role.Real in pinsSet
-                PinRoleRow(
-                    label = stringResource(R.string.vault_pin_real), subtitle = null, subtitleIsError = false,
-                    isSet = realSet, enabled = true,
-                    onSet = { pinRole = PinStore.Role.Real }, onRemove = { pendingRemove = PinStore.Role.Real },
-                )
-                PinRoleRow(
-                    label = stringResource(R.string.vault_pin_decoy), subtitle = stringResource(R.string.vault_pin_decoy_hint), subtitleIsError = false,
-                    isSet = PinStore.Role.Decoy in pinsSet, enabled = realSet,
-                    onSet = { pinRole = PinStore.Role.Decoy }, onRemove = { pendingRemove = PinStore.Role.Decoy },
-                )
-                PinRoleRow(
-                    label = stringResource(R.string.vault_pin_wipe), subtitle = stringResource(R.string.vault_pin_wipe_hint), subtitleIsError = true,
-                    isSet = PinStore.Role.Wipe in pinsSet, enabled = realSet,
-                    onSet = { pinRole = PinStore.Role.Wipe }, onRemove = { pendingRemove = PinStore.Role.Wipe },
-                )
-                if (realSet) {
-                    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text(stringResource(R.string.vault_pin_only))
-                            Text(
-                                stringResource(R.string.vault_pin_only_hint),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                val pins = groupShapes(if (realSet) 4 else 3)
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    PinRoleRow(stringResource(R.string.vault_pin_real), null, false, realSet, true, pins[0], { pinRole = PinStore.Role.Real }, { pendingRemove = PinStore.Role.Real })
+                    PinRoleRow(stringResource(R.string.vault_pin_decoy), stringResource(R.string.vault_pin_decoy_hint), false, PinStore.Role.Decoy in pinsSet, realSet, pins[1], { pinRole = PinStore.Role.Decoy }, { pendingRemove = PinStore.Role.Decoy })
+                    PinRoleRow(stringResource(R.string.vault_pin_wipe), stringResource(R.string.vault_pin_wipe_hint), true, PinStore.Role.Wipe in pinsSet, realSet, pins[2], { pinRole = PinStore.Role.Wipe }, { pendingRemove = PinStore.Role.Wipe })
+                    if (realSet) SwitchRow(stringResource(R.string.vault_pin_only), pins[3], pinOnly, stringResource(R.string.vault_pin_only_hint)) { if (!busy) onPinOnly(it) }
+                }
+            }
+            GroupTitle(stringResource(R.string.vault_protection))
+            val guard = groupShapes(2)
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                dev.altayeb.shoebill.settings.ChoiceRow(stringResource(R.string.vault_auto_lock), guard[0], AutoLock.entries.map { it to stringResource(it.label) }, autoLock, onAutoLock)
+                // Always on in the vault; shown so people know, not offered as a choice.
+                SettingRow(stringResource(R.string.vault_block_screenshots), guard[1], trailing = { Switch(checked = true, onCheckedChange = null, enabled = false) })
+            }
+            GroupTitle(stringResource(R.string.vault_backup_and_key))
+            Surface(Modifier.fillMaxWidth(), shape = groupShapes(1)[0], color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    if (busy) {
+                        BrandLoader()
+                        Text(if (restoring) stringResource(R.string.vault_restoring) else stringResource(R.string.vault_encrypting))
+                    } else {
+                        // Equal halves, so both labels fit on the narrowest phones.
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FilledTonalButton(onClick = { onBeginSystemHop(); exportLauncher.launch("shoebill-vault-${LocalDate.now()}.shoebillvault") }, Modifier.weight(1f)) {
+                                Icon(Icons.Rounded.Backup, null)
+                                Spacer(Modifier.width(8.dp))
+                                Text(stringResource(R.string.vault_backup), maxLines = 1)
+                            }
+                            OutlinedButton(onClick = { onBeginSystemHop(); importLauncher.launch(arrayOf("*/*")) }, Modifier.weight(1f)) {
+                                Icon(Icons.Rounded.Restore, null)
+                                Spacer(Modifier.width(8.dp))
+                                Text(stringResource(R.string.vault_restore), maxLines = 1)
+                            }
                         }
-                        Switch(checked = pinOnly, onCheckedChange = onPinOnly, enabled = !busy)
                     }
+                    message?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    Text(stringResource(R.string.vault_master_key, stringResource(keyLevel?.label() ?: R.string.vault_key_unknown)), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-            Spacer(Modifier.height(20.dp))
-            Text(stringResource(R.string.vault_protection), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-            Text(stringResource(R.string.vault_auto_lock), color = MaterialTheme.colorScheme.onSurfaceVariant)
-            AutoLock.entries.forEach { opt ->
-                Row(Modifier.fillMaxWidth().clickable { onAutoLock(opt) }, verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(selected = opt == autoLock, onClick = { onAutoLock(opt) })
-                    Text(stringResource(opt.label))
-                }
-            }
-            Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.vault_block_screenshots), Modifier.weight(1f))
-                Switch(checked = true, onCheckedChange = null, enabled = false)
-            }
-            Spacer(Modifier.height(20.dp))
-            Text(stringResource(R.string.vault_backup_and_key), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-            if (busy) {
-                BrandLoader()
-                Text(if (restoring) stringResource(R.string.vault_restoring) else stringResource(R.string.vault_encrypting))
-            } else {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    FilledTonalButton(onClick = { onBeginSystemHop(); exportLauncher.launch("shoebill-vault-${LocalDate.now()}.shoebillvault") }) {
-                        Icon(Icons.Rounded.Backup, null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.vault_backup))
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    OutlinedButton(onClick = { onBeginSystemHop(); importLauncher.launch(arrayOf("*/*")) }) {
-                        Icon(Icons.Rounded.Restore, null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.vault_restore))
-                    }
-                }
-            }
-            message?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-            Text(stringResource(R.string.vault_master_key, stringResource(keyLevel?.label() ?: R.string.vault_key_unknown)))
         }
     }
 
@@ -345,31 +326,22 @@ fun VaultSettings(
 }
 
 @Composable
-private fun PinRoleRow(
-    label: String,
-    subtitle: String?,
-    subtitleIsError: Boolean,
-    isSet: Boolean,
-    enabled: Boolean,
-    onSet: () -> Unit,
-    onRemove: () -> Unit,
-) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-            Text(label)
+private fun PinRoleRow(label: String, subtitle: String?, subtitleIsError: Boolean, isSet: Boolean, enabled: Boolean, shape: androidx.compose.ui.graphics.Shape, onSet: () -> Unit, onRemove: () -> Unit) {
+    // Buttons sit under the text, not beside it: long hints stay readable on narrow phones and in Arabic.
+    Surface(Modifier.fillMaxWidth(), shape = shape, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+        Column(Modifier.padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 4.dp)) {
+            Text(label, style = MaterialTheme.typography.bodyLarge)
             subtitle?.let {
-                Text(
-                    it,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (subtitleIsError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Text(it, Modifier.padding(end = 8.dp), style = MaterialTheme.typography.bodyMedium, color = if (subtitleIsError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
             }
-        }
-        if (isSet) {
-            TextButton(onClick = onSet, enabled = enabled) { Text(stringResource(R.string.change)) }
-            TextButton(onClick = onRemove, enabled = enabled) { Text(stringResource(R.string.remove)) }
-        } else {
-            TextButton(onClick = onSet, enabled = enabled) { Text(stringResource(R.string.vault_set)) }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                if (isSet) {
+                    TextButton(onClick = onRemove, enabled = enabled) { Text(stringResource(R.string.remove)) }
+                    TextButton(onClick = onSet, enabled = enabled) { Text(stringResource(R.string.change)) }
+                } else {
+                    TextButton(onClick = onSet, enabled = enabled) { Text(stringResource(R.string.vault_set)) }
+                }
+            }
         }
     }
 }
@@ -418,7 +390,7 @@ private fun DialCodeRow() {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     var code by remember { mutableStateOf(SecretCodeReceiver.dialCode(ctx).orEmpty()) }
     var saved by remember { mutableStateOf(SecretCodeReceiver.dialCode(ctx)) }
-    Spacer(Modifier.height(12.dp))
+    androidx.compose.material3.Surface(Modifier.fillMaxWidth(), shape = dev.altayeb.shoebill.ui.theme.Radius.L, color = MaterialTheme.colorScheme.surfaceContainerHigh) { androidx.compose.foundation.layout.Column(Modifier.padding(16.dp), verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
     Text(stringResource(R.string.vault_dial_title), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
     Row(verticalAlignment = Alignment.CenterVertically) {
         OutlinedTextField(
@@ -434,4 +406,5 @@ private fun DialCodeRow() {
         saved?.let { stringResource(R.string.vault_dial_info, it) } ?: stringResource(R.string.vault_dial_off),
         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
+    } }
 }

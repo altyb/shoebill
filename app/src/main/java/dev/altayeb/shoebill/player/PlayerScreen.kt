@@ -276,7 +276,7 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
     // overlay auto-hide: 3 s without touch, never while paused, a panel is open, the finger is on the seek bar, or at the end
     LaunchedEffect(overlayVisible, interaction, panel, searchOpen, seekPreview, eof, paused) {
         if (!qaKeepUi && overlayVisible && !paused && panel == null && !searchOpen && seekPreview == null && !eof) {
-            delay(3000)
+            delay(settingsState.value.controlsHideSec * 1000L)
             overlayVisible = false
         }
     }
@@ -340,10 +340,11 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
 
                 fun tapSeek(sign: Int) {
                     val now = System.currentTimeMillis()
-                    seekAcc = if (now - seekAt < 600 && sign == seekSign) seekAcc + 10 else 10
+                    val step = settingsState.value.doubleTapSec
+                    seekAcc = if (now - seekAt < 600 && sign == seekSign) seekAcc + step else step
                     seekSign = sign
                     seekAt = now
-                    player.seekBy(sign * 10.0)
+                    player.seekBy(sign * step.toDouble())
                     showHud(Hud(HudKind.Tap, label = (if (sign > 0) "+" else "−") + context.getString(R.string.player_seconds, seekAcc.toString())))
                 }
 

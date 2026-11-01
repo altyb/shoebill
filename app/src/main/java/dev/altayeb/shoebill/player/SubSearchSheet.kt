@@ -95,7 +95,7 @@ fun SubSearchSheet(
         Box(Modifier.fillMaxSize()) {
             Box(
                 modifier = Modifier.align(Alignment.CenterEnd).padding(12.dp).widthIn(max = 470.dp).fillMaxHeight()
-                    .glass(RoundedCornerShape(28.dp)),
+                    .glass(dev.altayeb.shoebill.ui.theme.Radius.XL),
             ) {
                 SearchContent(player, videoName, hash, keys, hidden, onHide, onApplied, onClose)
             }
@@ -245,7 +245,7 @@ private fun SearchContent(
 private fun ResultRow(r: SubResult, busy: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(20.dp),
+        shape = dev.altayeb.shoebill.ui.theme.Radius.L,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         modifier = modifier.fillMaxWidth().padding(vertical = 4.dp),
     ) {

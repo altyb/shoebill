@@ -27,8 +27,8 @@ data class SubStyle(
 /** Every user setting (rules ق-08, ق-12, ق-18). Shared by player, library, settings and theme. */
 data class Settings(
     // appearance
-    val colorSource: ColorSource = ColorSource.Wallpaper,
-    val seed: Int = 0xFF0B6E69.toInt(),           // preset or custom seed (ARGB)
+    val colorSource: ColorSource = ColorSource.Preset,
+    val seed: Int = 0xFF2F6F8F.toInt(),           // preset or custom seed (ARGB)
     val style: SchemeStyle = SchemeStyle.TonalSpot,
     val darkMode: DarkMode = DarkMode.System,
     val amoled: Boolean = false,
@@ -42,6 +42,9 @@ data class Settings(
     val subStyle: SubStyle = SubStyle(),
     // privacy
     val keepHistory: Boolean = true,
+    val controlsHideSec: Int = 3,
+    val doubleTapSec: Int = 10,
+    val skipSilence: Boolean = false,
 )
 
 class AppSettings private constructor(context: Context) {
@@ -57,6 +60,7 @@ class AppSettings private constructor(context: Context) {
             .putString("darkMode", n.darkMode.name).putBoolean("amoled", n.amoled).putString("contrast", n.contrast.name)
             .putString("decoder", n.decoder.name).putBoolean("autoResume", n.autoResume).putBoolean("playNext", n.playNext)
             .putBoolean("gestures", n.gestures).putBoolean("backgroundAudio", n.backgroundAudio).putBoolean("keepHistory", n.keepHistory)
+            .putInt("controlsHideSec", n.controlsHideSec).putInt("doubleTapSec", n.doubleTapSec).putBoolean("skipSilence", n.skipSilence)
             .putFloat("sub_scale", s.scale).putLong("sub_color", s.color).putFloat("sub_outline", s.outline)
             .putLong("sub_outline_color", s.outlineColor).putBoolean("sub_box", s.box).putFloat("sub_box_alpha", s.boxAlpha)
             .putInt("sub_pos", s.pos).putBoolean("sub_bold", s.bold).putBoolean("sub_force", s.force)
@@ -72,6 +76,8 @@ class AppSettings private constructor(context: Context) {
             decoder = enumOr(p.getString("decoder", null), d.decoder), autoResume = p.getBoolean("autoResume", d.autoResume),
             playNext = p.getBoolean("playNext", d.playNext), gestures = p.getBoolean("gestures", d.gestures),
             backgroundAudio = p.getBoolean("backgroundAudio", d.backgroundAudio), keepHistory = p.getBoolean("keepHistory", d.keepHistory),
+            controlsHideSec = p.getInt("controlsHideSec", d.controlsHideSec), doubleTapSec = p.getInt("doubleTapSec", d.doubleTapSec),
+            skipSilence = p.getBoolean("skipSilence", d.skipSilence),
             subStyle = readSub(),
         )
     }

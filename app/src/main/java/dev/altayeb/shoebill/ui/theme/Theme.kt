@@ -30,7 +30,7 @@ import com.materialkolor.dynamicColorScheme
 val BrandAmber = Color(0xFFE0AE27)
 
 /** Seed used when the wallpaper source is asked for on Android < 12 (design ش-18). */
-const val BRAND_SEED = 0xFF0B6E69.toInt()
+const val BRAND_SEED = 0xFF2F6F8F.toInt() // the logo's slate blue, so app and logo read as one
 
 data class Preset(val name: String, val seed: Int)
 
@@ -129,4 +129,4 @@ fun ShoebillTheme(content: @Composable () -> Unit) {
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun Themed(scheme: ColorScheme, content: @Composable () -> Unit) =
-    MaterialExpressiveTheme(colorScheme = scheme, typography = Typography(), content = content)
+    MaterialExpressiveTheme(colorScheme = scheme, typography = Typography(), shapes = AppShapes, content = content)

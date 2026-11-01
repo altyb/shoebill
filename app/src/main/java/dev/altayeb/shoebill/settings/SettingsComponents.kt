@@ -1,5 +1,6 @@
 package dev.altayeb.shoebill.settings
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -82,4 +83,48 @@ fun SwitchRow(title: String, shape: Shape, checked: Boolean, subtitle: String? =
             )
         },
     )
+}
+
+/** A setting with a few fixed answers, shown as chips under its title. */
+@Composable
+fun <T> ChoiceRow(title: String, shape: Shape, options: List<Pair<T, String>>, selected: T, pick: (T) -> Unit) {
+    Surface(Modifier.fillMaxWidth(), shape = shape, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+        Column(Modifier.padding(16.dp)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            androidx.compose.foundation.layout.Spacer(Modifier.padding(top = 8.dp))
+            Row(Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
+                options.forEach { (v, label) -> androidx.compose.material3.FilterChip(v == selected, { pick(v) }, { Text(label) }) }
+            }
+        }
+    }
+}
+
+/** One part of the app on the settings hub. Each part keeps its own colour role, so the list reads at a glance. */
+@Composable
+fun HubRow(icon: androidx.compose.ui.graphics.vector.ImageVector, container: androidx.compose.ui.graphics.Color, content: androidx.compose.ui.graphics.Color, title: String, subtitle: String, shape: Shape, onClick: () -> Unit) {
+    Surface(onClick = onClick, modifier = Modifier.fillMaxWidth(), shape = shape, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Surface(Modifier.size(44.dp), shape = dev.altayeb.shoebill.ui.theme.Radius.M, color = container, contentColor = content) {
+                androidx.compose.foundation.layout.Box(contentAlignment = Alignment.Center) { Icon(icon, null) }
+            }
+            androidx.compose.foundation.layout.Spacer(Modifier.width(16.dp))
+            Column(Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleMedium)
+                Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
+            }
+        }
+    }
+}
+
+/** A short, friendly hint at the top of a settings page, with the bird that belongs to it. */
+@Composable
+fun TipCard(art: Int, text: String) {
+    val cs = MaterialTheme.colorScheme
+    Surface(Modifier.fillMaxWidth(), shape = dev.altayeb.shoebill.ui.theme.Radius.L, color = cs.secondaryContainer, contentColor = cs.onSecondaryContainer) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(art), null, Modifier.size(56.dp), colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(cs.onSecondaryContainer))
+            androidx.compose.foundation.layout.Spacer(Modifier.width(16.dp))
+            Text(text, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+        }
+    }
 }

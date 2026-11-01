@@ -131,4 +131,9 @@ class MediaLogicTest {
         assertTrue(DownloadLogic.looksLikePlaylist("https://soundcloud.com/x/sets/y"))
         assertFalse(DownloadLogic.looksLikePlaylist("https://www.youtube.com/watch?v=a"))
     }
+
+    @Test fun sponsorsOnlyWhenAsked() {
+        assertTrue("--sponsorblock-remove" in DownloadLogic.args(DownloadOptions(skipSponsors = true), "/o"))
+        assertFalse("--sponsorblock-remove" in DownloadLogic.args(DownloadOptions(), "/o"))
+    }
 }

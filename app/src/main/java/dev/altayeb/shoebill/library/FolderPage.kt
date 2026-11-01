@@ -207,7 +207,7 @@ fun FolderBody(folder: String, onBack: () -> Unit, onPlay: (Uri, String) -> Unit
             if (selected.isNotEmpty()) {
                 Surface(
                     modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
-                    shape = RoundedCornerShape(28.dp),
+                    shape = dev.altayeb.shoebill.ui.theme.Radius.XL,
                     color = MaterialTheme.colorScheme.surfaceContainerHighest,
                     shadowElevation = 6.dp,
                 ) {
