@@ -28,6 +28,10 @@ data class DownloadOptions(
     val cookiesFile: String? = null,
     val archiveFile: String? = null,
     val extra: List<String> = emptyList(),
+    val playlistFolder: Boolean = false, // save into a folder named after the playlist
+    val playlistName: String? = null, // the playlist's title, for entries picked one by one (playlist = false)
+    val thumbnailFile: Boolean = false, // keep the thumbnail as a .jpg beside the video
+    val subtitleFiles: Boolean = false, // keep subtitles as .srt/.vtt files beside the video instead of embedding them
 )
 
 /** One format yt-dlp offers. Size is 0 when the site does not say. */
@@ -45,9 +49,11 @@ object DownloadLogic {
     /** yt-dlp arguments after the URL. The output folder is private; the finished file is then copied into the media library. */
     fun args(o: DownloadOptions, outputDir: String): List<String> {
         val a = ArrayList<String>()
-        a += listOf("-o", "$outputDir/" + (FILENAMES.getOrNull(o.filename) ?: FILENAMES[0]))
+        val folder = if (!o.playlistFolder) null else if (o.playlist) "%(playlist_title|Playlist)s" else folderName(o.playlistName)
+        a += listOf("-o", "$outputDir/" + (folder?.let { "$it/" } ?: "") + (FILENAMES.getOrNull(o.filename) ?: FILENAMES[0]))
         a += listOf("--no-mtime", "--no-part", "--newline", "--trim-filenames", "180")
         a += if (o.playlist) "--yes-playlist" else "--no-playlist"
+        if (o.thumbnailFile) a += listOf("--write-thumbnail", "--convert-thumbnails", "jpg")
         o.limit?.let { a += listOf("--limit-rate", it) }
         o.proxy?.let { a += listOf("--proxy", it) }
         if (o.skipSponsors) a += listOf("--sponsorblock-remove", o.sponsorCategories)
@@ -72,7 +78,8 @@ object DownloadLogic {
             if (o.subtitles) {
                 a += "--write-subs"
                 if (o.autoSubs) a += "--write-auto-subs"
-                a += listOf("--embed-subs", "--sub-langs", o.subLangs)
+                a += listOf("--sub-langs", o.subLangs)
+                if (!o.subtitleFiles) a += "--embed-subs"
             }
         }
         a += o.extra
@@ -143,9 +150,26 @@ object DownloadLogic {
 
     fun isAudioFile(name: String) = name.substringAfterLast('.', "").lowercase() in setOf("m4a", "mp3", "opus", "ogg", "flac", "wav", "aac")
     fun isMediaFile(name: String) = isAudioFile(name) || name.substringAfterLast('.', "").lowercase() in setOf("mkv", "mp4", "webm", "mov", "avi", "ts")
+    fun isThumbFile(name: String) = name.substringAfterLast('.', "").lowercase() == "jpg"
+    fun isSubtitleFile(name: String) = name.substringAfterLast('.', "").lowercase() in setOf("srt", "vtt")
+
+    /**
+     * One folder name from a site's title: a single plain path part, no slashes, dots-as-traversal, control or template marks,
+     * at most 80 characters (code points, so Arabic and emoji are never cut in half). Null if nothing is left.
+     */
+    fun folderName(raw: String?): String? {
+        val s = raw.orEmpty()
+            .replace(Regex("""[\\/:*?"<>|%\p{Cc}‪-‮⁦-⁩]"""), " ")
+            .replace("..", " ")
+            .replace(Regex("""\s+"""), " ")
+            .trim(' ', '.')
+        val cut = s.offsetByCodePoints(0, minOf(80, s.codePointCount(0, s.length)))
+        return s.substring(0, cut).trim(' ', '.').takeIf { it.isNotEmpty() }
+    }
 
     fun mime(name: String): String = when (name.substringAfterLast('.', "").lowercase()) {
         "mkv" -> "video/x-matroska"; "mp4" -> "video/mp4"; "webm" -> "video/webm"; "mov" -> "video/quicktime"; "avi" -> "video/x-msvideo"; "ts" -> "video/mp2t"
+        "jpg" -> "image/jpeg"; "srt" -> "application/x-subrip"; "vtt" -> "text/vtt"
         "m4a" -> "audio/mp4"; "mp3" -> "audio/mpeg"; "opus" -> "audio/opus"; "ogg" -> "audio/ogg"; "flac" -> "audio/flac"; "wav" -> "audio/wav"; "aac" -> "audio/aac"
         else -> "application/octet-stream"
     }
