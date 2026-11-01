@@ -58,7 +58,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
@@ -66,6 +70,7 @@ import dev.altayeb.shoebill.R
 import dev.altayeb.shoebill.library.formatTime
 import dev.altayeb.shoebill.library.logic.Lrc
 import dev.altayeb.shoebill.library.logic.NaturalOrder
+import dev.altayeb.shoebill.library.logic.artBucket
 import dev.altayeb.shoebill.player.AudioFx
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -103,12 +108,17 @@ private fun audioPermission() = if (Build.VERSION.SDK_INT >= 33) Manifest.permis
 private fun rememberController(connect: Boolean): MediaController? {
     val ctx = LocalContext.current
     var c by remember { mutableStateOf<MediaController?>(null) }
-    DisposableEffect(connect) {
+    var generation by remember { mutableIntStateOf(0) }
+    DisposableEffect(connect, generation) {
         if (!connect) return@DisposableEffect onDispose {}
         val token = SessionToken(ctx, ComponentName(ctx, MusicService::class.java))
-        val future = MediaController.Builder(ctx, token).buildAsync()
+        var live = true
+        val future = MediaController.Builder(ctx, token).setListener(object : MediaController.Listener {
+            // The service died under us (killed for memory): drop the dead controller and connect again, which restarts it and restores the queue.
+            override fun onDisconnected(controller: MediaController) { if (live) { c = null; generation++ } }
+        }).buildAsync()
         future.addListener({ c = runCatching { future.get() }.getOrNull() }, ContextCompat.getMainExecutor(ctx))
-        onDispose { c = null; MediaController.releaseFuture(future) }
+        onDispose { live = false; c = null; MediaController.releaseFuture(future) }
     }
     return c
 }
@@ -117,6 +127,9 @@ private fun rememberController(connect: Boolean): MediaController? {
 class MusicHost(val state: PlayerState, val sheet: Animatable<Float, AnimationVector1D>) {
     var controller by mutableStateOf<MediaController?>(null)
     var songs by mutableStateOf<List<Song>?>(null)
+    private val byId by derivedStateOf { songs.orEmpty().associateBy { it.id } }
+    /** The song playing now, from the library list; null before the list is loaded. */
+    val song: Song? get() = state.current?.mediaId?.toLongOrNull()?.let(byId::get)
     val hasTrack get() = controller != null && state.current != null
 }
 
@@ -128,7 +141,13 @@ fun rememberMusicHost(tab: Int): MusicHost {
     val controller = rememberController(connect)
     val state = rememberPlayerState(controller)
     val sheet = remember { Animatable(0f) }
-    return remember { MusicHost(state, sheet) }.also { it.controller = controller }
+    val host = remember { MusicHost(state, sheet) }.also { it.controller = controller }
+    // Open or closed survives a theme change, which recreates the activity: the sheet reopens once the controller is back.
+    var open by rememberSaveable { mutableStateOf(false) }
+    var reopen by remember { mutableStateOf(open) }
+    LaunchedEffect(host.hasTrack) { if (reopen && host.hasTrack) { reopen = false; sheet.snapTo(1f) } }
+    LaunchedEffect(Unit) { snapshotFlow { sheet.targetValue > 0.5f }.collect { if (!reopen) open = it } }
+    return host
 }
 
 const val MUSIC_TAB = 3
@@ -150,7 +169,15 @@ fun MusicTab(host: MusicHost, modifier: Modifier = Modifier) {
         }
         return
     }
-    LaunchedEffect(Unit) { host.songs = querySongs(ctx) }
+    // Songs added or removed while the tab is open (a download, a delete) show up without leaving the tab.
+    var refresh by remember { mutableIntStateOf(0) }
+    DisposableEffect(Unit) {
+        val obs = object : android.database.ContentObserver(android.os.Handler(android.os.Looper.getMainLooper())) { override fun onChange(selfChange: Boolean) { refresh++ } }
+        ctx.contentResolver.registerContentObserver(android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, true, obs)
+        onDispose { ctx.contentResolver.unregisterContentObserver(obs) }
+    }
+    // The old list stays on screen while the new one loads, so a refresh never flashes the spinner; rows are keyed by id, so scroll holds.
+    LaunchedEffect(refresh) { if (refresh > 0) delay(500); host.songs = querySongs(ctx) }
     Box(modifier.fillMaxSize()) {
         val all = host.songs
         if (all == null) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { LoadingIndicator() }
@@ -181,16 +208,26 @@ private fun rememberPlayerState(c: MediaController?): PlayerState {
             s.shuffle = c.shuffleModeEnabled
             s.repeat = c.repeatMode
             s.speed = c.playbackParameters.speed
-            s.duration = c.duration.coerceAtLeast(0)
+            s.duration = c.duration.coerceAtLeast(0) // TIME_UNSET is negative
             s.position = c.currentPosition.coerceAtLeast(0)
-            s.queueVersion++
         }
-        val l = object : Player.Listener { override fun onEvents(player: Player, events: Player.Events) = sync() }
+        val l = object : Player.Listener {
+            override fun onEvents(player: Player, events: Player.Events) {
+                sync()
+                if (events.containsAny(Player.EVENT_TIMELINE_CHANGED, Player.EVENT_MEDIA_ITEM_TRANSITION)) s.queueVersion++
+            }
+        }
         c.addListener(l)
-        sync()
+        sync() // a reconnect resyncs everything from the new controller
+        s.queueVersion++
         onDispose { c.removeListener(l) }
     }
-    LaunchedEffect(c) { while (c != null) { if (c.isPlaying) s.position = c.currentPosition.coerceAtLeast(0); delay(250) } }
+    // The 4 Hz position poll only while the screen is started; in the background the service plays on and nothing reads it.
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(c) {
+        if (c == null) return@LaunchedEffect
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { while (true) { if (c.isPlaying) s.position = c.currentPosition.coerceAtLeast(0); delay(250) } }
+    }
     return s
 }
 
@@ -230,19 +267,26 @@ private fun Library(all: List<Song>, c: MediaController?) {
         }
         val q = query.trim()
         val hits = remember(all, q) { if (q.isEmpty()) all else all.filter { listOf(it.title, it.artist, it.album).any { f -> f.contains(q, true) } } }
-        fun groups(key: (Song) -> String) = hits.groupBy(key).toSortedMap(NaturalOrder).map { it.key to it.value }
+        // Grouping and sorting once per (list, tab), not on every recomposition the 4 Hz position tick causes.
+        val groups = remember(hits, tab, listsVersion) {
+            fun by(songs: List<Song>, key: (Song) -> String) = songs.groupBy(key).toSortedMap(NaturalOrder).map { it.key to it.value }
+            when (tab) {
+                LibTab.Songs -> emptyList()
+                LibTab.Albums -> by(hits) { it.album }
+                LibTab.Genres -> by(hits.filter { it.genre.isNotBlank() }) { it.genre }
+                LibTab.Artists -> by(hits) { it.artist.ifEmpty { "—" } }
+                LibTab.Folders -> by(hits) { it.folder }
+                LibTab.Lists -> lists.names().map { it to lists.songs(it, all) }
+            }
+        }
         when (tab) {
             LibTab.Songs -> SongList(hits, c) { addTo = it }
-            LibTab.Albums -> AlbumGrid(groups { it.album }) { n, s -> open = n to s.sortedWith(compareBy<Song> { it.track }.thenBy(NaturalOrder) { it.title }) }
-            LibTab.Genres -> GroupList(hits.filter { it.genre.isNotBlank() }.groupBy { it.genre }.toSortedMap(NaturalOrder).map { it.key to it.value }) { n, s -> open = n to s }
-            LibTab.Artists -> GroupList(groups { it.artist.ifEmpty { "—" } }) { n, s -> open = n to s }
-            LibTab.Folders -> GroupList(groups { it.folder }) { n, s -> open = n to s }
+            LibTab.Albums -> AlbumGrid(groups) { n, s -> open = n to s.sortedWith(compareBy<Song> { it.track }.thenBy(NaturalOrder) { it.title }) }
             LibTab.Lists -> {
-                listsVersion.hashCode()
-                val names = lists.names()
-                if (names.isEmpty()) Text(stringResource(R.string.music_lists_empty), Modifier.fillMaxWidth().padding(32.dp), textAlign = TextAlign.Center)
-                GroupList(names.map { it to lists.songs(it, all) }) { n, s -> open = n to s }
+                if (groups.isEmpty()) Text(stringResource(R.string.music_lists_empty), Modifier.fillMaxWidth().padding(32.dp), textAlign = TextAlign.Center)
+                GroupList(groups) { n, s -> open = n to s }
             }
+            else -> GroupList(groups) { n, s -> open = n to s }
         }
     }
     addTo?.let { s ->
@@ -267,8 +311,12 @@ private fun SongList(songs: List<Song>, c: MediaController?, onLong: (Song) -> U
     }
 }
 
-/** One decode per album, so scrolling back never decodes again or flashes the placeholder. */
-private val artCache = LruCache<Long, Bitmap>(64)
+/** Decoded covers by album and request size, bounded by bytes, so scrolling back never decodes again or flashes the placeholder. */
+private val artCache = object : LruCache<Pair<Long, Int>, Bitmap>(32 shl 20) { override fun sizeOf(key: Pair<Long, Int>, value: Bitmap) = value.byteCount }
+/** Songs with no cover, by song and size: asked once per run. Per song, not per album, so one bare track never hides the art its album mates carry. */
+private val artMissing: MutableSet<Pair<Long, Int>> = java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap())
+/** Three decodes at a time: a fast fling must not flood the IO pool and starve the audio and list threads. */
+private val artIo = Dispatchers.IO.limitedParallelism(3)
 
 /** One group of sound options on its own card. */
 @Composable
@@ -345,15 +393,22 @@ private fun SongRow(s: Song, onClick: () -> Unit, onLong: () -> Unit) {
 @Composable
 private fun Art(s: Song, sizeDp: Int) {
     val ctx = LocalContext.current
-    val bmp by produceState<Bitmap?>(artCache.get(s.albumId), s.albumId) {
-        if (value != null) return@produceState
-        value = withContext(Dispatchers.IO) {
-            if (Build.VERSION.SDK_INT >= 29) runCatching { ctx.contentResolver.loadThumbnail(s.uri, Size(256, 256), null) }.getOrNull() else null
+    // Asked at the size drawn (rounded up to a bucket), so the 280 dp cover is not a 256 px thumbnail stretched.
+    val px = artBucket(with(LocalDensity.current) { sizeDp.dp.roundToPx() })
+    val key = s.albumId to px
+    // State keyed on the song: a track change shows its own cover or the placeholder at once, never the previous cover.
+    val bmp = remember(s.id, px) { mutableStateOf(artCache.get(key)) }
+    LaunchedEffect(s.id, px) {
+        if (bmp.value != null || (s.id to px) in artMissing) return@LaunchedEffect
+        artCache.get(key)?.let { bmp.value = it; return@LaunchedEffect } // an album mate decoded it since the cache miss above
+        val b = withContext(artIo) {
+            if (Build.VERSION.SDK_INT >= 29) runCatching { ctx.contentResolver.loadThumbnail(s.uri, Size(px, px), null) }.getOrNull() else null
         }
-        value?.let { artCache.put(s.albumId, it) }
+        if (b != null) artCache.put(key, b) else artMissing += s.id to px
+        bmp.value = b
     }
     val shape = Radius.S
-    val b = bmp
+    val b = bmp.value
     if (b != null) Image(b.asImageBitmap(), null, Modifier.size(sizeDp.dp).clip(shape), contentScale = ContentScale.Crop)
     else Box(Modifier.size(sizeDp.dp).clip(shape).background(MaterialTheme.colorScheme.secondaryContainer), contentAlignment = Alignment.Center) { Icon(Icons.Rounded.MusicNote, null) }
 }
@@ -387,7 +442,7 @@ fun MiniPlayer(host: MusicHost) {
             .padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        host.songs?.firstOrNull { it.id == s.current?.mediaId?.toLongOrNull() }?.let { Art(it, 44); Spacer(Modifier.width(12.dp)) }
+        host.song?.let { Art(it, 44); Spacer(Modifier.width(12.dp)) }
         Column(Modifier.weight(1f)) {
             Text(s.current?.mediaMetadata?.title?.toString().orEmpty(), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleSmall)
             Text(s.current?.mediaMetadata?.artist?.toString().orEmpty(), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -444,7 +499,7 @@ fun MusicSheet(host: MusicHost, dockHeight: Int) {
         ) {
             // Laid out at full size from the first frame and only clipped, so the page never reflows while it grows.
             Box(Modifier.fillMaxSize().wrapContentHeight(Alignment.Top, unbounded = true)) {
-                NowPlaying(c, host.state, host.songs.orEmpty(), Modifier.height(with(density) { full.toDp() }).statusBarsPadding().navigationBarsPadding(), { host.sheet.value }) {
+                NowPlaying(c, host, Modifier.height(with(density) { full.toDp() }).statusBarsPadding().navigationBarsPadding(), { host.sheet.value }) {
                     scope.launch { host.sheet.animateTo(0f, sheetClose) }
                 }
             }
@@ -460,9 +515,10 @@ private fun Modifier.arrive(progress: () -> Float, start: Float) = graphicsLayer
 }
 
 @Composable
-private fun NowPlaying(c: MediaController, s: PlayerState, all: List<Song>, modifier: Modifier, progress: () -> Float, close: () -> Unit) {
+private fun NowPlaying(c: MediaController, host: MusicHost, modifier: Modifier, progress: () -> Float, close: () -> Unit) {
     val ctx = LocalContext.current
-    val song = remember(s.current, all) { s.current?.mediaId?.toLongOrNull()?.let { id -> all.firstOrNull { it.id == id } } }
+    val s = host.state
+    val song = host.song
     var page by remember { mutableIntStateOf(0) } // 0 art, 1 lyrics, 2 queue, 3 sound
     val prefs by AppSettings.get(ctx).settings.collectAsState()
     val view = androidx.compose.ui.platform.LocalView.current
@@ -475,11 +531,6 @@ private fun NowPlaying(c: MediaController, s: PlayerState, all: List<Song>, modi
     val lyricScope = rememberCoroutineScope()
     val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null && song != null) lyricScope.launch { lyrics = Lyrics.save(ctx, song, uri) }
-    }
-    var sleepAt by remember { mutableLongStateOf(0L) }
-    var sleepMinutes by remember { mutableIntStateOf(0) }
-    LaunchedEffect(sleepAt) {
-        if (sleepAt > 0L) { delay((sleepAt - System.currentTimeMillis()).coerceAtLeast(0)); c.pause(); sleepAt = 0L }
     }
     Column(modifier.fillMaxSize().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Row(Modifier.fillMaxWidth().arrive(progress, 0.15f), verticalAlignment = Alignment.CenterVertically) {
@@ -500,11 +551,13 @@ private fun NowPlaying(c: MediaController, s: PlayerState, all: List<Song>, modi
                     // Paused art relaxes into a cookie; playing art is a plain square. Material's own shape morph.
                     val morph = remember { Morph(MaterialShapes.Square, MaterialShapes.Cookie12Sided) }
                     val cookie by androidx.compose.animation.core.animateFloatAsState(if (s.playing || !prefs.coverMorph) 0f else 1f, MaterialTheme.motionScheme.slowSpatialSpec(), label = "artMorph")
-                    Box(Modifier.graphicsLayer { val v = 0.82f + 0.18f * progress(); scaleX = v; scaleY = v }.clip(MorphShape(morph, cookie))) { Art(it, 280) }
+                    // Remembered: a new Shape instance each recomposition would re-clip the cover even when the morph is still.
+                    val shape = remember(cookie) { MorphShape(morph, cookie) }
+                    Box(Modifier.graphicsLayer { val v = 0.82f + 0.18f * progress(); scaleX = v; scaleY = v }.clip(shape)) { Art(it, 280) }
                 }
-                1 -> LyricsPage(lyrics, s.position, { c.seekTo(it) }) { pick.launch(arrayOf("*/*")) }
+                1 -> LyricsPage(lyrics, { s.position }, { c.seekTo(it) }) { pick.launch(arrayOf("*/*")) }
                 2 -> QueuePage(c, s)
-                else -> SoundPage(c, s, sleepAt, sleepMinutes) { m -> sleepMinutes = m; sleepAt = if (m == 0) 0L else System.currentTimeMillis() + m * 60_000L }
+                else -> SoundPage(c, s)
             } }
         }
         Column(Modifier.fillMaxWidth().arrive(progress, 0.35f), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -513,13 +566,7 @@ private fun NowPlaying(c: MediaController, s: PlayerState, all: List<Song>, modi
         }
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
             Column(Modifier.arrive(progress, 0.45f)) {
-                var drag by remember { mutableStateOf<Float?>(null) }
-                val dur = s.duration.coerceAtLeast(1)
-                Slider(drag ?: (s.position.toFloat() / dur).coerceIn(0f, 1f), { drag = it }, onValueChangeFinished = { drag?.let { c.seekTo((it * dur).toLong()) }; drag = null })
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(formatTime(s.position), style = MaterialTheme.typography.labelMedium)
-                    Text(formatTime(s.duration), style = MaterialTheme.typography.labelMedium)
-                }
+                SeekRow(c, s)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
                     IconToggleButton(s.shuffle, { c.shuffleModeEnabled = it }) { Icon(Icons.Rounded.Shuffle, stringResource(R.string.music_shuffle)) }
                     IconButton(onClick = { if (prefs.rewindBeforePrevious) c.seekToPrevious() else c.seekToPreviousMediaItem() }, shapes = IconButtonDefaults.shapes()) { Icon(Icons.Rounded.SkipPrevious, stringResource(R.string.player_previous), Modifier.size(36.dp)) }
@@ -537,8 +584,20 @@ private fun NowPlaying(c: MediaController, s: PlayerState, all: List<Song>, modi
     }
 }
 
+/** The only part of the page that reads the position in composition, so the 4 Hz tick recomposes this row and nothing else. */
 @Composable
-private fun LyricsPage(text: String?, pos: Long, seek: (Long) -> Unit, pick: () -> Unit) {
+private fun SeekRow(c: MediaController, s: PlayerState) {
+    var drag by remember { mutableStateOf<Float?>(null) }
+    val dur = s.duration.coerceAtLeast(1)
+    Slider(drag ?: (s.position.toFloat() / dur).coerceIn(0f, 1f), { drag = it }, onValueChangeFinished = { drag?.let { c.seekTo((it * dur).toLong()) }; drag = null })
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(formatTime(s.position), style = MaterialTheme.typography.labelMedium)
+        Text(formatTime(s.duration), style = MaterialTheme.typography.labelMedium)
+    }
+}
+
+@Composable
+private fun LyricsPage(text: String?, pos: () -> Long, seek: (Long) -> Unit, pick: () -> Unit) {
     val large = AppSettings.get(LocalContext.current).settings.collectAsState().value.lyricsLarge
     val lines = remember(text) { text?.let(Lrc::parse).orEmpty() }
     if (lines.isEmpty()) {
@@ -548,7 +607,8 @@ private fun LyricsPage(text: String?, pos: Long, seek: (Long) -> Unit, pick: () 
         }
         return
     }
-    val now = Lrc.indexAt(lines, pos)
+    // Derived: the list recomposes when the sung line changes, not on every position tick.
+    val now by remember(lines) { derivedStateOf { Lrc.indexAt(lines, pos()) } }
     val list = rememberLazyListState()
     LaunchedEffect(now) { if (now > 1) list.animateScrollToItem(now - 1) }
     LazyColumn(state = list, modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -562,7 +622,7 @@ private fun LyricsPage(text: String?, pos: Long, seek: (Long) -> Unit, pick: () 
 
 @Composable
 private fun QueuePage(c: MediaController, s: PlayerState) {
-    val items = remember(s.queueVersion) { (0 until c.mediaItemCount).map { c.getMediaItemAt(it) } }
+    val items = remember(c, s.queueVersion) { (0 until c.mediaItemCount).map { c.getMediaItemAt(it) } }
     LazyColumn(Modifier.fillMaxSize()) {
         itemsIndexed(items) { i, m ->
             Row(Modifier.fillMaxWidth().clickable { c.seekTo(i, 0) }.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -575,8 +635,11 @@ private fun QueuePage(c: MediaController, s: PlayerState) {
 }
 
 @Composable
-private fun SoundPage(c: MediaController, s: PlayerState, sleepAt: Long, sleepMinutes: Int, setSleep: (Int) -> Unit) {
+private fun SoundPage(c: MediaController, s: PlayerState) {
     val ctx = LocalContext.current
+    val sleepAt = MusicService.sleepAt
+    val sleepMinutes = MusicService.sleepMinutes
+    val setSleep = { m: Int -> MusicService.setSleep(m) }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SoundCard(stringResource(R.string.player_speed)) {
             dev.altayeb.shoebill.ui.ConnectedChoice(listOf(0.75f, 1f, 1.25f, 1.5f, 2f).map { it to "$it×" }, listOf(0.75f, 1f, 1.25f, 1.5f, 2f).firstOrNull { kotlin.math.abs(s.speed - it) < 0.01f }) { c.setPlaybackSpeed(it) }
