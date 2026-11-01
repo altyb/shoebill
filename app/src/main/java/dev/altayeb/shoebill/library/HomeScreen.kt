@@ -66,12 +66,12 @@ import androidx.compose.material.icons.rounded.VideoLibrary
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
 import androidx.compose.material3.carousel.rememberCarouselState
@@ -124,7 +124,7 @@ fun HomeScreen(
     // A link shared to the app opens on Downloads.
     val shared by dev.altayeb.shoebill.download.SharedLink.value.collectAsStateWithLifecycle()
     androidx.compose.runtime.LaunchedEffect(shared) { if (shared != null && dev.altayeb.shoebill.download.DownloadFeature.ENABLED) tab = 4 }
-    val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val scroll = TopAppBarDefaults.pinnedScrollBehavior()
     val existing = remember(videos) { videos.mapTo(HashSet()) { it.key } }
     // Continue-watching skips files that were trashed or removed since they were played.
     val cont = remember(states, existing) {
@@ -137,38 +137,35 @@ fun HomeScreen(
 
     val music = dev.altayeb.shoebill.music.rememberMusicHost(tab)
     var dockHeight by remember { mutableStateOf(0) }
+    // Derived, so the sheet's animation does not recompose the whole home screen on every frame.
+    val sheetFull by remember(music) { androidx.compose.runtime.derivedStateOf { music.sheet.value >= 1f } }
+    val motion = MaterialTheme.motionScheme
     Box(Modifier.fillMaxSize()) {
     Scaffold(
         // With the sheet fully open, the tabs under it are hidden from screen readers too.
-        modifier = Modifier.nestedScroll(scroll.nestedScrollConnection).then(if (music.sheet.value >= 1f) Modifier.clearAndSetSemantics {} else Modifier),
+        modifier = Modifier.nestedScroll(scroll.nestedScrollConnection).then(if (sheetFull) Modifier.clearAndSetSemantics {} else Modifier),
         topBar = {
-            if (tab == 0) {
-                val headerBg = MaterialTheme.colorScheme.surfaceContainer
-                val patternColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f)
-                LargeTopAppBar(
-                    title = {
-                        Text("Shoebill", fontWeight = FontWeight.Bold)
-                    },
-                    navigationIcon = { Logo(onLongClick = onVault) },
-                    actions = { IconButton(onClick = onSettings) { Icon(Icons.Rounded.Settings, stringResource(R.string.settings_title)) } },
-                    scrollBehavior = scroll,
-                    colors = TopAppBarDefaults.largeTopAppBarColors(
-                        containerColor = Color.Transparent,
-                        scrolledContainerColor = Color.Transparent,
-                    ),
-                    modifier = Modifier.clip(RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp))
-                        .drawBehind { drawRect(headerBg); playPattern(patternColor) },
-                )
-            }
+            // One header on every tab: the mark in the same spot, only the words change.
+            val name = if (tab == 0) "Shoebill" else stringResource(homeTabs[tab].first)
+            TopAppBar(
+                title = {
+                    androidx.compose.animation.AnimatedContent(name, transitionSpec = {
+                        androidx.compose.animation.fadeIn(motion.fastEffectsSpec()) togetherWith androidx.compose.animation.fadeOut(motion.fastEffectsSpec())
+                    }, label = "headerTitle") { Text(it, fontWeight = FontWeight.Bold, maxLines = 1) }
+                },
+                navigationIcon = { Logo(onLongClick = onVault) },
+                actions = { IconButton(onClick = onSettings) { Icon(Icons.Rounded.Settings, stringResource(R.string.settings_title)) } },
+                scrollBehavior = scroll,
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface, scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer),
+            )
         },
         bottomBar = {
             HomeDock(music, tab, Modifier.onSizeChanged { dockHeight = it.height }) { tab = it }
         },
     ) { pad ->
-        // Fade-through between tabs, on the Expressive scheme.
-        val motion = MaterialTheme.motionScheme
+        // Plain fade between tabs: scaling a whole list of thumbnails costs frames for little gain.
         androidx.compose.animation.AnimatedContent(tab, transitionSpec = {
-            (androidx.compose.animation.fadeIn(motion.defaultEffectsSpec()) + androidx.compose.animation.scaleIn(motion.defaultSpatialSpec(), initialScale = 0.97f)) togetherWith androidx.compose.animation.fadeOut(motion.fastEffectsSpec())
+            androidx.compose.animation.fadeIn(motion.defaultEffectsSpec()) togetherWith androidx.compose.animation.fadeOut(motion.fastEffectsSpec())
         }, label = "tabs") { tab ->
         when (tab) {
             1 -> { PlaylistsTab(onPlayQueue, Modifier.padding(pad)); return@AnimatedContent }
@@ -249,24 +246,6 @@ private fun Logo(onLongClick: () -> Unit) {
             painterResource(R.drawable.ic_launcher_monochrome), "Shoebill", Modifier.requiredSize(54.dp),
             colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurface),
         )
-    }
-}
-
-/** Faint grid of small play triangles behind the header; one path, drawn on the header only. */
-private fun DrawScope.playPattern(color: Color) {
-    val step = 30.dp.toPx()
-    val t = 7.dp.toPx()
-    val tri = Path().apply { moveTo(0f, 0f); lineTo(t, t * 0.58f); lineTo(0f, t * 1.16f); close() }
-    var row = 0
-    var y = -t
-    while (y < size.height + t) {
-        var x = if (row % 2 == 0) 0f else step / 2
-        while (x < size.width + t) {
-            translate(x, y) { drawPath(tri, color) }
-            x += step
-        }
-        y += step * 0.8f
-        row++
     }
 }
 

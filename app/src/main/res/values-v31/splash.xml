@@ -2,6 +2,7 @@
 <resources>
     <style name="Theme.Shoebill" parent="@android:style/Theme.DeviceDefault.NoActionBar">
         <item name="android:windowSplashScreenBackground">@color/ic_launcher_background</item>
-        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_anim</item>
+        <item name="android:windowSplashScreenAnimationDuration">500</item>
     </style>
 </resources>

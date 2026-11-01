@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
@@ -33,52 +34,25 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
- * The logo, alive: breathes, glances right then left, blinks. Drawn in code from [LogoPaths] so it takes the
- * theme colour; the eye is cut out, so any background shows through.
+ * The mark filling up from the bottom and draining again, tinted from the theme.
+ * Runs in the draw phase only: one path, two draws, no recomposition and no extra layer, so it stays cheap inside busy screens.
  */
 @Composable
 fun BrandLoader(modifier: Modifier = Modifier, size: Dp = 56.dp, color: Color = MaterialTheme.colorScheme.primary) {
-    val body = remember { PathParser().parsePathString(LogoPaths.BODY).toPath().apply { fillType = PathFillType.EvenOdd } }
-    val eye = remember { PathParser().parsePathString(LogoPaths.EYE).toPath() }
-    val t = rememberInfiniteTransition(label = "shoebill-loader")
-    val breathe by t.animateFloat(1f, 0.9f, infiniteRepeatable(tween(800, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "breathe")
-    val glance by t.animateFloat(
-        0f, 0f,
-        infiniteRepeatable(keyframes {
-            durationMillis = 1600
-            0f at 250 using LinearEasing
-            3f at 470 using FastOutSlowInEasing
-            -2f at 960 using FastOutSlowInEasing
-            0f at 1160
-        }),
-        label = "glance",
-    )
-    val blink by t.animateFloat(
-        1f, 1f,
-        infiniteRepeatable(keyframes {
-            durationMillis = 1600
-            1f at 1340
-            0.1f at 1410
-            1f at 1520
-        }),
-        label = "blink",
-    )
+    val body = remember {
+        PathParser().parsePathString(LogoPaths.BODY).toPath().apply {
+            fillType = PathFillType.EvenOdd
+            transform(androidx.compose.ui.graphics.Matrix().apply { translate(0f, LogoPaths.SIZE); scale(0.1f, -0.1f) })
+        }
+    }
+    val fill = rememberInfiniteTransition(label = "shoebill-loader")
+        .animateFloat(0.12f, 0.92f, infiniteRepeatable(tween(1100, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "fill")
     val loading = stringResource(R.string.ui_loading)
-    Canvas(
-        modifier.size(size)
-            .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen) // so BlendMode.Clear cuts the eyes only
-            .semantics { contentDescription = loading },
-    ) {
+    Canvas(modifier.size(size).semantics { contentDescription = loading }) {
         val k = this.size.minDimension / LogoPaths.SIZE
-        scale(k * breathe, k * breathe, pivot = Offset.Zero) {
-            // keep the mark centred while it breathes
-            val shift = LogoPaths.SIZE * (1 - breathe) / 2 / breathe
-            translate(shift, shift) {
-                drawPath(body, color)
-                translate(glance, 0f) {
-                    scale(1f, blink, pivot = Offset(LogoPaths.EYE_X, LogoPaths.EYE_Y)) { drawPath(eye, Color.Black, blendMode = BlendMode.Clear) }
-                }
-            }
+        scale(k, k, pivot = Offset.Zero) {
+            drawPath(body, color.copy(alpha = 0.22f))
+            clipRect(top = LogoPaths.SIZE * (1f - fill.value)) { drawPath(body, color) }
         }
     }
 }

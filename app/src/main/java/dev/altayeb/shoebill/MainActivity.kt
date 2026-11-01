@@ -69,6 +69,14 @@ class MainActivity : FragmentActivity() { // FragmentActivity: BiometricPrompt (
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        if (android.os.Build.VERSION.SDK_INT >= 31) {
+            // Leaves with a quick grow-and-fade instead of the system's plain cut.
+            splashScreen.setOnExitAnimationListener { v ->
+                v.animate().alpha(0f).scaleX(1.08f).scaleY(1.08f).setDuration(220).withEndAction { v.remove() }.start()
+            }
+        } else {
+            window.setBackgroundDrawableResource(android.R.color.black) // the splash picture must not sit behind the app
+        }
         takeViewIntent(intent)
         // Android 12+: keep the splash icon up briefly on a normal launch;
         // opening a video from another app skips it
