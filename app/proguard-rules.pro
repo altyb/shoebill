@@ -25,3 +25,10 @@
 -dontwarn org.apache.commons.compress.**
 # commons-compress builds its zip extra-field table by reflection; youtubedl-android unzips its runtime with it
 -keep class org.apache.commons.compress.** { *; }
+
+# SFTP and FTP: sshj and JCA load these by name.
+-keep class net.schmizz.** { *; }
+-keep class org.bouncycastle.** { *; }
+-keep class org.apache.commons.net.** { *; }
+-dontwarn net.schmizz.**
+-dontwarn com.jcraft.**
