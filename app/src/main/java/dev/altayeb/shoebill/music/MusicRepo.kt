@@ -28,7 +28,8 @@ data class Song(
     ).build()
 }
 
-suspend fun querySongs(context: Context): List<Song> = withContext(Dispatchers.IO) {
+/** [raw] ignores the library filters: for the settings page, which must list hidden folders, and for restoring a queue. */
+suspend fun querySongs(context: Context, raw: Boolean = false): List<Song> = withContext(Dispatchers.IO) {
     val m = MediaStore.Audio.Media.TITLE
     val cols = arrayOf(MediaStore.Audio.Media._ID, m, MediaStore.Audio.Media.ARTIST, MediaStore.Audio.Media.ALBUM, MediaStore.Audio.Media.ALBUM_ID,
         MediaStore.Audio.Media.DURATION, MediaStore.Audio.Media.TRACK, MediaStore.Audio.Media.DATA,
@@ -41,7 +42,8 @@ suspend fun querySongs(context: Context): List<Song> = withContext(Dispatchers.I
                 c.getLong(5), c.getInt(6) % 1000, path?.let { File(it).parentFile?.name }.orEmpty(), path, if (c.columnCount > 8) c.getString(8).orEmpty() else "")
         }
     }
-    out.sortedWith(compareBy(NaturalOrder) { it.title })
+    val f = dev.altayeb.shoebill.settings.AppSettings.get(context).settings.value
+    (if (raw) out else out.filter { it.durationMs >= f.minSongSec * 1000L && it.folder !in f.hiddenFolders }).sortedWith(compareBy(NaturalOrder) { it.title })
 }
 
 /** Saved lists of song ids. Songs deleted from the phone simply stop appearing. */

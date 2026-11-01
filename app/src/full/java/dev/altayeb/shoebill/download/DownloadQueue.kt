@@ -109,6 +109,32 @@ class DlPrefs(c: Context) {
     var proxy: String get() = p.getString("proxy", "").orEmpty(); set(v) = p.edit().putString("proxy", v).apply()
     var wifiOnly: Boolean get() = p.getBoolean("wifiOnly", false); set(v) = p.edit().putBoolean("wifiOnly", v).apply()
     var skipSponsors: Boolean get() = p.getBoolean("skipSponsors", false); set(v) = p.edit().putBoolean("skipSponsors", v).apply()
+    var sponsorCategories: String get() = p.getString("sponsorCats", "default") ?: "default"; set(v) = p.edit().putString("sponsorCats", v).apply()
+    var container: String get() = p.getString("container", "mkv") ?: "mkv"; set(v) = p.edit().putString("container", v).apply()
+    var codec: String? get() = p.getString("codec", null); set(v) = p.edit().putString("codec", v).apply()
+    var filename: Int get() = p.getInt("filename", 0); set(v) = p.edit().putInt("filename", v).apply()
+    var restrictNames: Boolean get() = p.getBoolean("restrictNames", false); set(v) = p.edit().putBoolean("restrictNames", v).apply()
+    var embedThumbnail: Boolean get() = p.getBoolean("embedThumb", true); set(v) = p.edit().putBoolean("embedThumb", v).apply()
+    var embedMetadata: Boolean get() = p.getBoolean("embedMeta", true); set(v) = p.edit().putBoolean("embedMeta", v).apply()
+    var subLangs: String get() = p.getString("subLangs", "ar.*,en.*") ?: "ar.*,en.*"; set(v) = p.edit().putString("subLangs", v).apply()
+    var autoSubs: Boolean get() = p.getBoolean("autoSubs", true); set(v) = p.edit().putBoolean("autoSubs", v).apply()
+    var forceIpv4: Boolean get() = p.getBoolean("ipv4", false); set(v) = p.edit().putBoolean("ipv4", v).apply()
+    var threads: Int get() = p.getInt("threads", 1); set(v) = p.edit().putInt("threads", v).apply()
+    var noDuplicates: Boolean get() = p.getBoolean("noDup", false); set(v) = p.edit().putBoolean("noDup", v).apply()
+    var incognito: Boolean get() = p.getBoolean("incognito", false); set(v) = p.edit().putBoolean("incognito", v).apply()
+    var extra: String get() = p.getString("extra", "").orEmpty(); set(v) = p.edit().putString("extra", v).apply()
+    var autoUpdate: Boolean get() = p.getBoolean("autoUpdate", true); set(v) = p.edit().putBoolean("autoUpdate", v).apply()
+    var nightly: Boolean get() = p.getBoolean("nightly", false); set(v) = p.edit().putBoolean("nightly", v).apply()
+    private val dir = c.applicationContext.filesDir
+    val cookiesFile get() = java.io.File(dir, "cookies.txt")
+    val archiveFile get() = java.io.File(dir, "download-archive.txt")
+
+    /** One download's options: this sheet's choices on top of the standing ones. */
+    fun options(quality: Quality, playlist: Boolean, subs: Boolean, formatId: String? = null, formatAudioOnly: Boolean = false) = DownloadOptions(
+        quality, playlist, subs, limit, proxy.takeIf { it.isNotBlank() }?.trim(), formatId, formatAudioOnly, skipSponsors, sponsorCategories, container, codec, filename,
+        restrictNames, embedThumbnail, embedMetadata, subLangs, autoSubs, forceIpv4, threads, cookiesFile.takeIf { it.exists() }?.path,
+        archiveFile.path.takeIf { noDuplicates }, DownloadLogic.parseExtra(extra).orEmpty(),
+    )
 }
 
 /** Fetches what a link is, with the same proxy the download will use, so a blocked network fails here and not later. */
@@ -178,16 +204,18 @@ object DownloadQueue {
     @Volatile private var active: String? = null
 
     private var historyFile: File? = null
+    @Volatile private var incognito = false
 
     /** Finished downloads outlive the app. No proxy in here: it can hold a password, and retry reads the current setting. */
     @Synchronized fun loadHistory(c: Context) {
         if (historyFile != null) return
         val f = File(c.filesDir, "download-history.json"); historyFile = f
         val prefs = DlPrefs(c)
+        incognito = prefs.incognito
         val a = runCatching { org.json.JSONArray(f.readText()) }.getOrNull() ?: return
         val old = (0 until a.length()).mapNotNull { n ->
             val o = a.optJSONObject(n) ?: return@mapNotNull null
-            DlJob(o.getString("id"), o.getString("url"), DownloadOptions(prefs.quality, false, false, prefs.limit, prefs.proxy.ifBlank { null }),
+            DlJob(o.getString("id"), o.getString("url"), prefs.options(prefs.quality, false, false),
                 runCatching { DlState.valueOf(o.getString("state")) }.getOrDefault(DlState.Done), 100,
                 o.optString("title"), o.optString("error"), o.optString("uploader"), o.optString("thumb").ifEmpty { null },
                 audio = o.optBoolean("audio"), fileUri = o.optString("uri").ifEmpty { null })
@@ -197,6 +225,7 @@ object DownloadQueue {
 
     private fun saveHistory() {
         val f = historyFile ?: return
+        if (incognito) return
         val a = org.json.JSONArray()
         jobs.value.filter { it.state == DlState.Done || it.state == DlState.Failed }.takeLast(200).forEach { j ->
             a.put(org.json.JSONObject().put("id", j.id).put("url", j.url).put("state", j.state.name).put("title", j.title).put("error", j.error)
@@ -206,6 +235,7 @@ object DownloadQueue {
     }
 
     fun add(c: Context, url: String, o: DownloadOptions, preview: Preview? = null) {
+        incognito = DlPrefs(c).incognito
         jobs.update { it + DlJob(UUID.randomUUID().toString(), url, o, title = preview?.title.orEmpty(), uploader = preview?.uploader.orEmpty(), thumb = preview?.thumb) }
         pump(c.applicationContext)
     }
@@ -245,10 +275,11 @@ object DownloadQueue {
     fun refreshSoon(c: Context) { scope.launch { runCatching { updateIfStale(c.applicationContext) } } }
 
     private fun updateIfStale(c: Context) {
+        if (!DlPrefs(c).autoUpdate) return
         val prefs = c.getSharedPreferences("downloads", Context.MODE_PRIVATE)
         val now = System.currentTimeMillis()
         if (now - prefs.getLong("updated", 0L) < 7 * 24 * 3_600_000L) return
-        runCatching { YoutubeDL.getInstance().updateYoutubeDL(c, YoutubeDL.UpdateChannel.STABLE) }.onSuccess { prefs.edit().putLong("updated", now).apply() }
+        runCatching { YoutubeDL.getInstance().updateYoutubeDL(c, if (DlPrefs(c).nightly) YoutubeDL.UpdateChannel.NIGHTLY else YoutubeDL.UpdateChannel.STABLE) }.onSuccess { prefs.edit().putLong("updated", now).apply() }
     }
 
     private suspend fun run(c: Context, j: DlJob) {
@@ -272,7 +303,7 @@ object DownloadQueue {
             if (jobs.value.firstOrNull { it.id == j.id }?.state == DlState.Cancelled) return
             change(j.id) { it.copy(state = DlState.Finishing, percent = 100) }
             val files = out.listFiles().orEmpty().filter { DownloadLogic.isMediaFile(it.name) }
-            check(files.isNotEmpty()) { "no file was produced" }
+            check(files.isNotEmpty()) { if (j.options.archiveFile != null) c.getString(R.string.dl_already) else "no file was produced" }
             val saved = files.map { publish(c, it) }
             change(j.id) { it.copy(state = DlState.Done, title = it.title.ifEmpty { files.first().nameWithoutExtension }, audio = DownloadLogic.isAudioFile(files.first().name), fileUri = saved.first()) }
             saveHistory()
