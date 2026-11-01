@@ -121,6 +121,7 @@
     <string name="dl_finishing">جارٍ الإنهاء</string>
     <string name="dl_done">حُفظ في مكتبتك</string>
     <string name="dl_failed">فشل: %1$s</string>
+    <string name="dl_sidecar_failed">تعذّر حفظ %1$s</string>
     <string name="dl_cancelled">أُلغي</string>
     <string name="dl_cancel">إلغاء</string>
     <string name="dl_retry">إعادة المحاولة</string>
@@ -239,7 +240,7 @@
     <string name="dl_autosubs">تضمين الترجمة التلقائية</string>
     <string name="dl_autosubs_sub">تُستخدم عندما لا توجد ترجمة مكتوبة</string>
     <string name="dl_sub_files">حفظ الترجمة كملفات منفصلة</string>
-    <string name="dl_sub_files_sub">تُحفظ بجانب الفيديو بصيغة srt أو vtt بدلًا من دمجها فيه</string>
+    <string name="dl_sub_files_sub">تُحفظ بصيغة srt أو vtt في مجلد Download/Shoebill (وبجانب الفيديو على أندرويد 9 وأقدم) بدلًا من دمجها فيه</string>
     <string name="dl_sublangs">لغات الترجمة</string>
     <string name="dl_sublangs_hint">مثال: ar.*,en.* أو all</string>
     <string name="dl_sponsor_what">ما يُزال</string>

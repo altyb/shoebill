@@ -310,12 +310,13 @@ object DownloadQueue {
             val media = all.filter { DownloadLogic.isMediaFile(it.name) }
             check(media.isNotEmpty()) { if (j.options.archiveFile != null) c.getString(R.string.dl_already) else "no file was produced" }
             val saved = media.map { publish(c, it, folderOf(out, it)) }
-            // Sidecars come after the check and never fail the job: the video is already in the library by then.
-            all.forEach { f ->
+            // Sidecars come after the check and never fail the job: the video is already in the library by then. A failed one is shown on the Done card.
+            val lost = all.filter { f ->
                 val side = (j.options.thumbnailFile && DownloadLogic.isThumbFile(f.name)) || (j.options.subtitleFiles && DownloadLogic.isSubtitleFile(f.name))
-                if (side) runCatching { publish(c, f, folderOf(out, f)) }.onFailure { Log.w("Download", "sidecar: ${it.javaClass.simpleName}") }
+                side && runCatching { publish(c, f, folderOf(out, f)) }.onFailure { Log.w("Download", "sidecar ${f.name}: $it") }.isFailure
             }
-            change(j.id) { it.copy(state = DlState.Done, title = it.title.ifEmpty { media.first().nameWithoutExtension }, audio = DownloadLogic.isAudioFile(media.first().name), fileUri = saved.first()) }
+            val sideError = if (lost.isEmpty()) "" else c.getString(R.string.dl_sidecar_failed, lost.joinToString(", ") { it.name })
+            change(j.id) { it.copy(state = DlState.Done, error = sideError, title = it.title.ifEmpty { media.first().nameWithoutExtension }, audio = DownloadLogic.isAudioFile(media.first().name), fileUri = saved.first()) }
             saveHistory()
             VideoIndex.refresh(c)
         } catch (e: Throwable) { // a broken runtime throws LinkageError; that must fail the job, not kill music and video too
@@ -335,18 +336,21 @@ object DownloadQueue {
 
     /**
      * Pending until fully copied, so a kill mid-copy never leaves half a file in the library.
-     * Pictures go to Pictures/Shoebill, subtitles to Movies/Shoebill (beside the video; MediaStore.Files takes any file type there).
+     * Pictures go to Pictures/Shoebill. Subtitles: on Android 10+ MediaProvider refuses a non-media type under Movies/
+     * (IllegalArgumentException on insert), so they go to Download/Shoebill via MediaStore.Downloads; older versions write
+     * them beside the video.
      */
     private fun publish(c: Context, f: File, folder: String): String {
         val audio = DownloadLogic.isAudioFile(f.name)
         val thumb = DownloadLogic.isThumbFile(f.name)
-        val root = when { thumb -> Environment.DIRECTORY_PICTURES; audio -> Environment.DIRECTORY_MUSIC; else -> Environment.DIRECTORY_MOVIES }
+        val sub = DownloadLogic.isSubtitleFile(f.name) && Build.VERSION.SDK_INT >= 29
+        val root = when { thumb -> Environment.DIRECTORY_PICTURES; sub -> Environment.DIRECTORY_DOWNLOADS; audio -> Environment.DIRECTORY_MUSIC; else -> Environment.DIRECTORY_MOVIES }
         val rel = listOf("Shoebill", folder).filter { it.isNotEmpty() }.joinToString("/")
         val r = c.contentResolver
         if (Build.VERSION.SDK_INT >= 29) {
             val base = when {
                 thumb -> MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-                DownloadLogic.isSubtitleFile(f.name) -> MediaStore.Files.getContentUri("external")
+                sub -> MediaStore.Downloads.EXTERNAL_CONTENT_URI
                 audio -> MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
                 else -> MediaStore.Video.Media.EXTERNAL_CONTENT_URI
             }
