@@ -11,6 +11,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.bouncycastle.jce.provider.BouncyCastleProvider
 import net.schmizz.sshj.SSHClient
 import net.schmizz.sshj.sftp.SFTPClient
 import net.schmizz.sshj.transport.verification.HostKeyVerifier
@@ -24,6 +25,7 @@ import java.net.URL
 import java.time.Duration
 import java.security.MessageDigest
 import java.security.PublicKey
+import java.security.Security
 import java.util.Base64
 import java.util.concurrent.TimeUnit
 
@@ -168,12 +170,23 @@ private class StreamFile(override val size: Long, private val openAt: (Long) -> 
 }
 
 /**
+ * sshj asks for provider "BC" by name, and Android's own "BC" is cut down (no X25519). Other crypto in the app names no
+ * provider, or AndroidKeyStore, so swapping this one and adding it last leaves those choices as they were.
+ */
+private fun useFullBouncyCastle() = synchronized(Security::class.java) {
+    if (Security.getProvider("BC") !is BouncyCastleProvider) {
+        Security.removeProvider("BC")
+        Security.addProvider(BouncyCastleProvider())
+    }
+}
+
+/**
  * SFTP through sshj. The first connection stores the server's key fingerprint; later connections are refused with a
  * clear message if it differs. Password only, like the other kinds.
  */
 class SftpLink(private val c: Context, s: SmbServer) : RemoteLink {
     private val root = s.share
-    private val ssh = SSHClient()
+    private val ssh = run { useFullBouncyCastle(); SSHClient() }
     private var keyChanged = false
     private val sftp: SFTPClient
 

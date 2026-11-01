@@ -120,7 +120,7 @@ object RemoteLogic {
         val factory = DocumentBuilderFactory.newInstance()
         factory.isNamespaceAware = true
         factory.isExpandEntityReferences = false
-        factory.isXIncludeAware = false
+        // Not setting isXIncludeAware: it is off by default, and setting it throws on Android.
         // Android has no XMLConstants.ACCESS_EXTERNAL_*; these are their values, for the desktop parser in tests.
         runCatching { factory.setAttribute("http://javax.xml.XMLConstants/property/accessExternalDTD", "") }
         runCatching { factory.setAttribute("http://javax.xml.XMLConstants/property/accessExternalSchema", "") }
