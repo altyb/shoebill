@@ -241,6 +241,60 @@ def sec_white():
     adb("shell", f"run-as {PKG} rm files/qa_keep_ui")
     ok("no crash on white", not crashed())
 
+def squeezed():
+    """Text squeezed into a narrow column (taller than wide with a short label), the 'O f f' bug. Also two-line button labels."""
+    bad = []
+    for n in nodes():
+        t = n.get("text") or ""
+        if 2 <= len(t) <= 16:
+            x1, y1, x2, y2 = map(int, re.findall(r"\d+", n.get("bounds")))
+            if x2 > x1 and y2 - y1 > (x2 - x1) * 1.3: bad.append((t, x2 - x1, y2 - y1))
+    return bad
+
+def sec_panels():
+    """Every player panel, scrolled through, on a landscape and a portrait video, at the current screen size."""
+    from PIL import Image
+    v = adb("shell", "content", "query", "--uri", "content://media/external/video/media", "--projection", "_id:_display_name")
+    adb("shell", f"run-as {PKG} sh -c 'mkdir -p files; touch files/qa_keep_ui'")
+    for name in ("v1", "whitep"):
+        m = re.search(r"_id=(\d+), _display_name=" + name + r"\.mp4", v); assert m, name
+        adb("shell", "am", "start", "-S", "-a", "android.intent.action.VIEW", "-t", "video/*", "-d", f"content://media/external/video/media/{m.group(1)}", "-n", f"{PKG}/.MainActivity"); time.sleep(7)
+        if find("Got it", exact=True) is not None: tap("Got it", exact=True); time.sleep(1)
+        for label in ("More", "Audio", "Subtitles"):
+            if find(label, exact=True) is None: tap_xy(500, 500); time.sleep(1.2)
+            tap(label, exact=True); time.sleep(1.5); shot(f"panel-{label}-{name}")
+            w, h = Image.open(os.path.join(os.environ["SHOTS"], f"panel-{label}-{name}.png")).size
+            for i in range(4):
+                b = squeezed(); ok(f"{label} {name} page {i}: no squeezed labels", not b, b)
+                adb("shell", "input", "swipe", str(w - 200), str(h * 3 // 4), str(w - 200), str(h // 4), "400"); time.sleep(1)
+            shot(f"panel-{label}-{name}-end")
+            back(); time.sleep(1)  # Close has scrolled away
+    adb("shell", f"run-as {PKG} rm files/qa_keep_ui")
+    ok("no crash in panels", not crashed())
+
+def sec_pages():
+    """Home tabs and every settings page at the current screen size, scrolled through."""
+    from PIL import Image
+    def sweep(name):
+        shot("page-" + name); w, h = Image.open(os.path.join(os.environ["SHOTS"], f"page-{name}.png")).size
+        for i in range(3):
+            b = squeezed(); ok(f"{name} {i}: no squeezed labels", not b, b)
+            adb("shell", "input", "swipe", str(w // 2), str(h * 3 // 4), str(w // 2), str(h // 4), "400"); time.sleep(.8)
+        shot("page-" + name + "-end")
+    home()
+    for t in ("Library", "Playlists", "Network", "Music", "Downloads"): tab(t); time.sleep(.5); sweep(t)
+    tap_xy(*center(find("Settings"))); time.sleep(1.5); sweep("hub")
+    adb("shell", "input", "swipe", "500", "600", "500", "1800", "300"); time.sleep(.8)
+    for t in ("Video player", "Music", "Downloads", "General", "About"):
+        for _ in range(2): adb("shell", "input", "swipe", "500", "700", "500", "2000", "200"); time.sleep(.5)
+        for _ in range(4):
+            if find(t, exact=True) is not None: break
+            adb("shell", "input", "swipe", "500", "1500", "500", "900", "400"); time.sleep(.8)
+        tap(t, exact=True); time.sleep(1.2); sweep("set-" + t.replace(" ", "")); back(); time.sleep(1)
+    for _ in range(2): adb("shell", "input", "swipe", "500", "700", "500", "2000", "200"); time.sleep(.5)
+    tap("Appearance", exact=True); time.sleep(1.2); sweep("appearance"); back()
+    ok("no crash in pages", not crashed())
+
 def sec_download():
     home(); tab("Downloads")
     tap("Download", exact=True); time.sleep(1); ok("empty link names the field", find("Link: enter") is not None, texts()[:10])
@@ -251,7 +305,7 @@ def sec_download():
     ok("youtube audio as MP3 reaches Music/Shoebill", r and "mp3" in adb("shell", "ls", "/sdcard/Music/Shoebill", check=False), t)
     ok("no crash in downloads", not crashed())
 
-S = dict(music=sec_music, nowplaying=sec_nowplaying, player=sec_player, download=sec_download, link=sec_link, network=sec_network, extras=sec_extras, white=sec_white)
+S = dict(music=sec_music, nowplaying=sec_nowplaying, player=sec_player, download=sec_download, link=sec_link, network=sec_network, extras=sec_extras, white=sec_white, panels=sec_panels, pages=sec_pages)
 adb("logcat", "-c", "-b", "crash", check=False)
 for s in sys.argv[1:] or S:
     print("==", s, flush=True)

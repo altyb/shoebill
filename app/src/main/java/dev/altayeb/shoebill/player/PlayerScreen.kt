@@ -119,6 +119,7 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
     var abA by remember { mutableStateOf<Double?>(null) }
     var abB by remember { mutableStateOf<Double?>(null) }
     var sleepUntil by remember { mutableStateOf<Long?>(null) }
+    var sleepMinutes by remember { mutableStateOf<Int?>(null) }
     var prevFile by remember { mutableStateOf<Pair<Uri, String>?>(null) }
     var nextFile by remember { mutableStateOf<Pair<Uri, String>?>(null) }
     var endDismissed by remember { mutableStateOf(false) }
@@ -592,7 +593,8 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
             onAbA = { abA = player.getDouble("time-pos"); player.setDouble("ab-loop-a", abA ?: 0.0) },
             onAbB = { abB = player.getDouble("time-pos"); player.setDouble("ab-loop-b", abB ?: 0.0) },
             onAbClear = { abA = null; abB = null; player.setString("ab-loop-a", "no"); player.setString("ab-loop-b", "no") },
-            onSleep = { min -> sleepUntil = min?.let { System.currentTimeMillis() + it * 60_000L } },
+            onSleep = { min -> sleepMinutes = min; sleepUntil = min?.let { System.currentTimeMillis() + it * 60_000L } },
+            sleepMinutes = sleepMinutes.takeIf { sleepUntil != null },
             onShot = {
                 val file = File(context.cacheDir, "shot-${System.currentTimeMillis()}.png")
                 player.command("screenshot-to-file", file.absolutePath, "video")

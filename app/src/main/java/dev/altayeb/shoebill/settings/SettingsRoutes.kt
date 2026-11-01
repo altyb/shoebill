@@ -2,6 +2,7 @@
 
 package dev.altayeb.shoebill.settings
 
+import androidx.compose.ui.unit.sp
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.togetherWith
 import androidx.compose.material.icons.rounded.Download
@@ -410,20 +411,8 @@ fun AppearanceScreen(onBack: () -> Unit) {
 /** Generic single-choice row built on ButtonGroup + ToggleButton. */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun <T> Choice(options: List<Pair<T, String>>, selected: T, onSelect: (T) -> Unit) {
-    ButtonGroup(
-        overflowIndicator = { },
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        options.forEach { (value, label) ->
-            toggleableItem(
-                checked = value == selected,
-                label = label,
-                onCheckedChange = { if (it) onSelect(value) },
-            )
-        }
-    }
-}
+private fun <T> Choice(options: List<Pair<T, String>>, selected: T, onSelect: (T) -> Unit) =
+    dev.altayeb.shoebill.ui.ConnectedChoice(options, selected, pick = onSelect)
 
 @Composable
 private fun PreviewCard() {
@@ -443,7 +432,7 @@ private fun PreviewCard() {
 @Composable
 private fun Block(label: String, bg: Color, fg: Color, modifier: Modifier) {
     Box(modifier.clip(Radius.L).background(bg), contentAlignment = Alignment.BottomStart) {
-        Text(label, color = fg, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(12.dp))
+        Text(label, color = fg, maxLines = 1, softWrap = false, style = MaterialTheme.typography.labelMedium, modifier = Modifier.fillMaxWidth().padding(8.dp), autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = 8.sp, maxFontSize = MaterialTheme.typography.labelMedium.fontSize))
     }
 }
 

@@ -1,5 +1,9 @@
 package dev.altayeb.shoebill.player
 
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.foundation.layout.widthIn
+import dev.altayeb.shoebill.ui.ConnectedChoice
 import dev.altayeb.shoebill.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.animation.AnimatedContent
@@ -86,6 +90,7 @@ fun SidePanel(
     onAbB: () -> Unit,
     onAbClear: () -> Unit,
     onSleep: (Int?) -> Unit,
+    sleepMinutes: Int?,
     onShot: () -> Unit,
     onDecoder: (Decoder) -> Unit,
     onClose: () -> Unit,
@@ -107,7 +112,7 @@ fun SidePanel(
     ) {
         Box(Modifier.fillMaxSize()) {
             Box(
-                modifier = Modifier.align(Alignment.CenterEnd).padding(12.dp).width(372.dp).fillMaxHeight()
+                modifier = Modifier.align(Alignment.CenterEnd).padding(12.dp).widthIn(max = 372.dp).fillMaxWidth().fillMaxHeight()
                     .glass(Radius.XL),
             ) {
                 Column(Modifier.padding(20.dp).verticalScroll(rememberScrollState())) {
@@ -117,7 +122,7 @@ fun SidePanel(
                             player, trackVersion, onTracksChanged, onAddSub, onSearch, subStyle, onSubStyle, subFile, subsStartTab,
                         )
                         Panel.Audio -> AudioPanel(player, trackVersion, speed, volume, onTracksChanged)
-                        Panel.Options -> OptionsPanel(player, abA, abB, onAbA, onAbB, onAbClear, onSleep, onShot, onDecoder)
+                        Panel.Options -> OptionsPanel(player, abA, abB, onAbA, onAbB, onAbClear, onSleep, sleepMinutes, onShot, onDecoder)
                         null -> {}
                     }
                 }
@@ -245,16 +250,8 @@ private fun AudioPanel(player: MpvPlayer, trackVersion: Int, speed: Double, volu
     if (audio.isEmpty()) Text(stringResource(R.string.player_no_audio_tracks), style = MaterialTheme.typography.bodyMedium)
     audio.forEach { t -> TrackRow(trackLabel(t), t.selected) { player.setString("aid", t.id); onTracksChanged() } }
     SectionTitle(stringResource(R.string.player_speed))
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        listOf(0.5, 0.75, 1.0, 1.25, 1.5, 2.0).forEach { s ->
-            val on = kotlin.math.abs(speed - s) < 0.01
-            if (on) {
-                Button(onClick = { player.setSpeed(s) }, contentPadding = PaddingValues(0.dp, 0.dp)) { Text(speedText(s)) }
-            } else {
-                FilledTonalButton(onClick = { player.setSpeed(s) }, contentPadding = PaddingValues(0.dp, 0.dp)) { Text(speedText(s)) }
-            }
-        }
-    }
+    val speeds = listOf(0.5, 0.75, 1.0, 1.25, 1.5, 2.0)
+    ConnectedChoice(speeds.map { it to speedText(it) }, speeds.firstOrNull { kotlin.math.abs(speed - it) < 0.01 }) { player.setSpeed(it) }
     Slider(value = speed.toFloat().coerceIn(0.25f, 4f), onValueChange = { player.setSpeed(Math.round(it * 20) / 20.0) }, valueRange = 0.25f..4f)
     AudioDelayAndEq(player)
     SectionTitle(stringResource(R.string.player_volume_boost, volume.toInt().toString()))
@@ -267,11 +264,11 @@ private fun AudioDelayAndEq(player: MpvPlayer) {
     SectionTitle(stringResource(R.string.player_audio_delay, "%+.2f".format(Locale.ROOT, delayS)))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         listOf(-0.5, -0.1, 0.1, 0.5).forEach { step ->
-            FilledTonalButton(onClick = { delayS += step; player.setDouble("audio-delay", delayS) }, modifier = Modifier.weight(1f)) {
-                Text((if (step > 0) "+" else "−") + "%.1f".format(Locale.ROOT, kotlin.math.abs(step)))
+            FilledTonalButton(onClick = { delayS += step; player.setDouble("audio-delay", delayS) }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 2.dp)) {
+                Text((if (step > 0) "+" else "−") + "%.1f".format(Locale.ROOT, kotlin.math.abs(step)), maxLines = 1, softWrap = false, style = MaterialTheme.typography.labelMedium)
             }
         }
-        OutlinedButton(onClick = { delayS = 0.0; player.setDouble("audio-delay", 0.0) }) { Text("0") }
+        OutlinedButton(onClick = { delayS = 0.0; player.setDouble("audio-delay", 0.0) }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 2.dp)) { Text("0", maxLines = 1) }
     }
     val fx = player.fx ?: return
     var on by remember { mutableStateOf(fx.enabled) }
@@ -281,7 +278,7 @@ private fun AudioDelayAndEq(player: MpvPlayer) {
         FilledTonalButton(onClick = { on = !on; fx.setEnabled(on) }, modifier = Modifier.weight(1f)) {
             Text(stringResource(if (on) R.string.player_equalizer_on else R.string.off))
         }
-        OutlinedButton(onClick = { fx.reset(); version++ }) { Text(stringResource(R.string.player_equalizer_reset)) }
+        OutlinedButton(onClick = { fx.reset(); version++ }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.player_equalizer_reset), maxLines = 1) }
     }
     if (on) for (b in 0 until fx.bands) key(version, b) {
         var level by remember { mutableStateOf(fx.level(b).toFloat()) }
@@ -303,6 +300,7 @@ private fun OptionsPanel(
     onAbB: () -> Unit,
     onAbClear: () -> Unit,
     onSleep: (Int?) -> Unit,
+    sleepMinutes: Int?,
     onShot: () -> Unit,
     onDecoder: (Decoder) -> Unit,
 ) {
@@ -315,14 +313,7 @@ private fun OptionsPanel(
         if (casting) CastDialog(u, player.shareableTitle, { player.setPaused(true) }) { casting = false }
     }
     SectionTitle(stringResource(R.string.player_decoder))
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Decoder.values().forEach { d ->
-            val on = hw == d.hwdec
-            val onClick = { hw = d.hwdec; player.setString("hwdec", d.hwdec); onDecoder(d) }
-            if (on) Button(onClick = onClick) { Text(decoderName(d)) }
-            else FilledTonalButton(onClick = onClick) { Text(decoderName(d)) }
-        }
-    }
+    ConnectedChoice(Decoder.values().map { it to decoderName(it) }, Decoder.values().firstOrNull { it.hwdec == hw }) { d -> hw = d.hwdec; player.setString("hwdec", d.hwdec); onDecoder(d) }
     val chapters = remember { player.chapters() }
     if (chapters.isNotEmpty()) {
         SectionTitle(stringResource(R.string.player_chapters))
@@ -335,28 +326,22 @@ private fun OptionsPanel(
     }
     SectionTitle(stringResource(R.string.player_frame_step))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedButton(onClick = { player.command("frame-back-step") }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.player_frame_back)) }
-        OutlinedButton(onClick = { player.command("frame-step") }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.player_frame_next)) }
+        // Short visible labels under the "Frame by frame" title, full names for screen readers.
+        val back = stringResource(R.string.player_frame_back); val next = stringResource(R.string.player_frame_next)
+        OutlinedButton(onClick = { player.command("frame-back-step") }, modifier = Modifier.weight(1f).semantics { contentDescription = back }) { Text(stringResource(R.string.player_previous), maxLines = 1, softWrap = false) }
+        OutlinedButton(onClick = { player.command("frame-step") }, modifier = Modifier.weight(1f).semantics { contentDescription = next }) { Text(stringResource(R.string.player_next), maxLines = 1, softWrap = false) }
     }
     SectionTitle(stringResource(R.string.player_ab_loop))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedButton(onClick = onAbA) { Text(if (abA == null) stringResource(R.string.player_ab_set_a) else "A ${fmtSec(abA)}") }
-        OutlinedButton(onClick = onAbB) { Text(if (abB == null) stringResource(R.string.player_ab_set_b) else "B ${fmtSec(abB)}") }
-        OutlinedButton(onClick = onAbClear) { Text(stringResource(R.string.clear)) }
+        val tight = PaddingValues(horizontal = 4.dp)
+        OutlinedButton(onClick = onAbA, Modifier.weight(1f), contentPadding = tight) { Text(if (abA == null) stringResource(R.string.player_ab_set_a) else "A ${fmtSec(abA)}", maxLines = 1, softWrap = false) }
+        OutlinedButton(onClick = onAbB, Modifier.weight(1f), contentPadding = tight) { Text(if (abB == null) stringResource(R.string.player_ab_set_b) else "B ${fmtSec(abB)}", maxLines = 1, softWrap = false) }
+        OutlinedButton(onClick = onAbClear, Modifier.weight(1f), contentPadding = tight) { Text(stringResource(R.string.clear), maxLines = 1, softWrap = false) }
     }
     SectionTitle(stringResource(R.string.player_sleep_timer))
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        listOf(15, 30, 60).forEach { m -> OutlinedButton(onClick = { onSleep(m) }) { Text(stringResource(R.string.player_minutes_short, m.toString())) } }
-        OutlinedButton(onClick = { onSleep(null) }) { Text(stringResource(R.string.off)) }
-    }
+    ConnectedChoice(listOf<Pair<Int?, String>>(null to stringResource(R.string.off)) + listOf(15, 30, 60).map { it to stringResource(R.string.player_minutes_short, it.toString()) }, sleepMinutes, pick = onSleep)
     SectionTitle(stringResource(R.string.player_aspect))
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        listOf("-1" to stringResource(R.string.player_aspect_auto), "16:9" to "16:9", "4:3" to "4:3", "2.35:1" to "2.35").forEach { (v, label) ->
-            val onClick = { aspect = v; player.setString("video-aspect-override", v) }
-            if (aspect == v) Button(onClick = onClick) { Text(label) }
-            else FilledTonalButton(onClick = onClick) { Text(label) }
-        }
-    }
+    ConnectedChoice(listOf("-1" to stringResource(R.string.player_aspect_auto), "16:9" to "16:9", "4:3" to "4:3", "2.35:1" to "2.35"), aspect) { v -> aspect = v; player.setString("video-aspect-override", v) }
     Spacer(Modifier.height(8.dp))
     FilledTonalButton(onClick = {
         crop = !crop

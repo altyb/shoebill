@@ -465,9 +465,9 @@ fun EndCard(name: String, countdown: Int, onPlayNow: () -> Unit, onCancel: () ->
                 Text(stringResource(R.string.player_next_in, countdown.toString()), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
                 Text(name, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = onPlayNow) { Text(stringResource(R.string.player_play_now)) }
-                    FilledTonalButton(onClick = onCancel) { Text(stringResource(R.string.cancel)) }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = onPlayNow, Modifier.weight(1f)) { Text(stringResource(R.string.player_play_now), maxLines = 1) }
+                    FilledTonalButton(onClick = onCancel, Modifier.weight(1f)) { Text(stringResource(R.string.cancel), maxLines = 1) }
                 }
             }
         }

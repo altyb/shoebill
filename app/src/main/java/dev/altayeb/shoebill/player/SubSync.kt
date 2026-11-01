@@ -106,9 +106,9 @@ fun SubTimingTab(player: MpvPlayer, subFile: File?) {
             Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(cue.ifBlank { stringResource(R.string.sub_no_cue) }, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
                 Spacer(Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { player.command("sub-seek", "-1") }) { Text(stringResource(R.string.player_previous)) }
-                    OutlinedButton(onClick = { player.command("sub-seek", "1") }) { Text(stringResource(R.string.player_next)) }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { player.command("sub-seek", "-1") }, Modifier.weight(1f)) { Text(stringResource(R.string.player_previous), maxLines = 1) }
+                    OutlinedButton(onClick = { player.command("sub-seek", "1") }, Modifier.weight(1f)) { Text(stringResource(R.string.player_next), maxLines = 1) }
                 }
             }
         }

@@ -338,13 +338,15 @@ private fun HomeDock(music: MusicHost, tab: Int, modifier: Modifier, onTab: (Int
     Surface(modifier, shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp), color = cs.surfaceContainer) {
         Column(Modifier.animateContentSize(MaterialTheme.motionScheme.defaultSpatialSpec())) {
             if (music.hasTrack) MiniPlayer(music)
+            // Narrow phones get one smaller size for all five labels, so they stay equal and do not collide.
+            val navLabel = if (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp < 360) MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp) else MaterialTheme.typography.labelMedium
             ShortNavigationBar(containerColor = Color.Transparent) {
                 homeTabs.forEachIndexed { i, (labelRes, icon) ->
                     ShortNavigationBarItem(
                         selected = tab == i,
                         onClick = { onTab(i) },
                         icon = { Icon(icon, null) },
-                        label = { Text(stringResource(labelRes), maxLines = 1, softWrap = false, autoSize = TextAutoSize.StepBased(minFontSize = 9.sp, maxFontSize = MaterialTheme.typography.labelMedium.fontSize)) }, // shrinks only when five labels cannot fit
+                        label = { Text(stringResource(labelRes), maxLines = 1, softWrap = false, style = navLabel, autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = 8.sp, maxFontSize = navLabel.fontSize)) },
                     )
                 }
             }
