@@ -68,6 +68,7 @@ import dev.altayeb.shoebill.player.cast.CastDialog
 import dev.altayeb.shoebill.ui.theme.Radius
 import java.math.BigDecimal
 import java.math.RoundingMode
+import kotlin.math.roundToInt
 
 /** Side sheet, 372 dp, 28 dp corners, over the video, which keeps playing (ق-07). */
 @Composable
@@ -79,6 +80,7 @@ fun SidePanel(
     volume: Double,
     abA: Double?,
     abB: Double?,
+    chapters: List<Pair<String, Double>>,
     onTracksChanged: () -> Unit,
     onAddSub: () -> Unit,
     onSearch: () -> Unit,
@@ -122,7 +124,7 @@ fun SidePanel(
                             player, trackVersion, onTracksChanged, onAddSub, onSearch, subStyle, onSubStyle, subFile, subsStartTab,
                         )
                         Panel.Audio -> AudioPanel(player, trackVersion, speed, volume, onTracksChanged)
-                        Panel.Options -> OptionsPanel(player, abA, abB, onAbA, onAbB, onAbClear, onSleep, sleepMinutes, onShot, onDecoder)
+                        Panel.Options -> OptionsPanel(player, abA, abB, chapters, onAbA, onAbB, onAbClear, onSleep, sleepMinutes, onShot, onDecoder)
                         null -> {}
                     }
                 }
@@ -299,6 +301,7 @@ private fun OptionsPanel(
     player: MpvPlayer,
     abA: Double?,
     abB: Double?,
+    chapters: List<Pair<String, Double>>,
     onAbA: () -> Unit,
     onAbB: () -> Unit,
     onAbClear: () -> Unit,
@@ -317,7 +320,13 @@ private fun OptionsPanel(
     }
     SectionTitle(stringResource(R.string.player_decoder))
     ConnectedChoice(Decoder.values().map { it to decoderName(it) }, Decoder.values().firstOrNull { it.hwdec == hw }) { d -> hw = d.hwdec; player.setString("hwdec", d.hwdec); onDecoder(d) }
-    val chapters = remember { player.chapters() }
+    // mpv deinterlace=auto. Direct mediacodec hands mpv GPU frames that no filter can touch, so it stays a no-op there; HW+ (copy) and SW work.
+    var deint by remember { mutableStateOf(player.getString("deinterlace") == "auto") }
+    SectionTitle(stringResource(R.string.player_deinterlace))
+    ConnectedChoice(listOf(false to stringResource(R.string.off), true to stringResource(R.string.player_deint_auto)), deint) { v ->
+        deint = v; player.setString("deinterlace", if (v) "auto" else "no")
+    }
+    if (hw == "mediacodec") Text(stringResource(R.string.player_deint_hw_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     if (chapters.isNotEmpty()) {
         SectionTitle(stringResource(R.string.player_chapters))
         chapters.forEachIndexed { i, (title, sec) ->
@@ -345,6 +354,35 @@ private fun OptionsPanel(
     ConnectedChoice(listOf<Pair<Int?, String>>(null to stringResource(R.string.off)) + listOf(15, 30, 60).map { it to stringResource(R.string.player_minutes_short, it.toString()) }, sleepMinutes, pick = onSleep)
     SectionTitle(stringResource(R.string.player_aspect))
     ConnectedChoice(listOf("-1" to stringResource(R.string.player_aspect_auto), "16:9" to "16:9", "4:3" to "4:3", "2.35:1" to "2.35"), aspect) { v -> aspect = v; player.setString("video-aspect-override", v) }
+    // mpv video equalizer, -100..100. Session-wide: mpv keeps the values across files.
+    val picProps = listOf("brightness", "contrast", "saturation", "gamma")
+    val picLabels = listOf(R.string.player_pic_brightness, R.string.player_pic_contrast, R.string.player_pic_saturation, R.string.player_pic_gamma)
+    var pic by remember { mutableStateOf(picProps.associateWith { player.getString(it)?.toIntOrNull() ?: 0 }) }
+    SectionTitle(stringResource(R.string.player_picture))
+    picProps.forEachIndexed { i, prop ->
+        val v = pic[prop] ?: 0
+        Row(Modifier.fillMaxWidth()) {
+            Text(stringResource(picLabels[i]), Modifier.weight(1f), maxLines = 1, softWrap = false)
+            Text(v.toString(), maxLines = 1, softWrap = false)
+        }
+        Slider(value = v.toFloat(), valueRange = -100f..100f, onValueChange = { f ->
+            val n = f.roundToInt()
+            pic = pic + (prop to n)
+            player.setString(prop, n.toString())
+        })
+    }
+    OutlinedButton(onClick = {
+        picProps.forEach { player.setString(it, "0") }
+        pic = picProps.associateWith { 0 }
+    }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.player_pic_reset), maxLines = 1, softWrap = false) }
+    // mpv --scale: the upscaling filter. Sharper filters cost GPU time and battery.
+    SectionTitle(stringResource(R.string.player_scaling))
+    var scale by remember { mutableStateOf(player.getString("scale") ?: "bilinear") }
+    ConnectedChoice(
+        listOf("bilinear" to stringResource(R.string.player_scale_fast), "spline36" to stringResource(R.string.player_scale_balanced), "ewa_lanczossharp" to stringResource(R.string.player_scale_sharp)),
+        scale,
+    ) { v -> scale = v; player.setString("scale", v) }
+    if (scale == "ewa_lanczossharp") Text(stringResource(R.string.player_scale_warn), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     Spacer(Modifier.height(8.dp))
     FilledTonalButton(onClick = {
         crop = !crop

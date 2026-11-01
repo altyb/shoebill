@@ -35,6 +35,7 @@ data class Settings(
     val contrast: Contrast = Contrast.Standard,
     // player
     val decoder: Decoder = Decoder.HWPlus,
+    val deinterlace: Boolean = false, // mpv deinterlace=auto when on; needs a copy decoder (HW+ or SW)
     val autoResume: Boolean = true,
     val playNext: Boolean = true,
     val gestures: Boolean = true,
@@ -85,7 +86,7 @@ class AppSettings private constructor(context: Context) {
         p.edit()
             .putString("colorSource", n.colorSource.name).putInt("seed", n.seed).putString("style", n.style.name)
             .putString("darkMode", n.darkMode.name).putBoolean("amoled", n.amoled).putString("contrast", n.contrast.name)
-            .putString("decoder", n.decoder.name).putBoolean("autoResume", n.autoResume).putBoolean("playNext", n.playNext)
+            .putString("decoder", n.decoder.name).putBoolean("deinterlace", n.deinterlace).putBoolean("autoResume", n.autoResume).putBoolean("playNext", n.playNext)
             .putBoolean("gestures", n.gestures).putBoolean("backgroundAudio", n.backgroundAudio).putBoolean("keepHistory", n.keepHistory)
             .putFloat("defaultSpeed", n.defaultSpeed).putBoolean("loopOne", n.loopOne).putBoolean("autoPip", n.autoPip).putInt("orientation", n.orientation)
             .putBoolean("showRemaining", n.showRemaining).putBoolean("rememberBrightness", n.rememberBrightness).putFloat("brightness", n.brightness)
@@ -109,7 +110,7 @@ class AppSettings private constructor(context: Context) {
             colorSource = enumOr(p.getString("colorSource", null), d.colorSource), seed = p.getInt("seed", d.seed),
             style = enumOr(p.getString("style", null), d.style), darkMode = enumOr(p.getString("darkMode", null), d.darkMode),
             amoled = p.getBoolean("amoled", d.amoled), contrast = enumOr(p.getString("contrast", null), d.contrast),
-            decoder = enumOr(p.getString("decoder", null), d.decoder), autoResume = p.getBoolean("autoResume", d.autoResume),
+            decoder = enumOr(p.getString("decoder", null), d.decoder), deinterlace = p.getBoolean("deinterlace", d.deinterlace), autoResume = p.getBoolean("autoResume", d.autoResume),
             playNext = p.getBoolean("playNext", d.playNext), gestures = p.getBoolean("gestures", d.gestures),
             backgroundAudio = p.getBoolean("backgroundAudio", d.backgroundAudio), keepHistory = p.getBoolean("keepHistory", d.keepHistory),
             defaultSpeed = p.getFloat("defaultSpeed", d.defaultSpeed), loopOne = p.getBoolean("loopOne", d.loopOne), autoPip = p.getBoolean("autoPip", d.autoPip),

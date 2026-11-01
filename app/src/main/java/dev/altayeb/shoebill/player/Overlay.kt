@@ -3,6 +3,7 @@ package dev.altayeb.shoebill.player
 import androidx.compose.runtime.collectAsState
 import androidx.compose.animation.togetherWith
 import dev.altayeb.shoebill.R
+import dev.altayeb.shoebill.player.logic.chapterFraction
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.animation.AnimatedVisibility
@@ -142,6 +143,7 @@ fun Controls(
     shownSec: Double,
     abA: Double?,
     abB: Double?,
+    chapterSecs: List<Double>,
     hasPrev: Boolean,
     hasNext: Boolean,
     onBack: () -> Unit,
@@ -242,7 +244,7 @@ fun Controls(
             SeekPreview(player.shareableUri, shownSec, durationSec, scrubbing)
             Surface(Modifier.slideFrom(top = false), shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp), color = ControlSurface) { Column(Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.displayCutout).padding(vertical = 8.dp)) {
                 // Every edge lands 16 in: bar and times directly, icon row at 4 because a 48 dp button holds its icon 12 in.
-                Box(Modifier.padding(horizontal = 16.dp)) { SeekBar(durationSec, shownSec, paused, abA, abB, { scrubbing = true; onScrub(it) }, { scrubbing = false; onScrubEnd(it) }) }
+                Box(Modifier.padding(horizontal = 16.dp)) { SeekBar(durationSec, shownSec, paused, abA, abB, chapterSecs, { scrubbing = true; onScrub(it) }, { scrubbing = false; onScrubEnd(it) }) }
                 Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(formatTime((shownSec * 1000).toLong()), color = PlayerColors.On, style = MaterialTheme.typography.labelLarge)
                     Text(
@@ -300,7 +302,7 @@ private fun Pill(content: @Composable () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically, content = { content() })
 }
 
-/** Seek bar: wavy while playing, flat when paused, amber marks for the A-B loop. */
+/** Seek bar: wavy while playing, flat when paused, amber marks for the A-B loop, small ticks for chapters. */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun SeekBar(
@@ -309,6 +311,7 @@ private fun SeekBar(
     paused: Boolean,
     abA: Double?,
     abB: Double?,
+    chapterSecs: List<Double>,
     onScrub: (Double) -> Unit,
     onScrubEnd: (Double?) -> Unit,
 ) {
@@ -363,6 +366,15 @@ private fun SeekBar(
                     BrandAmber,
                     topLeft = Offset(x(sec) - 1.5.dp.toPx(), size.height / 2 - 10.dp.toPx()),
                     size = Size(3.dp.toPx(), 20.dp.toPx()),
+                )
+            }
+            // chapter ticks: thin and short, so they never read as A-B marks
+            chapterSecs.forEach { sec ->
+                val f = chapterFraction(sec, durationSec) ?: return@forEach
+                drawRect(
+                    PlayerColors.On.copy(alpha = 0.8f),
+                    topLeft = Offset(f * size.width - 0.75.dp.toPx(), size.height / 2 - 5.dp.toPx()),
+                    size = Size(1.5.dp.toPx(), 10.dp.toPx()),
                 )
             }
         }

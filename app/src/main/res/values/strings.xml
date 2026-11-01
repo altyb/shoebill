@@ -263,4 +263,18 @@
     <string name="video_max_volume">Highest volume</string>
     <string name="video_pip_blocked">Picture-in-picture is off for this app</string>
     <string name="video_pip_blocked_sub">Tap to turn it on in Android settings</string>
+    <string name="player_deinterlace">Deinterlace</string>
+    <string name="player_deint_auto">Auto</string>
+    <string name="player_deint_hw_note">Direct hardware decoding cannot deinterlace. Use HW+ to apply it.</string>
+    <string name="player_picture">Picture</string>
+    <string name="player_pic_brightness">Brightness</string>
+    <string name="player_pic_contrast">Contrast</string>
+    <string name="player_pic_saturation">Saturation</string>
+    <string name="player_pic_gamma">Gamma</string>
+    <string name="player_pic_reset">Reset picture</string>
+    <string name="player_scaling">Scaling</string>
+    <string name="player_scale_fast">Fast</string>
+    <string name="player_scale_balanced">Balanced</string>
+    <string name="player_scale_sharp">Sharpest</string>
+    <string name="player_scale_warn">Sharpest uses much more battery and can stutter on older phones.</string>
 </resources>

@@ -26,7 +26,8 @@ class MpvPlayer(context: Context) : MPVLib.EventObserver {
     private val stateTick = object : Runnable {
         override fun run() {
             val keys = listOf("filename", "duration", "time-pos", "pause", "sid", "aid", "secondary-sid", "sub-delay", "hwdec-current", "volume", "speed",
-                "video-zoom", "ab-loop-a", "ab-loop-b", "video-aspect-override", "eof-reached", "af", "sub-pos", "sub-start", "user-data/shoebill/ui")
+                "video-zoom", "ab-loop-a", "ab-loop-b", "video-aspect-override", "eof-reached", "af", "sub-pos", "sub-start", "user-data/shoebill/ui",
+                "deinterlace", "deinterlace-active", "scale", "brightness", "contrast", "saturation", "gamma", "chapter")
             Log.d("BrandState", keys.joinToString(" ") { k -> "$k=${runCatching { mpv.getPropertyString(k) }.getOrNull()}" })
             stateHandler.postDelayed(this, 1000)
         }
