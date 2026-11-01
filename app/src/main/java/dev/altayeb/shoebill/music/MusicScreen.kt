@@ -124,7 +124,7 @@ fun MusicTab(host: MusicHost, modifier: Modifier = Modifier) {
     Box(modifier.fillMaxSize()) {
         val all = host.songs
         if (all == null) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { androidx.compose.material3.LoadingIndicator() }
-        else if (all.isEmpty()) Text(stringResource(R.string.music_empty), Modifier.fillMaxWidth().padding(32.dp), textAlign = TextAlign.Center)
+        else if (all.isEmpty()) dev.altayeb.shoebill.ui.EmptyState(R.drawable.art_music, stringResource(R.string.music_empty))
         else Library(all, host.controller)
     }
 }
@@ -195,7 +195,7 @@ private fun Library(all: List<Song>, c: MediaController?) {
     } ?: Column(Modifier.fillMaxSize()) {
         OutlinedTextField(query, { query = it }, Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), singleLine = true,
             label = { Text(stringResource(R.string.search)) }, leadingIcon = { Icon(Icons.Rounded.Search, null) })
-        Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             LibTab.entries.forEach { t -> FilterChip(tab == t, { tab = t }, { Text(stringResource(t.label)) }) }
         }
         val q = query.trim()
@@ -251,8 +251,8 @@ private class MorphShape(val morph: androidx.graphics.shapes.Morph, val progress
 private fun AlbumGrid(groups: List<Pair<String, List<Song>>>, open: (String, List<Song>) -> Unit) {
     androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
         androidx.compose.foundation.lazy.grid.GridCells.Adaptive(150.dp), Modifier.fillMaxSize(),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         items(groups.size, key = { groups[it].first }) { i ->
             val (name, songs) = groups[i]
@@ -260,7 +260,7 @@ private fun AlbumGrid(groups: List<Pair<String, List<Song>>>, open: (String, Lis
                 val side = maxWidth.value.toInt()
                 Column {
                     songs.firstOrNull()?.let { Art(it, side) }
-                    Text(name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
+                    Text(name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
                     Text(songs.first().artist.ifEmpty { stringResource(R.string.music_count, songs.size) }, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
@@ -338,7 +338,7 @@ fun MiniPlayer(host: MusicHost) {
         Modifier.fillMaxWidth()
             .draggable(drag, androidx.compose.foundation.gestures.Orientation.Vertical, onDragStopped = { settle(host, scope, sheetOpen, sheetClose, it) })
             .clickable { scope.launch { host.sheet.animateTo(1f, sheetOpen) } }
-            .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 2.dp),
+            .padding(start = 16.dp, end = 4.dp, top = 8.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         host.songs?.firstOrNull { it.id == s.current?.mediaId?.toLongOrNull() }?.let { Art(it, 44); Spacer(Modifier.width(12.dp)) }
@@ -520,11 +520,11 @@ private fun SoundPage(c: MediaController, s: PlayerState, sleepAt: Long, setSlee
     val ctx = LocalContext.current
     Column(Modifier.fillMaxSize().padding(8.dp).then(Modifier), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(stringResource(R.string.player_speed), style = MaterialTheme.typography.titleSmall)
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(0.75f, 1f, 1.25f, 1.5f, 2f).forEach { v -> FilterChip(kotlin.math.abs(s.speed - v) < 0.01f, { c.setPlaybackSpeed(v) }, { Text("$v×") }) }
         }
         Text(stringResource(R.string.player_sleep_timer), style = MaterialTheme.typography.titleSmall)
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(15, 30, 60).forEach { m -> OutlinedButton(onClick = { setSleep(System.currentTimeMillis() + m * 60_000L) }) { Text(stringResource(R.string.player_minutes_short, m.toString())) } }
             OutlinedButton(onClick = { setSleep(0L) }) { Text(stringResource(R.string.off)) }
         }

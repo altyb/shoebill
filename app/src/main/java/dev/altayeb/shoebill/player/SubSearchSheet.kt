@@ -185,7 +185,7 @@ private fun SearchContent(
         }
         SearchPill(query, { query = it }, stringResource(R.string.sub_search_hint), Modifier.fillMaxWidth(), onSearch = { reload++ })
         Spacer(Modifier.height(8.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             LANGS.forEach { (code, label) ->
                 FilterChip(
                     selected = code in langs,
@@ -194,9 +194,9 @@ private fun SearchContent(
                 )
             }
         }
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(8.dp))
         if (keyed.isNotEmpty()) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 keyed.forEach { id ->
                     val isHidden = id in hidden
                     FilterChip(
@@ -247,7 +247,7 @@ private fun ResultRow(r: SubResult, busy: Boolean, onClick: () -> Unit, modifier
         onClick = onClick,
         shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        modifier = modifier.fillMaxWidth().padding(vertical = 3.dp),
+        modifier = modifier.fillMaxWidth().padding(vertical = 4.dp),
     ) {
         Row(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {

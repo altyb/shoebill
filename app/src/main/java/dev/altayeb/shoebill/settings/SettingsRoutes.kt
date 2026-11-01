@@ -384,7 +384,7 @@ private fun PreviewCard() {
 @Composable
 private fun Block(label: String, bg: Color, fg: Color, modifier: Modifier) {
     Box(modifier.clip(RoundedCornerShape(20.dp)).background(bg), contentAlignment = Alignment.BottomStart) {
-        Text(label, color = fg, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(10.dp))
+        Text(label, color = fg, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(12.dp))
     }
 }
 

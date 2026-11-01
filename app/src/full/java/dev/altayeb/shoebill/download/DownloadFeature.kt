@@ -382,7 +382,7 @@ object DownloadFeature {
         val notify = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { }
         val cs = MaterialTheme.colorScheme
         val hero = jobs.firstOrNull { it.state == DlState.Running || it.state == DlState.Finishing }
-        LazyColumn(modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        LazyColumn(modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item(key = "hero") {
                 Column(Modifier.animateContentSize()) {
                     if (hero != null) { HeroCard(hero); Spacer(Modifier.height(12.dp)) }
@@ -399,20 +399,20 @@ object DownloadFeature {
                             sheetUrl = u
                         }
                     }, Modifier.fillMaxWidth()) { Text(stringResource(R.string.dl_start)) }
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(8.dp))
                     Text(stringResource(R.string.dl_rights), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
                     val others = jobs.filter { it !== hero }
                     if (others.isNotEmpty()) Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(stringResource(R.string.dl_queue), Modifier.weight(1f), style = MaterialTheme.typography.titleSmall)
-                        TextButton(onClick = { DownloadQueue.clearFinished() }) { Text(stringResource(R.string.dl_clear)) }
+                        TextButton(onClick = { DownloadQueue.clearFinished() }, contentPadding = PaddingValues(horizontal = 0.dp, vertical = 8.dp)) { Text(stringResource(R.string.dl_clear)) }
                     }
-                    if (others.any { it.state == DlState.Done }) Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (others.any { it.state == DlState.Done }) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(R.string.dl_all, R.string.dl_video, R.string.dl_audio).forEachIndexed { i, l -> FilterChip(kind == i, { kind = i }, { Text(stringResource(l)) }) }
                     }
                 }
             }
             items(jobs.filter { it !== hero && (kind == 0 || (it.state == DlState.Done && it.audio == (kind == 2))) }.reversed(), key = { it.id }) { j -> JobCard(j, Modifier.animateItem()) }
-            if (jobs.isEmpty()) item(key = "none") { Text(stringResource(R.string.dl_none), color = cs.onSurfaceVariant) }
+            if (jobs.isEmpty()) item(key = "none") { dev.altayeb.shoebill.ui.EmptyState(R.drawable.art_download, stringResource(R.string.dl_none), Modifier.height(320.dp)) }
         }
         sheetUrl?.let { u -> ConfigureSheet(u, { sheetUrl = null }) { url = "" } }
     }
@@ -442,12 +442,12 @@ object DownloadFeature {
             val i = info
             val entries = i?.entries.orEmpty()
             // The buttons stay in reach however long the format or playlist list gets.
-            Column(Modifier.fillMaxWidth().weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(Modifier.fillMaxWidth().weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 when {
                     i != null -> {
                         if (i.thumb != null) Box {
                             Thumb(i.thumb, proxy, Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(16.dp)))
-                            if (i.durationSec > 0) Text(DownloadLogic.time(i.durationSec), Modifier.align(Alignment.BottomEnd).padding(8.dp).background(androidx.compose.ui.graphics.Color.Black.copy(alpha = .7f), RoundedCornerShape(6.dp)).padding(horizontal = 6.dp, vertical = 2.dp), color = androidx.compose.ui.graphics.Color.White, style = MaterialTheme.typography.labelSmall)
+                            if (i.durationSec > 0) Text(DownloadLogic.time(i.durationSec), Modifier.align(Alignment.BottomEnd).padding(8.dp).background(androidx.compose.ui.graphics.Color.Black.copy(alpha = .7f), RoundedCornerShape(6.dp)).padding(horizontal = 8.dp, vertical = 2.dp), color = androidx.compose.ui.graphics.Color.White, style = MaterialTheme.typography.labelSmall)
                         }
                         Text(i.title, style = MaterialTheme.typography.titleMedium, maxLines = 3, overflow = TextOverflow.Ellipsis)
                         if (i.uploader.isNotEmpty()) Text(i.uploader, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -460,16 +460,16 @@ object DownloadFeature {
                 if (entries.isNotEmpty()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(stringResource(R.string.dl_pick_count, entries.size - unpicked.size, entries.size), Modifier.weight(1f), style = MaterialTheme.typography.titleSmall)
-                        TextButton(onClick = { if (unpicked.isEmpty()) unpicked.addAll(entries.map { it.url }) else unpicked.clear() }) {
+                        TextButton(onClick = { if (unpicked.isEmpty()) unpicked.addAll(entries.map { it.url }) else unpicked.clear() }, contentPadding = PaddingValues(horizontal = 0.dp, vertical = 8.dp)) {
                             Text(stringResource(if (unpicked.isEmpty()) R.string.dl_select_none else R.string.dl_select_all))
                         }
                     }
                     // Lazy, so a 250-video playlist fetches only the thumbnails on screen.
                     LazyColumn(Modifier.fillMaxWidth().heightIn(max = 340.dp)) { items(entries, key = { it.url }) { e ->
                         Row(Modifier.fillMaxWidth().clickable { if (!unpicked.remove(e.url)) unpicked.add(e.url) }, verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(e.url !in unpicked, null, Modifier.padding(horizontal = 8.dp, vertical = 10.dp))
+                            Checkbox(e.url !in unpicked, null, Modifier.padding(end = 12.dp).padding(vertical = 12.dp))
                             Thumb(e.thumb, proxy, Modifier.width(80.dp).aspectRatio(16f / 9f).clip(RoundedCornerShape(8.dp)))
-                            Spacer(Modifier.width(10.dp))
+                            Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(e.title, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
                                 if (e.durationSec > 0) Text(DownloadLogic.time(e.durationSec), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -481,15 +481,15 @@ object DownloadFeature {
                 QualityChips(quality) { quality = it; format = null }
                 val fmts = i?.formats.orEmpty()
                 if (fmts.isNotEmpty()) {
-                    TextButton(onClick = { showFormats = !showFormats }) { Text(stringResource(R.string.dl_all_formats, fmts.size)) }
-                    if (showFormats) androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    TextButton(onClick = { showFormats = !showFormats }, contentPadding = PaddingValues(horizontal = 0.dp, vertical = 8.dp)) { Text(stringResource(R.string.dl_all_formats, fmts.size)) }
+                    if (showFormats) androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         fmts.forEach { f -> FilterChip(format == f, { format = f.takeIf { format != it } }, { Text(DownloadLogic.formatLabel(f)) }) }
                     }
                 }
-                if (entries.isEmpty()) Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(playlist, { playlist = it }); Text(stringResource(R.string.dl_playlist)) }
-                if (quality.audio == null) Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(subs, { subs = it }); Text(stringResource(R.string.dl_subs)) }
+                if (entries.isEmpty()) Row(Modifier.offset(x = (-12).dp), verticalAlignment = Alignment.CenterVertically) { Checkbox(playlist, { playlist = it }); Text(stringResource(R.string.dl_playlist)) }
+                if (quality.audio == null) Row(Modifier.offset(x = (-12).dp), verticalAlignment = Alignment.CenterVertically) { Checkbox(subs, { subs = it }); Text(stringResource(R.string.dl_subs)) }
             }
-                Row(Modifier.padding(horizontal = 20.dp).padding(bottom = 20.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.padding(horizontal = 16.dp).padding(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = close, Modifier.weight(1f)) { Text(stringResource(R.string.dl_cancel)) }
                     Button(onClick = {
                         val base = DownloadOptions(quality, playlist, subs, prefs.limit, proxy, format?.id, format?.audioOnly == true)
@@ -505,7 +505,7 @@ object DownloadFeature {
 
     @Composable
     private fun QualityChips(selected: Quality, pick: (Quality) -> Unit) {
-        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Quality.entries.forEach { q ->
                 FilterChip(selected == q, { pick(q) }, { Text(when (q) {
                     Quality.BEST -> stringResource(R.string.dl_best)
@@ -534,7 +534,7 @@ object DownloadFeature {
             Column {
                 if (j.thumb != null) Thumb(j.thumb, j.options.proxy, Modifier.fillMaxWidth().aspectRatio(16f / 9f))
                 androidx.compose.material3.LinearWavyProgressIndicator(progress = { j.percent / 100f }, Modifier.fillMaxWidth())
-                Row(Modifier.padding(start = 16.dp, end = 8.dp, top = 10.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text(j.title.ifEmpty { j.url }, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
                         Text(status(j), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -566,7 +566,7 @@ object DownloadFeature {
         Surface(modifier.fillMaxWidth().then(if (j.state == DlState.Done && j.fileUri != null) Modifier.clickable(onClick = open) else Modifier), shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
             Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Thumb(j.thumb, j.options.proxy, Modifier.width(112.dp).aspectRatio(16f / 9f).clip(RoundedCornerShape(10.dp)))
-                Spacer(Modifier.width(10.dp))
+                Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(j.title.ifEmpty { j.url }, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
                     Text(status(j), style = MaterialTheme.typography.bodySmall, maxLines = 3, overflow = TextOverflow.Ellipsis,
@@ -599,10 +599,10 @@ object DownloadFeature {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(stringResource(R.string.dl_quality), style = MaterialTheme.typography.titleSmall)
                 QualityChips(quality) { quality = it; prefs.quality = it }
-                Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(playlist, { playlist = it; prefs.playlist = it }); Text(stringResource(R.string.dl_playlist)) }
-                Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(subs, { subs = it; prefs.subtitles = it }); Text(stringResource(R.string.dl_subs)) }
+                Row(Modifier.offset(x = (-12).dp), verticalAlignment = Alignment.CenterVertically) { Checkbox(playlist, { playlist = it; prefs.playlist = it }); Text(stringResource(R.string.dl_playlist)) }
+                Row(Modifier.offset(x = (-12).dp), verticalAlignment = Alignment.CenterVertically) { Checkbox(subs, { subs = it; prefs.subtitles = it }); Text(stringResource(R.string.dl_subs)) }
                 Text(stringResource(R.string.dl_limit), style = MaterialTheme.typography.titleSmall)
-                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(limit == null, { limit = null; prefs.limit = null }, { Text(stringResource(R.string.dl_no_limit)) })
                     DownloadLogic.LIMITS.forEach { l -> FilterChip(limit == l, { limit = l; prefs.limit = l }, { Text(l + "B/s") }) }
                 }
@@ -610,10 +610,10 @@ object DownloadFeature {
                 OutlinedTextField(proxy, { proxy = it.take(300); if (DownloadLogic.validProxy(it)) prefs.proxy = it.trim() }, Modifier.fillMaxWidth(), singleLine = true,
                     label = { Text(stringResource(R.string.dl_proxy)) }, isError = !ok,
                     supportingText = { Text(stringResource(if (ok) R.string.dl_proxy_hint else R.string.dl_bad_proxy)) })
-                if (Build.VERSION.SDK_INT >= 31) TextButton(onClick = {
+                if (Build.VERSION.SDK_INT >= 31) TextButton(contentPadding = PaddingValues(vertical = 8.dp), onClick = {
                     ctx.startActivity(Intent(android.provider.Settings.ACTION_APP_OPEN_BY_DEFAULT_SETTINGS, android.net.Uri.parse("package:${ctx.packageName}")))
                 }) { Text(stringResource(R.string.dl_open_links)) }
-                TextButton(enabled = !updating, onClick = {
+                TextButton(enabled = !updating, contentPadding = PaddingValues(vertical = 8.dp), onClick = {
                     updating = true; message = null
                     scope.launch {
                         message = withContext(Dispatchers.IO) {

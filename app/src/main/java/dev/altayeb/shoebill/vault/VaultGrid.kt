@@ -259,13 +259,13 @@ fun VaultGrid(
                     }
                 }
                 if (shown.isEmpty()) {
-                    EmptyState(Icons.Filled.Lock, stringResource(R.string.vault_empty), Modifier.weight(1f), body = stringResource(R.string.vault_empty_body))
+                    EmptyState(dev.altayeb.shoebill.R.drawable.art_vault, stringResource(R.string.vault_empty), Modifier.weight(1f), body = stringResource(R.string.vault_empty_body))
                 } else {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(3),
                         contentPadding = PaddingValues(start = 8.dp, top = 8.dp, end = 8.dp, bottom = if (selecting) 96.dp else 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.fillMaxSize(),
                     ) {
                         items(shown, key = { it.id }) { e ->
@@ -408,7 +408,7 @@ private fun Tile(e: VaultEntry, thumb: ByteArray?, selected: Boolean, onClick: (
         if (e.kind == "video") {
             Text(
                 formatDuration(e.durationMs),
-                Modifier.align(Alignment.BottomEnd).padding(4.dp).background(Color(0xB3000000), RoundedCornerShape(6.dp)).padding(horizontal = 6.dp, vertical = 2.dp),
+                Modifier.align(Alignment.BottomEnd).padding(4.dp).background(Color(0xB3000000), RoundedCornerShape(6.dp)).padding(horizontal = 8.dp, vertical = 2.dp),
                 color = Color.White, style = MaterialTheme.typography.labelSmall,
             )
         } else {

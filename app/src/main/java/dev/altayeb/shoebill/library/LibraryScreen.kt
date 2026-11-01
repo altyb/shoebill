@@ -124,8 +124,7 @@ fun VideoGate(content: @Composable (List<Video>) -> Unit) {
     }
 
     if (access == Access.None) {
-        EmptyState(
-            Icons.Rounded.VideoLibrary,
+        EmptyState(dev.altayeb.shoebill.R.drawable.art_video,
             if (asked) stringResource(R.string.lib_access_denied)
             else stringResource(R.string.lib_access_needed),
             action = {
@@ -160,7 +159,7 @@ fun VideoGate(content: @Composable (List<Video>) -> Unit) {
         Box(Modifier.weight(1f).then(inset)) {
             when {
                 list == null -> CenteredGate { BrandLoader() }
-                list.isEmpty() -> EmptyState(Icons.Rounded.VideoLibrary, stringResource(R.string.lib_no_videos))
+                list.isEmpty() -> EmptyState(dev.altayeb.shoebill.R.drawable.art_video, stringResource(R.string.lib_no_videos))
                 else -> content(list)
             }
         }
@@ -219,7 +218,7 @@ fun LtrText(text: AnnotatedString, style: TextStyle, maxLines: Int, color: Color
 fun DurationBadge(ms: Long, modifier: Modifier = Modifier) {
     Surface(modifier = modifier, shape = RoundedCornerShape(6.dp), color = Color.Black.copy(alpha = 0.7f)) {
         Text(formatTime(ms), color = Color.White, style = MaterialTheme.typography.labelSmall,
-            modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp))
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 1.dp))
     }
 }
 
@@ -234,7 +233,7 @@ fun ProgressLine(fraction: Float, modifier: Modifier = Modifier) {
 fun TagChip(text: String) {
     Surface(shape = RoundedCornerShape(6.dp), color = MaterialTheme.colorScheme.secondaryContainer) {
         Text(text, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSecondaryContainer,
-            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
     }
 }
 
@@ -278,7 +277,7 @@ fun VideoRow(
             }
             Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
                 LtrText(highlight(v.name, query), MaterialTheme.typography.bodyLarge, maxLines = 2)
-                Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp),
+                Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically) {
                     if (v.quality.isNotEmpty()) TagChip(v.quality)
                     TagChip(formatSize(v.sizeBytes))
@@ -318,10 +317,10 @@ fun VideoCard(
                 .then(if (selected) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(20.dp)) else Modifier)
         ) {
             Thumb(v.uri, Modifier.fillMaxSize(), durationMs = v.durationMs, savedPosMs = state?.positionMs ?: -1, shared = true)
-            DurationBadge(v.durationMs, Modifier.align(Alignment.BottomEnd).padding(6.dp))
+            DurationBadge(v.durationMs, Modifier.align(Alignment.BottomEnd).padding(8.dp))
             if (p.partial) ProgressLine(p.fraction, Modifier.align(Alignment.BottomStart))
         }
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(8.dp))
         LtrText(AnnotatedString(v.name), MaterialTheme.typography.bodyMedium, maxLines = 2)
         Text(
             listOfNotNull(v.quality.ifEmpty { null }, formatSize(v.sizeBytes)).joinToString(" · "),

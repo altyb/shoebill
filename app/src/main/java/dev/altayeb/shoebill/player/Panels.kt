@@ -130,7 +130,7 @@ private fun TrackRow(label: String, selected: Boolean, onClick: () -> Unit) {
         onClick = onClick,
         shape = RoundedCornerShape(20.dp),
         color = if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.White.copy(alpha = 0.06f),
-        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
     ) {
         Row(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
@@ -143,7 +143,7 @@ private fun TrackRow(label: String, selected: Boolean, onClick: () -> Unit) {
 internal fun SectionTitle(text: String) {
     Spacer(Modifier.height(16.dp))
     Text(text, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    Spacer(Modifier.height(6.dp))
+    Spacer(Modifier.height(8.dp))
 }
 
 @Composable
@@ -193,7 +193,7 @@ private fun TrackTab(
         TrackRow(stringResource(R.string.off), none) { player.setString("sid", "no"); onTracksChanged() }
         subs.forEach { t -> TrackRow(trackLabel(t), t.selected) { player.setString("sid", t.id); onTracksChanged() } }
         Spacer(Modifier.height(8.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilledTonalButton(onClick = onSearch, modifier = Modifier.weight(1f).height(64.dp)) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(Icons.Rounded.Search, null)
@@ -269,7 +269,7 @@ private fun AudioDelayAndEq(player: MpvPlayer) {
     var on by remember { mutableStateOf(fx.enabled) }
     var version by remember { mutableStateOf(0) }
     SectionTitle(stringResource(R.string.player_equalizer))
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         FilledTonalButton(onClick = { on = !on; fx.setEnabled(on) }, modifier = Modifier.weight(1f)) {
             Text(stringResource(if (on) R.string.player_equalizer_on else R.string.off))
         }
@@ -307,7 +307,7 @@ private fun OptionsPanel(
         if (casting) dev.altayeb.shoebill.player.cast.CastDialog(u, player.shareableTitle, { player.setPaused(true) }) { casting = false }
     }
     SectionTitle(stringResource(R.string.player_decoder))
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Decoder.values().forEach { d ->
             val on = hw == d.hwdec
             val onClick = { hw = d.hwdec; player.setString("hwdec", d.hwdec); onDecoder(d) }
@@ -326,23 +326,23 @@ private fun OptionsPanel(
         }
     }
     SectionTitle(stringResource(R.string.player_frame_step))
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedButton(onClick = { player.command("frame-back-step") }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.player_frame_back)) }
         OutlinedButton(onClick = { player.command("frame-step") }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.player_frame_next)) }
     }
     SectionTitle(stringResource(R.string.player_ab_loop))
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedButton(onClick = onAbA) { Text(if (abA == null) stringResource(R.string.player_ab_set_a) else "A ${fmtSec(abA)}") }
         OutlinedButton(onClick = onAbB) { Text(if (abB == null) stringResource(R.string.player_ab_set_b) else "B ${fmtSec(abB)}") }
         OutlinedButton(onClick = onAbClear) { Text(stringResource(R.string.clear)) }
     }
     SectionTitle(stringResource(R.string.player_sleep_timer))
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         listOf(15, 30, 60).forEach { m -> OutlinedButton(onClick = { onSleep(m) }) { Text(stringResource(R.string.player_minutes_short, m.toString())) } }
         OutlinedButton(onClick = { onSleep(null) }) { Text(stringResource(R.string.off)) }
     }
     SectionTitle(stringResource(R.string.player_aspect))
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         listOf("-1" to stringResource(R.string.player_aspect_auto), "16:9" to "16:9", "4:3" to "4:3", "2.35:1" to "2.35").forEach { (v, label) ->
             val onClick = { aspect = v; player.setString("video-aspect-override", v) }
             if (aspect == v) androidx.compose.material3.Button(onClick = onClick) { Text(label) }

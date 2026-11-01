@@ -122,13 +122,23 @@ fun SearchPill(
 
 /** Centered empty state: tonal icon disc, title, optional body and action. Fades and scales in. */
 @Composable
-fun EmptyState(
-    icon: ImageVector,
-    title: String,
-    modifier: Modifier = Modifier,
-    body: String? = null,
-    action: @Composable () -> Unit = {},
-) {
+fun EmptyState(art: Int, title: String, modifier: Modifier = Modifier, body: String? = null, action: @Composable () -> Unit = {}) =
+    EmptyState(title, modifier, body, action) {
+        // Brand art is one flat shape, tinted from the theme so it works in every colour scheme.
+        androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(art), null, Modifier.size(160.dp), colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(MaterialTheme.colorScheme.primary))
+    }
+
+@Composable
+fun EmptyState(icon: ImageVector, title: String, modifier: Modifier = Modifier, body: String? = null, action: @Composable () -> Unit = {}) =
+    EmptyState(title, modifier, body, action) {
+        val cs = MaterialTheme.colorScheme
+        Box(Modifier.size(96.dp).clip(CircleShape).background(cs.secondaryContainer), contentAlignment = Alignment.Center) {
+            Icon(icon, null, Modifier.size(44.dp), tint = cs.onSecondaryContainer)
+        }
+    }
+
+@Composable
+private fun EmptyState(title: String, modifier: Modifier, body: String?, action: @Composable () -> Unit, graphic: @Composable () -> Unit) {
     val cs = MaterialTheme.colorScheme
     val shown = remember { MutableTransitionState(false).apply { targetState = true } }
     AnimatedVisibility(shown, modifier, enter = fadeIn(tween(250)) + scaleIn(tween(250), initialScale = 0.92f)) {
@@ -137,13 +147,11 @@ fun EmptyState(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            Box(Modifier.size(96.dp).clip(CircleShape).background(cs.secondaryContainer), contentAlignment = Alignment.Center) {
-                Icon(icon, null, Modifier.size(44.dp), tint = cs.onSecondaryContainer)
-            }
+            graphic()
             Spacer(Modifier.height(20.dp))
             Text(title, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
             body?.let {
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(8.dp))
                 Text(it, style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant, textAlign = TextAlign.Center)
             }
             Spacer(Modifier.height(12.dp))
