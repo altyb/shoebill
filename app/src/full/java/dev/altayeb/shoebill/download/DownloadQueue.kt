@@ -1,4 +1,4 @@
-@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class, androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
+@file:OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 
 package dev.altayeb.shoebill.download
 
@@ -86,6 +86,9 @@ import java.net.URI
 import java.net.URL
 import java.util.Collections
 import kotlinx.coroutines.Job
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.ExperimentalMaterial3Api
 
 object SharedLink { val value = MutableStateFlow<String?>(null) }
 
@@ -129,8 +132,8 @@ class DlPrefs(c: Context) {
     var autoUpdate: Boolean get() = p.getBoolean("autoUpdate", true); set(v) = p.edit().putBoolean("autoUpdate", v).apply()
     var nightly: Boolean get() = p.getBoolean("nightly", false); set(v) = p.edit().putBoolean("nightly", v).apply()
     private val dir = c.applicationContext.filesDir
-    val cookiesFile get() = java.io.File(dir, "cookies.txt")
-    val archiveFile get() = java.io.File(dir, "download-archive.txt")
+    val cookiesFile get() = File(dir, "cookies.txt")
+    val archiveFile get() = File(dir, "download-archive.txt")
 
     /** One download's options: this sheet's choices on top of the standing ones. */
     fun options(quality: Quality, playlist: Boolean, subs: Boolean, formatId: String? = null, formatAudioOnly: Boolean = false) = DownloadOptions(

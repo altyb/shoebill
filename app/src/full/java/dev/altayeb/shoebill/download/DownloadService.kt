@@ -1,4 +1,4 @@
-@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class, androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
+@file:OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 
 package dev.altayeb.shoebill.download
 
@@ -86,6 +86,10 @@ import java.net.URI
 import java.net.URL
 import java.util.Collections
 import kotlinx.coroutines.Job
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.ExperimentalMaterial3Api
+import dev.altayeb.shoebill.MainActivity
 
 /** Keeps the process alive during a download. The notification shows the video itself, speed, time left and a cancel button. */
 class DownloadService : Service() {
@@ -93,7 +97,7 @@ class DownloadService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     private fun openTab(): PendingIntent = PendingIntent.getActivity(
-        this, 0, Intent(Intent.ACTION_VIEW, Uri.parse("shoebill://download"), this, dev.altayeb.shoebill.MainActivity::class.java),
+        this, 0, Intent(Intent.ACTION_VIEW, Uri.parse("shoebill://download"), this, MainActivity::class.java),
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
     )
 

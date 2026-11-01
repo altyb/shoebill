@@ -82,7 +82,7 @@ fun NetworkTab(onPlay: (Uri, String) -> Unit, modifier: Modifier = Modifier) {
         SmbSection(onPlay)
         Spacer(Modifier.height(8.dp))
         if (recents.isEmpty()) {
-            EmptyState(dev.altayeb.shoebill.R.drawable.art_network, stringResource(R.string.lib_network_empty), body = stringResource(R.string.lib_network_empty_body))
+            EmptyState(R.drawable.art_network, stringResource(R.string.lib_network_empty), body = stringResource(R.string.lib_network_empty_body))
         } else {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.lib_recent_links), style = MaterialTheme.typography.titleSmall)

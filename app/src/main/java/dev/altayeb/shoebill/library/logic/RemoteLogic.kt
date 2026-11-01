@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets
 import javax.xml.parsers.DocumentBuilderFactory
 import org.w3c.dom.Element
 import org.xml.sax.InputSource
+import java.io.ByteArrayOutputStream
 
 /** Saved-server kinds. SMB servers were the only kind before; their rows have no kind and read as SMB. */
 object RemoteKind {
@@ -57,7 +58,7 @@ object RemoteLogic {
 
     fun percentDecode(s: String): String {
         val src = s.toByteArray(StandardCharsets.UTF_8)
-        val out = java.io.ByteArrayOutputStream(src.size)
+        val out = ByteArrayOutputStream(src.size)
         var i = 0
         while (i < src.size) {
             val b = src[i]
