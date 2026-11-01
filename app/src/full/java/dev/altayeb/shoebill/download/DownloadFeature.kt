@@ -234,7 +234,7 @@ object DownloadFeature {
                 Row(Modifier.padding(horizontal = 16.dp).padding(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = close, Modifier.weight(1f)) { Text(stringResource(R.string.dl_cancel)) }
                     Button(onClick = {
-                        val base = DownloadOptions(quality, playlist, subs, prefs.limit, proxy, format?.id, format?.audioOnly == true, prefs.skipSponsors)
+                        val base = prefs.options(quality, playlist, subs, format?.id, format?.audioOnly == true)
                         if (entries.isEmpty()) DownloadQueue.add(ctx, url, base, info)
                         else entries.filter { it.url !in unpicked }.forEach { e ->
                             DownloadQueue.add(ctx, e.url, base.copy(playlist = false), Preview(e.title, i?.uploader.orEmpty(), e.thumb, e.durationSec))
@@ -253,6 +253,8 @@ object DownloadFeature {
                     Quality.BEST -> stringResource(R.string.dl_best)
                     Quality.M4A -> stringResource(R.string.dl_m4a)
                     Quality.MP3 -> stringResource(R.string.dl_mp3)
+                    Quality.OPUS -> "Audio OPUS"
+                    Quality.FLAC -> "Audio FLAC"
                     else -> "${q.height}p"
                 }) })
             }
@@ -350,58 +352,117 @@ object DownloadFeature {
         val ctx = LocalContext.current
         val prefs = remember { DlPrefs(ctx) }
         val scope = rememberCoroutineScope()
-        var quality by remember { mutableStateOf(prefs.quality) }
-        var playlist by remember { mutableStateOf(prefs.playlist) }
-        var subs by remember { mutableStateOf(prefs.subtitles) }
-        var limit by remember { mutableStateOf(prefs.limit) }
-        var proxy by remember { mutableStateOf(prefs.proxy) }
-        var wifi by remember { mutableStateOf(prefs.wifiOnly) }
-        var sponsors by remember { mutableStateOf(prefs.skipSponsors) }
+        var tick by remember { mutableStateOf(0) }
+        val changed = { tick++ }
+        tick.hashCode() // re-read prefs after any change
         var message by remember { mutableStateOf<String?>(null) }
         var updating by remember { mutableStateOf(false) }
-        val col = androidx.compose.foundation.layout.Arrangement.spacedBy(2.dp)
+        val col = Arrangement.spacedBy(2.dp)
+        fun sw(title: Int, shape: androidx.compose.ui.graphics.Shape, value: Boolean, sub: Int? = null, set: (Boolean) -> Unit): @Composable () -> Unit = {
+            SwitchRow(stringResource(title), shape, value, sub?.let { stringResource(it) }) { set(it); changed() }
+        }
 
         GroupTitle(stringResource(R.string.dl_group_defaults))
-        val d = groupShapes(4)
+        val d = groupShapes(5)
         Column(verticalArrangement = col) {
             ChoiceRow(stringResource(R.string.dl_quality), d[0], Quality.entries.map { q -> q to when (q) {
                 Quality.BEST -> stringResource(R.string.dl_best)
                 Quality.M4A -> stringResource(R.string.dl_m4a)
                 Quality.MP3 -> stringResource(R.string.dl_mp3)
+                Quality.OPUS -> "Audio OPUS"
+                Quality.FLAC -> "Audio FLAC"
                 else -> "${q.height}p"
-            } }, quality) { quality = it; prefs.quality = it }
-            SwitchRow(stringResource(R.string.dl_playlist), d[1], playlist) { playlist = it; prefs.playlist = it }
-            SwitchRow(stringResource(R.string.dl_subs), d[2], subs) { subs = it; prefs.subtitles = it }
-            SwitchRow(stringResource(R.string.dl_sponsors), d[3], sponsors, stringResource(R.string.dl_sponsors_sub)) { sponsors = it; prefs.skipSponsors = it }
+            } }, prefs.quality) { prefs.quality = it; changed() }
+            ChoiceRow(stringResource(R.string.dl_container), d[1], listOf("mkv" to "MKV", "mp4" to "MP4", "webm" to "WebM"), prefs.container) { prefs.container = it; changed() }
+            ChoiceRow(stringResource(R.string.dl_codec), d[2], listOf<Pair<String?, String>>(null to stringResource(R.string.dl_auto), "h264" to "H.264", "vp9" to "VP9", "av01" to "AV1"), prefs.codec) { prefs.codec = it; changed() }
+            sw(R.string.dl_playlist, d[3], prefs.playlist) { prefs.playlist = it }()
+            sw(R.string.dl_metadata, d[4], prefs.embedMetadata, R.string.dl_metadata_sub) { prefs.embedMetadata = it }()
+        }
+
+        GroupTitle(stringResource(R.string.dl_group_files))
+        val f = groupShapes(5)
+        Column(verticalArrangement = col) {
+            ChoiceRow(stringResource(R.string.dl_filename), f[0], listOf(0 to stringResource(R.string.dl_name_id), 1 to stringResource(R.string.dl_name_title), 2 to stringResource(R.string.dl_name_channel)), prefs.filename) { prefs.filename = it; changed() }
+            sw(R.string.dl_restrict, f[1], prefs.restrictNames, R.string.dl_restrict_sub) { prefs.restrictNames = it }()
+            sw(R.string.dl_thumb, f[2], prefs.embedThumbnail, R.string.dl_thumb_sub) { prefs.embedThumbnail = it }()
+            sw(R.string.dl_nodup, f[3], prefs.noDuplicates, R.string.dl_nodup_sub) { prefs.noDuplicates = it }()
+            sw(R.string.dl_incognito, f[4], prefs.incognito, R.string.dl_incognito_sub) { prefs.incognito = it }()
+        }
+
+        GroupTitle(stringResource(R.string.dl_group_subs))
+        val sb = groupShapes(3)
+        Column(verticalArrangement = col) {
+            sw(R.string.dl_subs, sb[0], prefs.subtitles) { prefs.subtitles = it }()
+            sw(R.string.dl_autosubs, sb[1], prefs.autoSubs, R.string.dl_autosubs_sub) { prefs.autoSubs = it }()
+            Surface(Modifier.fillMaxWidth(), shape = sb[2], color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+                var langs by remember { mutableStateOf(prefs.subLangs) }
+                OutlinedTextField(langs, { langs = it.take(100); if (it.isNotBlank()) prefs.subLangs = it.trim() }, Modifier.fillMaxWidth().padding(16.dp), singleLine = true,
+                    label = { Text(stringResource(R.string.dl_sublangs)) }, supportingText = { Text(stringResource(R.string.dl_sublangs_hint)) })
+            }
+        }
+
+        GroupTitle(stringResource(R.string.dl_group_sponsor))
+        val sp = groupShapes(if (prefs.skipSponsors) 2 else 1)
+        Column(verticalArrangement = col) {
+            sw(R.string.dl_sponsors, sp[0], prefs.skipSponsors, R.string.dl_sponsors_sub) { prefs.skipSponsors = it }()
+            if (prefs.skipSponsors) ChoiceRow(stringResource(R.string.dl_sponsor_what), sp[1], listOf("default" to stringResource(R.string.dl_sp_default), "sponsor" to stringResource(R.string.dl_sp_sponsor), "sponsor,selfpromo,interaction" to stringResource(R.string.dl_sp_promo), "all" to stringResource(R.string.dl_all)), prefs.sponsorCategories) { prefs.sponsorCategories = it; changed() }
         }
 
         GroupTitle(stringResource(R.string.dl_group_network))
-        val n = groupShapes(3)
+        val n = groupShapes(6)
         Column(verticalArrangement = col) {
-            SwitchRow(stringResource(R.string.dl_wifi), n[0], wifi, stringResource(R.string.dl_wifi_sub)) { wifi = it; prefs.wifiOnly = it }
-            ChoiceRow(stringResource(R.string.dl_limit), n[1], listOf<Pair<String?, String>>(null to stringResource(R.string.dl_no_limit)) + DownloadLogic.LIMITS.map { it to it + "B/s" }, limit) { limit = it; prefs.limit = it }
-            Surface(Modifier.fillMaxWidth(), shape = n[2], color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+            sw(R.string.dl_wifi, n[0], prefs.wifiOnly, R.string.dl_wifi_sub) { prefs.wifiOnly = it }()
+            ChoiceRow(stringResource(R.string.dl_limit), n[1], listOf<Pair<String?, String>>(null to stringResource(R.string.dl_no_limit)) + DownloadLogic.LIMITS.map { it to it + "B/s" }, prefs.limit) { prefs.limit = it; changed() }
+            ChoiceRow(stringResource(R.string.dl_threads), n[2], listOf(1, 2, 4, 8).map { it to it.toString() }, prefs.threads) { prefs.threads = it; changed() }
+            sw(R.string.dl_ipv4, n[3], prefs.forceIpv4, R.string.dl_ipv4_sub) { prefs.forceIpv4 = it }()
+            Surface(Modifier.fillMaxWidth(), shape = n[4], color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+                var proxy by remember { mutableStateOf(prefs.proxy) }
                 val ok = DownloadLogic.validProxy(proxy)
                 OutlinedTextField(proxy, { proxy = it.take(300); if (DownloadLogic.validProxy(it)) prefs.proxy = it.trim() }, Modifier.fillMaxWidth().padding(16.dp), singleLine = true,
                     label = { Text(stringResource(R.string.dl_proxy)) }, isError = !ok,
                     supportingText = { Text(stringResource(if (ok) R.string.dl_proxy_hint else R.string.dl_bad_proxy)) })
             }
+            val pick = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
+                if (uri != null) scope.launch(Dispatchers.IO) {
+                    // Sign-in cookies: private app storage only, never in backups, and capped so a wrong file cannot fill the disk.
+                    val ok = runCatching {
+                        ctx.contentResolver.openInputStream(uri)!!.use { i ->
+                            val bytes = i.readBytes().also { check(it.size <= 2 * 1024 * 1024) }
+                            prefs.cookiesFile.writeBytes(bytes)
+                        }
+                    }.isSuccess
+                    withContext(Dispatchers.Main) { message = ctx.getString(if (ok) R.string.dl_cookies_saved else R.string.dl_cookies_bad); changed() }
+                }
+            }
+            val hasCookies = prefs.cookiesFile.exists()
+            SettingRow(stringResource(R.string.dl_cookies), n[5], stringResource(R.string.dl_cookies_sub), onClick = { pick.launch(arrayOf("text/*", "*/*")) }, trailing = if (hasCookies) { { TextButton(onClick = { prefs.cookiesFile.delete(); changed() }) { Text(stringResource(R.string.remove)) } } } else null)
         }
 
         GroupTitle(stringResource(R.string.dl_group_tools))
-        val t = groupShapes(if (Build.VERSION.SDK_INT >= 31) 2 else 1)
+        val sdk31 = Build.VERSION.SDK_INT >= 31
+        val t = groupShapes(if (sdk31) 6 else 5)
+        var i = 0
         Column(verticalArrangement = col) {
-            if (Build.VERSION.SDK_INT >= 31) SettingRow(stringResource(R.string.dl_open_links), t[0], onClick = {
-                ctx.startActivity(Intent(android.provider.Settings.ACTION_APP_OPEN_BY_DEFAULT_SETTINGS, Uri.parse("package:${ctx.packageName}")))
+            Surface(Modifier.fillMaxWidth(), shape = t[i++], color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+                var extra by remember { mutableStateOf(prefs.extra) }
+                val ok = DownloadLogic.parseExtra(extra) != null
+                OutlinedTextField(extra, { extra = it.take(500); if (DownloadLogic.parseExtra(it) != null) prefs.extra = it.trim() }, Modifier.fillMaxWidth().padding(16.dp),
+                    label = { Text(stringResource(R.string.dl_extra)) }, isError = !ok, supportingText = { Text(stringResource(if (ok) R.string.dl_extra_hint else R.string.dl_extra_bad)) })
+            }
+            SettingRow(stringResource(R.string.dl_clear_archive), t[i++], stringResource(R.string.dl_clear_archive_sub), onClick = { prefs.archiveFile.delete(); message = ctx.getString(R.string.dl_cleared) })
+            if (sdk31) SettingRow(stringResource(R.string.dl_open_links), t[i++], onClick = {
+                ctx.startActivity(Intent(android.provider.Settings.ACTION_APP_OPEN_BY_DEFAULT_SETTINGS, android.net.Uri.parse("package:${ctx.packageName}")))
             })
-            SettingRow(stringResource(R.string.dl_update), t.last(), subtitle = message, onClick = {
+            sw(R.string.dl_autoupdate, t[i++], prefs.autoUpdate, R.string.dl_autoupdate_sub) { prefs.autoUpdate = it }()
+            sw(R.string.dl_nightly, t[i++], prefs.nightly, R.string.dl_nightly_sub) { prefs.nightly = it }()
+            SettingRow(stringResource(R.string.dl_update), t[i], subtitle = message, onClick = {
                 if (!updating) {
                     updating = true; message = null
                     scope.launch {
                         message = withContext(Dispatchers.IO) {
                             runCatching {
                                 DownloadQueue.ensureReady(ctx)
-                                val st = YoutubeDL.getInstance().updateYoutubeDL(ctx, YoutubeDL.UpdateChannel.STABLE)
+                                val st = YoutubeDL.getInstance().updateYoutubeDL(ctx, if (prefs.nightly) YoutubeDL.UpdateChannel.NIGHTLY else YoutubeDL.UpdateChannel.STABLE)
                                 if (st == YoutubeDL.UpdateStatus.DONE) ctx.getString(R.string.dl_updated, YoutubeDL.getInstance().version(ctx).orEmpty())
                                 else ctx.getString(R.string.dl_up_to_date)
                             }.getOrElse { ctx.getString(R.string.dl_update_failed) }

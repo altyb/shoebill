@@ -136,4 +136,30 @@ class MediaLogicTest {
         assertTrue("--sponsorblock-remove" in DownloadLogic.args(DownloadOptions(skipSponsors = true), "/o"))
         assertFalse("--sponsorblock-remove" in DownloadLogic.args(DownloadOptions(), "/o"))
     }
+
+    @Test fun standingOptionsReachYtDlp() {
+        val a = DownloadLogic.args(DownloadOptions(container = "mp4", codec = "h264", filename = 1, restrictNames = true, forceIpv4 = true, threads = 4, cookiesFile = "/c", archiveFile = "/a", extra = listOf("--retries", "20"), embedThumbnail = false, embedMetadata = false, sponsorCategories = "sponsor", skipSponsors = true), "/o")
+        fun after(k: String) = a[a.indexOf(k) + 1]
+        assertEquals("mp4", after("--merge-output-format")); assertEquals("vcodec:h264", after("-S")); assertEquals("/o/%(title).180B.%(ext)s", after("-o"))
+        assertEquals("4", after("-N")); assertEquals("/c", after("--cookies")); assertEquals("/a", after("--download-archive")); assertEquals("20", after("--retries")); assertEquals("sponsor", after("--sponsorblock-remove"))
+        assertTrue("--restrict-filenames" in a); assertTrue("--force-ipv4" in a)
+        assertFalse("--embed-thumbnail" in a); assertFalse("--embed-metadata" in a)
+        val d = DownloadLogic.args(DownloadOptions(), "/o")
+        for (k in listOf("--restrict-filenames", "--force-ipv4", "-N", "--cookies", "--download-archive", "-S")) assertFalse(k, k in d)
+        assertTrue("--embed-thumbnail" in d); assertTrue("--embed-metadata" in d)
+        assertFalse("--embed-thumbnail" in DownloadLogic.args(DownloadOptions(container = "webm"), "/o"))
+    }
+
+    @Test fun subtitleOptions() {
+        val a = DownloadLogic.args(DownloadOptions(subtitles = true, autoSubs = false, subLangs = "fr"), "/o")
+        assertEquals("fr", a[a.indexOf("--sub-langs") + 1]); assertTrue("--write-subs" in a); assertFalse("--write-auto-subs" in a)
+    }
+
+    @Test fun extraOptionsSplitAndGuard() {
+        assertEquals(listOf("--retries", "20"), DownloadLogic.parseExtra(" --retries   20 "))
+        assertEquals(listOf("--match-filter", "like a b"), DownloadLogic.parseExtra("--match-filter 'like a b'"))
+        assertEquals(emptyList<String>(), DownloadLogic.parseExtra(""))
+        assertNull(DownloadLogic.parseExtra("--retries 'x"))
+        for (bad in listOf("--exec rm", "--exec-before-download x", "-o /sdcard/x", "--output x", "-P /x", "--paths /x", "--config-location /x", "--plugin-dirs /x")) assertNull(bad, DownloadLogic.parseExtra(bad))
+    }
 }

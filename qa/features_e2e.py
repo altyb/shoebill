@@ -295,6 +295,57 @@ def sec_pages():
     tap("Appearance", exact=True); time.sleep(1.2); sweep("appearance"); back()
     ok("no crash in pages", not crashed())
 
+def raw_prefs(name, xml):
+    p = os.environ["DL_PREFS"]; open(p, "w").write("<?xml version='1.0' encoding='utf-8' standalone='yes' ?><map>" + xml + "</map>")
+    adb("shell", "am", "force-stop", PKG); adb("push", p, "/data/local/tmp/x.xml")
+    adb("shell", f"run-as {PKG} sh -c 'mkdir -p shared_prefs; cp /data/local/tmp/x.xml shared_prefs/{name}.xml'")
+
+def music_list():
+    home(); tab("Music"); time.sleep(2)
+    return " ".join(texts())
+
+def sec_settings():
+    """Each setting must change what the app does, not just show a switch."""
+    SMALL = "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4"
+    def dl_once():
+        adb("shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", f"shoebill://download?url={SMALL}", "-n", f"{PKG}/.MainActivity"); time.sleep(3)
+        wait("Quality", 60); sheet_download(); end = time.time() + 90
+        while time.time() < end:
+            t = " ".join(texts())
+            if "Saved to your library" in t or "Failed" in t: return t
+            time.sleep(2)
+        return t
+    files = lambda: adb("shell", "ls", "/sdcard/Movies/Shoebill", check=False)
+    # music
+    raw_prefs("settings", '<int name="minSongSec" value="30" />')
+    t = music_list(); ok("min length hides 20 s songs", "Song 1" not in t, t[:160])
+    raw_prefs("settings", '<set name="hiddenFolders"><string>QA</string></set>')
+    t = music_list(); ok("hidden folder is gone", "Song 1" not in t, t[:160])
+    raw_prefs("settings", '<int name="musicStartTab" value="1" />')
+    t = music_list(); ok("library opens on the chosen tab", "Album X" in t, t[:160])
+    raw_prefs("settings", "")
+    music_list(); tap("Songs", exact=True); time.sleep(1); tap("Song 2"); time.sleep(3)
+    adb("shell", "input", "keyevent", "KEYCODE_MEDIA_PAUSE"); time.sleep(2)
+    adb("shell", "am", "force-stop", PKG); time.sleep(1)
+    music_list(); time.sleep(3); n = [x for x in nodes() if x.get("text") == "Song 2"]
+    ok("queue comes back after a restart", len(n) >= 2 or find("Play", exact=True) is not None, texts()[:12])
+    # downloads
+    raw_prefs("downloads", '<int name="filename" value="1" /><boolean name="restrictNames" value="true" /><boolean name="noDup" value="true" />')
+    adb("shell", f"run-as {PKG} rm -f files/download-archive.txt files/download-history.json")
+    adb("shell", "am", "force-stop", PKG)
+    before = files(); t = dl_once(); ok("download with file name options", "Saved to your library" in t, t[:220])
+    new = [x for x in files().split() if x not in before.split()]
+    ok("title-only, simple file name", any("[" not in x and " " not in x for x in new), new)
+    time.sleep(1); tap("Clear finished"); time.sleep(1)
+    t = dl_once(); ok("second time is skipped as a duplicate", "Already downloaded" in t, t[:260])
+    raw_prefs("downloads", '<boolean name="incognito" value="true" /><string name="extra">--retries 2</string>')
+    adb("shell", f"run-as {PKG} rm -f files/download-history.json")
+    adb("shell", "am", "force-stop", PKG)
+    t = dl_once(); ok("download with extra options", "Saved to your library" in t, t[:220])
+    hist = adb("shell", f"run-as {PKG} sh -c 'cat files/download-history.json 2>/dev/null'", check=False)
+    ok("private mode writes no history", "Big_Buck" not in hist, hist[:120])
+    raw_prefs("downloads", ""); ok("no crash in settings", not crashed())
+
 def sec_download():
     home(); tab("Downloads")
     tap("Download", exact=True); time.sleep(1); ok("empty link names the field", find("Link: enter") is not None, texts()[:10])
@@ -305,7 +356,7 @@ def sec_download():
     ok("youtube audio as MP3 reaches Music/Shoebill", r and "mp3" in adb("shell", "ls", "/sdcard/Music/Shoebill", check=False), t)
     ok("no crash in downloads", not crashed())
 
-S = dict(music=sec_music, nowplaying=sec_nowplaying, player=sec_player, download=sec_download, link=sec_link, network=sec_network, extras=sec_extras, white=sec_white, panels=sec_panels, pages=sec_pages)
+S = dict(music=sec_music, nowplaying=sec_nowplaying, player=sec_player, download=sec_download, link=sec_link, network=sec_network, extras=sec_extras, white=sec_white, panels=sec_panels, pages=sec_pages, settings=sec_settings)
 adb("logcat", "-c", "-b", "crash", check=False)
 for s in sys.argv[1:] or S:
     print("==", s, flush=True)

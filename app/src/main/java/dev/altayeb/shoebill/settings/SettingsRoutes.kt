@@ -2,6 +2,9 @@
 
 package dev.altayeb.shoebill.settings
 
+import androidx.compose.material3.Surface
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.FilterChip
 import androidx.compose.ui.unit.sp
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.togetherWith
@@ -31,7 +34,6 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -50,7 +52,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -180,7 +181,43 @@ fun SettingsScreen(onBack: () -> Unit, onAppearance: () -> Unit) {
                 }
                 2 -> {
                     TipCard(R.drawable.art_music, stringResource(R.string.tip_music))
-                    SwitchRow(stringResource(R.string.settings_skip_silence), groupShapes(1)[0], s.skipSilence, stringResource(R.string.settings_skip_silence_sub)) { v -> app.update { it.copy(skipSilence = v) } }
+                    GroupTitle(stringResource(R.string.music_group_playback))
+                    val pb = groupShapes(6)
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        SwitchRow(stringResource(R.string.settings_skip_silence), pb[0], s.skipSilence, stringResource(R.string.settings_skip_silence_sub)) { v -> app.update { it.copy(skipSilence = v) } }
+                        SwitchRow(stringResource(R.string.music_rewind), pb[1], s.rewindBeforePrevious, stringResource(R.string.music_rewind_sub)) { v -> app.update { it.copy(rewindBeforePrevious = v) } }
+                        SwitchRow(stringResource(R.string.music_unplug), pb[2], s.pauseOnUnplug, stringResource(R.string.music_unplug_sub)) { v -> app.update { it.copy(pauseOnUnplug = v) } }
+                        SwitchRow(stringResource(R.string.music_focus), pb[3], s.pauseForOthers, stringResource(R.string.music_focus_sub)) { v -> app.update { it.copy(pauseForOthers = v) } }
+                        SwitchRow(stringResource(R.string.music_stop_close), pb[4], s.stopOnClose, stringResource(R.string.music_stop_close_sub)) { v -> app.update { it.copy(stopOnClose = v) } }
+                        SwitchRow(stringResource(R.string.music_remember), pb[5], s.rememberQueue, stringResource(R.string.music_remember_sub)) { v -> app.update { it.copy(rememberQueue = v) } }
+                    }
+                    GroupTitle(stringResource(R.string.music_group_library))
+                    val lib = groupShapes(3)
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        ChoiceRow(stringResource(R.string.music_start_tab), lib[0], listOf(R.string.music_songs, R.string.music_albums, R.string.music_artists, R.string.music_genres, R.string.music_folders, R.string.music_lists).mapIndexed { i, r -> i to stringResource(r) }, s.musicStartTab) { v -> app.update { it.copy(musicStartTab = v) } }
+                        ChoiceRow(stringResource(R.string.music_min_length), lib[1], listOf(0, 30, 60, 120).map { it to if (it == 0) stringResource(R.string.off) else stringResource(R.string.settings_seconds, it) }, s.minSongSec) { v -> app.update { it.copy(minSongSec = v) } }
+                        val folders by androidx.compose.runtime.produceState(emptyList<String>()) {
+                            value = runCatching { dev.altayeb.shoebill.music.querySongs(context, raw = true) }.getOrDefault(emptyList()).map { it.folder }.filter { it.isNotEmpty() }.distinct().sorted()
+                        }
+                        Surface(Modifier.fillMaxWidth(), shape = lib[2], color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+                            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(stringResource(R.string.music_folders_shown), style = MaterialTheme.typography.bodyLarge)
+                                Text(stringResource(R.string.music_folders_shown_sub), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    folders.forEach { f ->
+                                        FilterChip(f !in s.hiddenFolders, { app.update { it.copy(hiddenFolders = if (f in it.hiddenFolders) it.hiddenFolders - f else it.hiddenFolders + f) } }, { Text(f) })
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    GroupTitle(stringResource(R.string.music_group_now))
+                    val np = groupShapes(3)
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        SwitchRow(stringResource(R.string.music_morph), np[0], s.coverMorph, stringResource(R.string.music_morph_sub)) { v -> app.update { it.copy(coverMorph = v) } }
+                        SwitchRow(stringResource(R.string.music_lyrics_large), np[1], s.lyricsLarge) { v -> app.update { it.copy(lyricsLarge = v) } }
+                        SwitchRow(stringResource(R.string.music_screen_on), np[2], s.keepScreenOnMusic, stringResource(R.string.music_screen_on_sub)) { v -> app.update { it.copy(keepScreenOnMusic = v) } }
+                    }
                 }
                 3 -> {
                     TipCard(R.drawable.art_download, stringResource(R.string.tip_download))

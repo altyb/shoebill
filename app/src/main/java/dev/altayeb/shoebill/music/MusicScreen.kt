@@ -2,6 +2,8 @@
 
 package dev.altayeb.shoebill.music
 
+import androidx.compose.runtime.collectAsState
+import dev.altayeb.shoebill.settings.AppSettings
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.Animatable
@@ -206,7 +208,7 @@ private fun Library(all: List<Song>, c: MediaController?) {
     val ctx = LocalContext.current
     val lists = remember { MusicLists(ctx) }
     var listsVersion by remember { mutableIntStateOf(0) }
-    var tab by remember { mutableStateOf(LibTab.Songs) }
+    var tab by remember { mutableStateOf(LibTab.entries.getOrElse(AppSettings.get(ctx).settings.value.musicStartTab) { LibTab.Songs }) }
     var query by remember { mutableStateOf("") }
     var open by remember { mutableStateOf<Pair<String, List<Song>>?>(null) }
     var addTo by remember { mutableStateOf<Song?>(null) }
@@ -462,6 +464,12 @@ private fun NowPlaying(c: MediaController, s: PlayerState, all: List<Song>, modi
     val ctx = LocalContext.current
     val song = remember(s.current, all) { s.current?.mediaId?.toLongOrNull()?.let { id -> all.firstOrNull { it.id == id } } }
     var page by remember { mutableIntStateOf(0) } // 0 art, 1 lyrics, 2 queue, 3 sound
+    val prefs by AppSettings.get(ctx).settings.collectAsState()
+    val view = androidx.compose.ui.platform.LocalView.current
+    DisposableEffect(prefs.keepScreenOnMusic) {
+        view.keepScreenOn = prefs.keepScreenOnMusic
+        onDispose { view.keepScreenOn = false }
+    }
     var lyrics by remember(song) { mutableStateOf<String?>(null) }
     LaunchedEffect(song) { lyrics = song?.let { Lyrics.load(ctx, it) } }
     val lyricScope = rememberCoroutineScope()
@@ -491,7 +499,7 @@ private fun NowPlaying(c: MediaController, s: PlayerState, all: List<Song>, modi
                 0 -> song?.let {
                     // Paused art relaxes into a cookie; playing art is a plain square. Material's own shape morph.
                     val morph = remember { Morph(MaterialShapes.Square, MaterialShapes.Cookie12Sided) }
-                    val cookie by androidx.compose.animation.core.animateFloatAsState(if (s.playing) 0f else 1f, MaterialTheme.motionScheme.slowSpatialSpec(), label = "artMorph")
+                    val cookie by androidx.compose.animation.core.animateFloatAsState(if (s.playing || !prefs.coverMorph) 0f else 1f, MaterialTheme.motionScheme.slowSpatialSpec(), label = "artMorph")
                     Box(Modifier.graphicsLayer { val v = 0.82f + 0.18f * progress(); scaleX = v; scaleY = v }.clip(MorphShape(morph, cookie))) { Art(it, 280) }
                 }
                 1 -> LyricsPage(lyrics, s.position, { c.seekTo(it) }) { pick.launch(arrayOf("*/*")) }
@@ -514,7 +522,7 @@ private fun NowPlaying(c: MediaController, s: PlayerState, all: List<Song>, modi
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
                     IconToggleButton(s.shuffle, { c.shuffleModeEnabled = it }) { Icon(Icons.Rounded.Shuffle, stringResource(R.string.music_shuffle)) }
-                    IconButton(onClick = { c.seekToPrevious() }, shapes = IconButtonDefaults.shapes()) { Icon(Icons.Rounded.SkipPrevious, stringResource(R.string.player_previous), Modifier.size(36.dp)) }
+                    IconButton(onClick = { if (prefs.rewindBeforePrevious) c.seekToPrevious() else c.seekToPreviousMediaItem() }, shapes = IconButtonDefaults.shapes()) { Icon(Icons.Rounded.SkipPrevious, stringResource(R.string.player_previous), Modifier.size(36.dp)) }
                     FilledIconButton(onClick = { if (s.playing) c.pause() else c.play() }, modifier = Modifier.size(72.dp), shapes = IconButtonDefaults.shapes()) {
                         Icon(if (s.playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, stringResource(if (s.playing) R.string.pause else R.string.play), Modifier.size(40.dp))
                     }
@@ -531,6 +539,7 @@ private fun NowPlaying(c: MediaController, s: PlayerState, all: List<Song>, modi
 
 @Composable
 private fun LyricsPage(text: String?, pos: Long, seek: (Long) -> Unit, pick: () -> Unit) {
+    val large = AppSettings.get(LocalContext.current).settings.collectAsState().value.lyricsLarge
     val lines = remember(text) { text?.let(Lrc::parse).orEmpty() }
     if (lines.isEmpty()) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -545,7 +554,7 @@ private fun LyricsPage(text: String?, pos: Long, seek: (Long) -> Unit, pick: () 
     LazyColumn(state = list, modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
         itemsIndexed(lines) { i, l ->
             Text(l.text, Modifier.fillMaxWidth().clickable { seek(l.timeMs) }.padding(8.dp), textAlign = TextAlign.Center,
-                style = if (i == now) MaterialTheme.typography.titleLarge else MaterialTheme.typography.bodyLarge,
+                style = when { large -> if (i == now) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.titleLarge; i == now -> MaterialTheme.typography.titleLarge; else -> MaterialTheme.typography.bodyLarge },
                 color = if (i == now) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }

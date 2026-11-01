@@ -2,7 +2,7 @@ package dev.altayeb.shoebill.download.logic
 import java.util.Locale
 
 enum class Quality(val height: Int?, val audio: String?) {
-    BEST(null, null), P1080(1080, null), P720(720, null), P480(480, null), M4A(null, "m4a"), MP3(null, "mp3")
+    BEST(null, null), P1080(1080, null), P720(720, null), P480(480, null), M4A(null, "m4a"), MP3(null, "mp3"), OPUS(null, "opus"), FLAC(null, "flac")
 }
 
 data class DownloadOptions(
@@ -14,6 +14,20 @@ data class DownloadOptions(
     val formatId: String? = null, // one exact format picked from the list; overrides quality
     val formatAudioOnly: Boolean = false,
     val skipSponsors: Boolean = false, // SponsorBlock: cut sponsor segments out of the file
+    val sponsorCategories: String = "default",
+    val container: String = "mkv",
+    val codec: String? = null, // preferred video codec, a yt-dlp sort key value such as h264
+    val filename: Int = 0, // index into DownloadLogic.FILENAMES
+    val restrictNames: Boolean = false,
+    val embedThumbnail: Boolean = true,
+    val embedMetadata: Boolean = true,
+    val subLangs: String = "ar.*,en.*",
+    val autoSubs: Boolean = true,
+    val forceIpv4: Boolean = false,
+    val threads: Int = 1,
+    val cookiesFile: String? = null,
+    val archiveFile: String? = null,
+    val extra: List<String> = emptyList(),
 )
 
 /** One format yt-dlp offers. Size is 0 when the site does not say. */
@@ -31,24 +45,37 @@ object DownloadLogic {
     /** yt-dlp arguments after the URL. The output folder is private; the finished file is then copied into the media library. */
     fun args(o: DownloadOptions, outputDir: String): List<String> {
         val a = ArrayList<String>()
-        a += listOf("-o", "$outputDir/%(title).150B [%(id)s].%(ext)s")
+        a += listOf("-o", "$outputDir/" + (FILENAMES.getOrNull(o.filename) ?: FILENAMES[0]))
         a += listOf("--no-mtime", "--no-part", "--newline", "--trim-filenames", "180")
         a += if (o.playlist) "--yes-playlist" else "--no-playlist"
         o.limit?.let { a += listOf("--limit-rate", it) }
         o.proxy?.let { a += listOf("--proxy", it) }
-        if (o.skipSponsors) a += listOf("--sponsorblock-remove", "default")
+        if (o.skipSponsors) a += listOf("--sponsorblock-remove", o.sponsorCategories)
+        if (o.restrictNames) a += "--restrict-filenames"
+        if (o.forceIpv4) a += "--force-ipv4"
+        if (o.threads > 1) a += listOf("-N", o.threads.toString())
+        o.cookiesFile?.let { a += listOf("--cookies", it) }
+        o.archiveFile?.let { a += listOf("--download-archive", it) }
+        if (o.embedMetadata) a += "--embed-metadata"
         if (o.formatId != null) {
             a += listOf("-f", if (o.formatAudioOnly) o.formatId else "${o.formatId}+ba/${o.formatId}")
-            if (!o.formatAudioOnly) a += listOf("--merge-output-format", "mkv")
-            a += "--embed-metadata"
+            if (!o.formatAudioOnly) a += listOf("--merge-output-format", o.container)
         } else if (o.quality.audio != null) {
-            a += listOf("-f", "ba/b", "-x", "--audio-format", o.quality.audio, "--embed-metadata", "--embed-thumbnail")
+            a += listOf("-f", "ba/b", "-x", "--audio-format", o.quality.audio)
+            if (o.embedThumbnail) a += "--embed-thumbnail"
         } else {
             val h = o.quality.height
             a += listOf("-f", if (h == null) "bv*+ba/b" else "bv*[height<=$h]+ba/b[height<=$h]/b")
-            a += listOf("--merge-output-format", "mkv", "--embed-metadata")
-            if (o.subtitles) a += listOf("--write-subs", "--write-auto-subs", "--embed-subs", "--sub-langs", "ar.*,en.*")
+            o.codec?.let { a += listOf("-S", "vcodec:$it") }
+            a += listOf("--merge-output-format", o.container)
+            if (o.embedThumbnail && o.container != "webm") a += "--embed-thumbnail"
+            if (o.subtitles) {
+                a += "--write-subs"
+                if (o.autoSubs) a += "--write-auto-subs"
+                a += listOf("--embed-subs", "--sub-langs", o.subLangs)
+            }
         }
+        a += o.extra
         return a
     }
 
@@ -70,6 +97,27 @@ object DownloadLogic {
     }
 
     fun looksLikePlaylist(url: String): Boolean = Regex("""[?&]list=|/playlist\b|/sets/""").containsMatchIn(url)
+
+    val FILENAMES = listOf("%(title).150B [%(id)s].%(ext)s", "%(title).180B.%(ext)s", "%(uploader).60B - %(title).120B.%(ext)s")
+
+    private val FORBIDDEN = Regex("""^--(exec|exec-before-download|no-exec|paths|output|config-locations?|plugin-dirs)\b|^-[oP]$""")
+
+    /**
+     * The owner's own extra yt-dlp options, split on spaces with quotes respected. Null if unbalanced or forbidden:
+     * running commands and writing outside the app's folder stay off, even if someone is told to paste them.
+     */
+    fun parseExtra(text: String): List<String>? {
+        val out = ArrayList<String>(); val cur = StringBuilder(); var quote: Char? = null; var has = false
+        for (c in text) when {
+            quote != null -> if (c == quote) quote = null else cur.append(c)
+            c == '"' || c == '\'' -> { quote = c; has = true }
+            c.isWhitespace() -> { if (has || cur.isNotEmpty()) out += cur.toString(); cur.clear(); has = false }
+            else -> cur.append(c)
+        }
+        if (quote != null) return null
+        if (has || cur.isNotEmpty()) out += cur.toString()
+        return out.takeIf { l -> l.none { FORBIDDEN.containsMatchIn(it) } }
+    }
 
     val LIMITS = listOf("500K", "1M", "2M", "5M")
     private val PROXY = Regex("""(?i)^(https?|socks4a?|socks5h?)://([^\s/@]+@)?[^\s/:@]+:([0-9]{1,5})/?$""")
