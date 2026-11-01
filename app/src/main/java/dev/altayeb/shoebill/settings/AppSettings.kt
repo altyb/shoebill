@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import dev.altayeb.shoebill.library.logic.GainMode
 
 enum class ColorSource { Wallpaper, Preset, Custom }
 enum class SchemeStyle { TonalSpot, Vibrant, Expressive, Fidelity, Monochrome }
@@ -72,6 +73,8 @@ data class Settings(
     val coverMorph: Boolean = true,
     val lyricsLarge: Boolean = false,
     val keepScreenOnMusic: Boolean = false,
+    val replayGain: GainMode = GainMode.Off,
+    val replayGainPreamp: Int = 0, // dB, -12..12
 )
 
 class AppSettings private constructor(context: Context) {
@@ -97,6 +100,7 @@ class AppSettings private constructor(context: Context) {
             .putBoolean("stopOnClose", n.stopOnClose).putBoolean("rememberQueue", n.rememberQueue).putInt("minSongSec", n.minSongSec)
             .putStringSet("hiddenFolders", n.hiddenFolders).putInt("musicStartTab", n.musicStartTab).putBoolean("coverMorph", n.coverMorph)
             .putBoolean("lyricsLarge", n.lyricsLarge).putBoolean("keepScreenOnMusic", n.keepScreenOnMusic)
+            .putString("replayGain", n.replayGain.name).putInt("replayGainPreamp", n.replayGainPreamp)
             .putFloat("sub_scale", s.scale).putLong("sub_color", s.color).putFloat("sub_outline", s.outline)
             .putLong("sub_outline_color", s.outlineColor).putBoolean("sub_box", s.box).putFloat("sub_box_alpha", s.boxAlpha)
             .putInt("sub_pos", s.pos).putBoolean("sub_bold", s.bold).putBoolean("sub_force", s.force)
@@ -126,6 +130,7 @@ class AppSettings private constructor(context: Context) {
             rememberQueue = p.getBoolean("rememberQueue", d.rememberQueue), minSongSec = p.getInt("minSongSec", d.minSongSec),
             hiddenFolders = p.getStringSet("hiddenFolders", d.hiddenFolders)?.toSet() ?: d.hiddenFolders, musicStartTab = p.getInt("musicStartTab", d.musicStartTab),
             coverMorph = p.getBoolean("coverMorph", d.coverMorph), lyricsLarge = p.getBoolean("lyricsLarge", d.lyricsLarge), keepScreenOnMusic = p.getBoolean("keepScreenOnMusic", d.keepScreenOnMusic),
+            replayGain = enumOr(p.getString("replayGain", null), d.replayGain), replayGainPreamp = p.getInt("replayGainPreamp", d.replayGainPreamp),
             subStyle = readSub(),
         )
     }
