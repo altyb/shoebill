@@ -23,6 +23,7 @@ import java.security.MessageDigest
 import java.util.Base64
 import java.util.UUID
 import java.security.GeneralSecurityException
+import android.security.keystore.UserNotAuthenticatedException
 
 /** Caches unwrapped keysets while unlocked, so Keystore is only hit when a key is first needed (inside the 30 s window). */
 class SessionKeys(private val hw: MasterKey) : MasterKey {
@@ -415,7 +416,7 @@ private class EitherKey(private val primary: MasterKey, private val fallback: Ma
     override fun unwrap(wrapped: ByteArray): ByteArray = try {
         primary.unwrap(wrapped)
     } catch (e: GeneralSecurityException) {
-        if (e is android.security.keystore.UserNotAuthenticatedException) throw e // needs a prompt, not the other key
+        if (e is UserNotAuthenticatedException) throw e // needs a prompt, not the other key
         fallback.unwrap(wrapped)
     }
 }

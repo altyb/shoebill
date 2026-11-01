@@ -24,6 +24,7 @@ import androidx.compose.runtime.setValue
 import androidx.core.app.PictureInPictureModeChangedInfo
 import androidx.core.content.ContextCompat
 import androidx.core.util.Consumer
+import dev.altayeb.shoebill.settings.AppSettings
 
 private const val ACTION_TOGGLE = "dev.altayeb.shoebill.PIP_TOGGLE"
 
@@ -61,7 +62,7 @@ fun rememberPip(activity: Activity, player: MpvPlayer, paused: Boolean, enabled:
         }
     }
 
-    val autoPip = dev.altayeb.shoebill.settings.AppSettings.get(ctx).settings.collectAsState().value.autoPip
+    val autoPip = AppSettings.get(ctx).settings.collectAsState().value.autoPip
     LaunchedEffect(paused, enabled, autoPip) {
         if (!enabled || !autoPip) {
             PipGate.params = null

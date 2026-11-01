@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.Image
 import androidx.compose.ui.graphics.ColorFilter
 import dev.altayeb.shoebill.ui.theme.Radius
+import androidx.compose.ui.res.painterResource
 
 // ponytail: translucent tint + hairline border, not a real backdrop blur. Blur can't sample the mpv SurfaceView;
 // add Haze/RenderEffect only for screens without video behind.
@@ -128,7 +129,7 @@ fun SearchPill(
 fun EmptyState(art: Int, title: String, modifier: Modifier = Modifier, body: String? = null, action: @Composable () -> Unit = {}) =
     EmptyState(title, modifier, body, action) {
         // Brand art is one flat shape, tinted from the theme so it works in every colour scheme.
-        Image(androidx.compose.ui.res.painterResource(art), null, Modifier.size(160.dp), colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary))
+        Image(painterResource(art), null, Modifier.size(160.dp), colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary))
     }
 
 @Composable
