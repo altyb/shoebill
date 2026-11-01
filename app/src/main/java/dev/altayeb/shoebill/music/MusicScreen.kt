@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
 
 package dev.altayeb.shoebill.music
 
@@ -96,16 +96,6 @@ import androidx.media3.common.MediaItem
 import dev.altayeb.shoebill.ui.EmptyState
 import dev.altayeb.shoebill.ui.theme.Radius
 import kotlinx.coroutines.CoroutineScope
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.ui.platform.LocalView
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.core.animateFloatAsState
-import dev.altayeb.shoebill.ui.ConnectedChoice
-import androidx.compose.foundation.gestures.rememberDraggableState
-import androidx.compose.runtime.derivedStateOf
 
 private fun audioPermission() = if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_AUDIO else Manifest.permission.READ_EXTERNAL_STORAGE
 
@@ -283,7 +273,7 @@ private val artCache = LruCache<Long, Bitmap>(64)
 /** One group of sound options on its own card. */
 @Composable
 private fun SoundCard(title: String?, content: @Composable () -> Unit) {
-    Surface(Modifier.fillMaxWidth(), shape = Radius.L, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+    Surface(Modifier.fillMaxWidth(), shape = dev.altayeb.shoebill.ui.theme.Radius.L, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             title?.let { Text(it, style = MaterialTheme.typography.titleSmall) }
             content()
@@ -376,7 +366,7 @@ private fun settle(host: MusicHost, scope: CoroutineScope, springOpen: FiniteAni
 @Composable
 private fun rememberSheetDrag(host: MusicHost, scope: CoroutineScope): DraggableState {
     val range = LocalWindowInfo.current.containerSize.height.toFloat().coerceAtLeast(1f)
-    return rememberDraggableState { d ->
+    return androidx.compose.foundation.gestures.rememberDraggableState { d ->
         scope.launch { host.sheet.snapTo((host.sheet.value - d / range).coerceIn(0f, 1f)) }
     }
 }
@@ -430,7 +420,7 @@ fun MusicSheet(host: MusicHost, dockHeight: Int) {
         return
     }
     // The value is only read in layout and draw below, so a moving sheet relays out one surface and recomposes nothing.
-    val shown by remember(host) { derivedStateOf { host.sheet.value > 0f || host.sheet.isRunning } }
+    val shown by remember(host) { androidx.compose.runtime.derivedStateOf { host.sheet.value > 0f || host.sheet.isRunning } }
     if (!shown) return
     BackHandler(host.sheet.targetValue > 0f) { scope.launch { host.sheet.animateTo(0f, sheetClose) } }
     val ctx = LocalContext.current
@@ -475,7 +465,7 @@ private fun NowPlaying(c: MediaController, s: PlayerState, all: List<Song>, modi
     val song = remember(s.current, all) { s.current?.mediaId?.toLongOrNull()?.let { id -> all.firstOrNull { it.id == id } } }
     var page by remember { mutableIntStateOf(0) } // 0 art, 1 lyrics, 2 queue, 3 sound
     val prefs by AppSettings.get(ctx).settings.collectAsState()
-    val view = LocalView.current
+    val view = androidx.compose.ui.platform.LocalView.current
     DisposableEffect(prefs.keepScreenOnMusic) {
         view.keepScreenOn = prefs.keepScreenOnMusic
         onDispose { view.keepScreenOn = false }
@@ -503,13 +493,13 @@ private fun NowPlaying(c: MediaController, s: PlayerState, all: List<Song>, modi
         Box(Modifier.weight(1f).fillMaxWidth().arrive(progress, 0.25f), contentAlignment = Alignment.Center) {
             val motion = MaterialTheme.motionScheme
             AnimatedContent(page, transitionSpec = {
-                (fadeIn(motion.defaultEffectsSpec()) + scaleIn(motion.defaultSpatialSpec(), initialScale = 0.94f)) togetherWith fadeOut(motion.fastEffectsSpec())
+                (androidx.compose.animation.fadeIn(motion.defaultEffectsSpec()) + androidx.compose.animation.scaleIn(motion.defaultSpatialSpec(), initialScale = 0.94f)) togetherWith androidx.compose.animation.fadeOut(motion.fastEffectsSpec())
             }, contentAlignment = Alignment.Center, label = "npPage") { pageNow -> when (pageNow) {
                 // Reads the raw value, so the art alone shows the spring's overshoot past 1.
                 0 -> song?.let {
                     // Paused art relaxes into a cookie; playing art is a plain square. Material's own shape morph.
                     val morph = remember { Morph(MaterialShapes.Square, MaterialShapes.Cookie12Sided) }
-                    val cookie by animateFloatAsState(if (s.playing || !prefs.coverMorph) 0f else 1f, MaterialTheme.motionScheme.slowSpatialSpec(), label = "artMorph")
+                    val cookie by androidx.compose.animation.core.animateFloatAsState(if (s.playing || !prefs.coverMorph) 0f else 1f, MaterialTheme.motionScheme.slowSpatialSpec(), label = "artMorph")
                     Box(Modifier.graphicsLayer { val v = 0.82f + 0.18f * progress(); scaleX = v; scaleY = v }.clip(MorphShape(morph, cookie))) { Art(it, 280) }
                 }
                 1 -> LyricsPage(lyrics, s.position, { c.seekTo(it) }) { pick.launch(arrayOf("*/*")) }
@@ -589,11 +579,11 @@ private fun SoundPage(c: MediaController, s: PlayerState, sleepAt: Long, sleepMi
     val ctx = LocalContext.current
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SoundCard(stringResource(R.string.player_speed)) {
-            ConnectedChoice(listOf(0.75f, 1f, 1.25f, 1.5f, 2f).map { it to "$it×" }, listOf(0.75f, 1f, 1.25f, 1.5f, 2f).firstOrNull { kotlin.math.abs(s.speed - it) < 0.01f }) { c.setPlaybackSpeed(it) }
+            dev.altayeb.shoebill.ui.ConnectedChoice(listOf(0.75f, 1f, 1.25f, 1.5f, 2f).map { it to "$it×" }, listOf(0.75f, 1f, 1.25f, 1.5f, 2f).firstOrNull { kotlin.math.abs(s.speed - it) < 0.01f }) { c.setPlaybackSpeed(it) }
         }
         SoundCard(stringResource(R.string.player_sleep_timer)) {
             val off = stringResource(R.string.off)
-            ConnectedChoice(listOf(0 to off) + listOf(15, 30, 60).map { it to stringResource(R.string.player_minutes_short, it.toString()) }, if (sleepAt > 0L) sleepMinutes else 0, pick = setSleep)
+            dev.altayeb.shoebill.ui.ConnectedChoice(listOf(0 to off) + listOf(15, 30, 60).map { it to stringResource(R.string.player_minutes_short, it.toString()) }, if (sleepAt > 0L) sleepMinutes else 0, pick = setSleep)
             if (sleepAt > 0L) {
                 val left by produceState(sleepAt - System.currentTimeMillis(), sleepAt) {
                     while (true) { value = sleepAt - System.currentTimeMillis(); delay(1000) }

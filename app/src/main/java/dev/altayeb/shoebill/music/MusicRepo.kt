@@ -15,7 +15,6 @@ import java.io.File
 import android.os.Build
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
-import dev.altayeb.shoebill.settings.AppSettings
 
 data class Song(
     val id: Long, val title: String, val artist: String, val album: String, val albumId: Long,
@@ -43,7 +42,7 @@ suspend fun querySongs(context: Context, raw: Boolean = false): List<Song> = wit
                 c.getLong(5), c.getInt(6) % 1000, path?.let { File(it).parentFile?.name }.orEmpty(), path, if (c.columnCount > 8) c.getString(8).orEmpty() else "")
         }
     }
-    val f = AppSettings.get(context).settings.value
+    val f = dev.altayeb.shoebill.settings.AppSettings.get(context).settings.value
     (if (raw) out else out.filter { it.durationMs >= f.minSongSec * 1000L && it.folder !in f.hiddenFolders }).sortedWith(compareBy(NaturalOrder) { it.title })
 }
 

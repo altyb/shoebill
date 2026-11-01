@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class, androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
 
 package dev.altayeb.shoebill.download
 
@@ -92,16 +92,6 @@ import java.net.URI
 import java.net.URL
 import java.util.Collections
 import kotlinx.coroutines.Job
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.activity.compose.rememberLauncherForActivityResult
-import android.Manifest
-import dev.altayeb.shoebill.ui.ConnectedChoice
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.produceState
-import androidx.compose.ui.graphics.Shape
-import android.provider.Settings
 
 object DownloadFeature {
     const val ENABLED = true
@@ -133,7 +123,7 @@ object DownloadFeature {
         LaunchedEffect(Unit) { withContext(Dispatchers.IO) { DownloadQueue.loadHistory(ctx) } }
         val jobs by DownloadQueue.jobs.collectAsStateWithLifecycle()
         var kind by remember { mutableStateOf(0) } // 0 all, 1 video, 2 audio
-        val notify = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+        val notify = androidx.activity.compose.rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
         val cs = MaterialTheme.colorScheme
         val hero = jobs.firstOrNull { it.state == DlState.Running || it.state == DlState.Finishing }
         LazyColumn(modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -149,7 +139,7 @@ object DownloadFeature {
                     Button(onClick = {
                         val u = DownloadLogic.firstUrl(url)
                         if (u == null) bad = true else {
-                            if (Build.VERSION.SDK_INT >= 33) notify.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            if (Build.VERSION.SDK_INT >= 33) notify.launch(android.Manifest.permission.POST_NOTIFICATIONS)
                             sheetUrl = u
                         }
                     }, Modifier.fillMaxWidth()) { Text(stringResource(R.string.dl_start)) }
@@ -160,7 +150,7 @@ object DownloadFeature {
                         Text(stringResource(R.string.dl_queue), Modifier.weight(1f), style = MaterialTheme.typography.titleSmall)
                         TextButton(onClick = { DownloadQueue.clearFinished() }, contentPadding = PaddingValues(horizontal = 0.dp, vertical = 8.dp)) { Text(stringResource(R.string.dl_clear)) }
                     }
-                    if (others.any { it.state == DlState.Done }) ConnectedChoice(listOf(0 to stringResource(R.string.dl_all), 1 to stringResource(R.string.dl_video), 2 to stringResource(R.string.dl_audio)), kind) { kind = it }
+                    if (others.any { it.state == DlState.Done }) dev.altayeb.shoebill.ui.ConnectedChoice(listOf(0 to stringResource(R.string.dl_all), 1 to stringResource(R.string.dl_video), 2 to stringResource(R.string.dl_audio)), kind) { kind = it }
                 }
             }
             items(jobs.filter { it !== hero && (kind == 0 || (it.state == DlState.Done && it.audio == (kind == 2))) }.reversed(), key = { it.id }) { j -> JobCard(j, Modifier.animateItem()) }
@@ -182,7 +172,7 @@ object DownloadFeature {
         var error by remember { mutableStateOf<String?>(null) }
         var format by remember { mutableStateOf<Fmt?>(null) }
         var showFormats by remember { mutableStateOf(false) }
-        val unpicked = remember { mutableStateListOf<String>() }
+        val unpicked = remember { androidx.compose.runtime.mutableStateListOf<String>() }
         LaunchedEffect(url) {
             withContext(Dispatchers.IO) { runCatching {
                 (if (DownloadLogic.looksLikePlaylist(url)) runCatching { Probe.playlist(ctx, url, proxy) }.getOrNull() else null) ?: Probe.info(ctx, url, proxy)
@@ -257,7 +247,7 @@ object DownloadFeature {
 
     @Composable
     private fun QualityChips(selected: Quality, pick: (Quality) -> Unit) {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Quality.entries.forEach { q ->
                 FilterChip(selected == q, { pick(q) }, { Text(when (q) {
                     Quality.BEST -> stringResource(R.string.dl_best)
@@ -273,7 +263,7 @@ object DownloadFeature {
 
     @Composable
     private fun Thumb(url: String?, proxy: String?, modifier: Modifier) {
-        val pic by produceState<Bitmap?>(null, url) {
+        val pic by androidx.compose.runtime.produceState<Bitmap?>(null, url) {
             value = url?.let { withContext(Dispatchers.IO) { Probe.thumb(it, proxy) } }
         }
         Box(modifier.background(MaterialTheme.colorScheme.surfaceContainerHighest)) {
@@ -368,7 +358,7 @@ object DownloadFeature {
         var message by remember { mutableStateOf<String?>(null) }
         var updating by remember { mutableStateOf(false) }
         val col = Arrangement.spacedBy(2.dp)
-        fun sw(title: Int, shape: Shape, value: Boolean, sub: Int? = null, set: (Boolean) -> Unit): @Composable () -> Unit = {
+        fun sw(title: Int, shape: androidx.compose.ui.graphics.Shape, value: Boolean, sub: Int? = null, set: (Boolean) -> Unit): @Composable () -> Unit = {
             SwitchRow(stringResource(title), shape, value, sub?.let { stringResource(it) }) { set(it); changed() }
         }
 
@@ -435,7 +425,7 @@ object DownloadFeature {
                     label = { Text(stringResource(R.string.dl_proxy)) }, isError = !ok,
                     supportingText = { Text(stringResource(if (ok) R.string.dl_proxy_hint else R.string.dl_bad_proxy)) })
             }
-            val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            val pick = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
                 if (uri != null) scope.launch(Dispatchers.IO) {
                     // Sign-in cookies: private app storage only, never in backups, and capped so a wrong file cannot fill the disk.
                     val ok = runCatching {
@@ -464,7 +454,7 @@ object DownloadFeature {
             }
             SettingRow(stringResource(R.string.dl_clear_archive), t[i++], stringResource(R.string.dl_clear_archive_sub), onClick = { prefs.archiveFile.delete(); message = ctx.getString(R.string.dl_cleared) })
             if (sdk31) SettingRow(stringResource(R.string.dl_open_links), t[i++], onClick = {
-                ctx.startActivity(Intent(Settings.ACTION_APP_OPEN_BY_DEFAULT_SETTINGS, Uri.parse("package:${ctx.packageName}")))
+                ctx.startActivity(Intent(android.provider.Settings.ACTION_APP_OPEN_BY_DEFAULT_SETTINGS, android.net.Uri.parse("package:${ctx.packageName}")))
             })
             sw(R.string.dl_autoupdate, t[i++], prefs.autoUpdate, R.string.dl_autoupdate_sub) { prefs.autoUpdate = it }()
             sw(R.string.dl_nightly, t[i++], prefs.nightly, R.string.dl_nightly_sub) { prefs.nightly = it }()
