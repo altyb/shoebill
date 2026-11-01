@@ -150,9 +150,7 @@ object DownloadFeature {
                         Text(stringResource(R.string.dl_queue), Modifier.weight(1f), style = MaterialTheme.typography.titleSmall)
                         TextButton(onClick = { DownloadQueue.clearFinished() }, contentPadding = PaddingValues(horizontal = 0.dp, vertical = 8.dp)) { Text(stringResource(R.string.dl_clear)) }
                     }
-                    if (others.any { it.state == DlState.Done }) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(R.string.dl_all, R.string.dl_video, R.string.dl_audio).forEachIndexed { i, l -> FilterChip(kind == i, { kind = i }, { Text(stringResource(l)) }) }
-                    }
+                    if (others.any { it.state == DlState.Done }) dev.altayeb.shoebill.ui.ConnectedChoice(listOf(0 to stringResource(R.string.dl_all), 1 to stringResource(R.string.dl_video), 2 to stringResource(R.string.dl_audio)), kind) { kind = it }
                 }
             }
             items(jobs.filter { it !== hero && (kind == 0 || (it.state == DlState.Done && it.audio == (kind == 2))) }.reversed(), key = { it.id }) { j -> JobCard(j, Modifier.animateItem()) }
@@ -249,7 +247,7 @@ object DownloadFeature {
 
     @Composable
     private fun QualityChips(selected: Quality, pick: (Quality) -> Unit) {
-        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Quality.entries.forEach { q ->
                 FilterChip(selected == q, { pick(q) }, { Text(when (q) {
                     Quality.BEST -> stringResource(R.string.dl_best)

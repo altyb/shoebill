@@ -279,26 +279,6 @@ private fun SoundCard(title: String?, content: @Composable () -> Unit) {
     }
 }
 
-/** A row of equal-width options joined into one control. Equal widths mean a label can never squeeze into wrapping. */
-@Composable
-private fun <T> Connected(options: List<Pair<T, String>>, selected: T?, pick: (T) -> Unit) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(androidx.compose.material3.ButtonGroupDefaults.ConnectedSpaceBetween)) {
-        options.forEachIndexed { i, (v, label) ->
-            androidx.compose.material3.ToggleButton(
-                checked = v == selected,
-                onCheckedChange = { pick(v) },
-                modifier = Modifier.weight(1f),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 4.dp),
-                shapes = when (i) {
-                    0 -> androidx.compose.material3.ButtonGroupDefaults.connectedLeadingButtonShapes()
-                    options.lastIndex -> androidx.compose.material3.ButtonGroupDefaults.connectedTrailingButtonShapes()
-                    else -> androidx.compose.material3.ButtonGroupDefaults.connectedMiddleButtonShapes()
-                },
-            ) { Text(label, maxLines = 1, softWrap = false, style = MaterialTheme.typography.labelMedium) }
-        }
-    }
-}
-
 private class MorphShape(val morph: Morph, val progress: Float) : Shape {
     override fun createOutline(size: androidx.compose.ui.geometry.Size, layoutDirection: LayoutDirection, density: Density): Outline {
         val path = Path()
@@ -590,11 +570,11 @@ private fun SoundPage(c: MediaController, s: PlayerState, sleepAt: Long, sleepMi
     val ctx = LocalContext.current
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SoundCard(stringResource(R.string.player_speed)) {
-            Connected(listOf(0.75f, 1f, 1.25f, 1.5f, 2f).map { it to "$it×" }, listOf(0.75f, 1f, 1.25f, 1.5f, 2f).firstOrNull { kotlin.math.abs(s.speed - it) < 0.01f }) { c.setPlaybackSpeed(it) }
+            dev.altayeb.shoebill.ui.ConnectedChoice(listOf(0.75f, 1f, 1.25f, 1.5f, 2f).map { it to "$it×" }, listOf(0.75f, 1f, 1.25f, 1.5f, 2f).firstOrNull { kotlin.math.abs(s.speed - it) < 0.01f }) { c.setPlaybackSpeed(it) }
         }
         SoundCard(stringResource(R.string.player_sleep_timer)) {
             val off = stringResource(R.string.off)
-            Connected(listOf(0 to off) + listOf(15, 30, 60).map { it to stringResource(R.string.player_minutes_short, it.toString()) }, if (sleepAt > 0L) sleepMinutes else 0, setSleep)
+            dev.altayeb.shoebill.ui.ConnectedChoice(listOf(0 to off) + listOf(15, 30, 60).map { it to stringResource(R.string.player_minutes_short, it.toString()) }, if (sleepAt > 0L) sleepMinutes else 0, pick = setSleep)
             if (sleepAt > 0L) {
                 val left by produceState(sleepAt - System.currentTimeMillis(), sleepAt) {
                     while (true) { value = sleepAt - System.currentTimeMillis(); delay(1000) }
