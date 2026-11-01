@@ -237,7 +237,7 @@ object DownloadFeature {
                         val base = prefs.options(quality, playlist, subs, format?.id, format?.audioOnly == true)
                         if (entries.isEmpty()) DownloadQueue.add(ctx, url, base, info)
                         else entries.filter { it.url !in unpicked }.forEach { e ->
-                            DownloadQueue.add(ctx, e.url, base.copy(playlist = false), Preview(e.title, i?.uploader.orEmpty(), e.thumb, e.durationSec))
+                            DownloadQueue.add(ctx, e.url, base.copy(playlist = false, playlistName = i?.title), Preview(e.title, i?.uploader.orEmpty(), e.thumb, e.durationSec))
                         }
                         started(); close()
                     }, Modifier.weight(1f), enabled = entries.isEmpty() || unpicked.size < entries.size) { Text(stringResource(R.string.dl_start)) }
@@ -380,21 +380,24 @@ object DownloadFeature {
         }
 
         GroupTitle(stringResource(R.string.dl_group_files))
-        val f = groupShapes(5)
+        val f = groupShapes(7)
         Column(verticalArrangement = col) {
             ChoiceRow(stringResource(R.string.dl_filename), f[0], listOf(0 to stringResource(R.string.dl_name_id), 1 to stringResource(R.string.dl_name_title), 2 to stringResource(R.string.dl_name_channel)), prefs.filename) { prefs.filename = it; changed() }
             sw(R.string.dl_restrict, f[1], prefs.restrictNames, R.string.dl_restrict_sub) { prefs.restrictNames = it }()
             sw(R.string.dl_thumb, f[2], prefs.embedThumbnail, R.string.dl_thumb_sub) { prefs.embedThumbnail = it }()
-            sw(R.string.dl_nodup, f[3], prefs.noDuplicates, R.string.dl_nodup_sub) { prefs.noDuplicates = it }()
-            sw(R.string.dl_incognito, f[4], prefs.incognito, R.string.dl_incognito_sub) { prefs.incognito = it }()
+            sw(R.string.dl_thumb_file, f[3], prefs.thumbFile, R.string.dl_thumb_file_sub) { prefs.thumbFile = it }()
+            sw(R.string.dl_playlist_folder, f[4], prefs.playlistFolder, R.string.dl_playlist_folder_sub) { prefs.playlistFolder = it }()
+            sw(R.string.dl_nodup, f[5], prefs.noDuplicates, R.string.dl_nodup_sub) { prefs.noDuplicates = it }()
+            sw(R.string.dl_incognito, f[6], prefs.incognito, R.string.dl_incognito_sub) { prefs.incognito = it }()
         }
 
         GroupTitle(stringResource(R.string.dl_group_subs))
-        val sb = groupShapes(3)
+        val sb = groupShapes(4)
         Column(verticalArrangement = col) {
             sw(R.string.dl_subs, sb[0], prefs.subtitles) { prefs.subtitles = it }()
             sw(R.string.dl_autosubs, sb[1], prefs.autoSubs, R.string.dl_autosubs_sub) { prefs.autoSubs = it }()
-            Surface(Modifier.fillMaxWidth(), shape = sb[2], color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+            sw(R.string.dl_sub_files, sb[2], prefs.subFiles, R.string.dl_sub_files_sub) { prefs.subFiles = it }()
+            Surface(Modifier.fillMaxWidth(), shape = sb[3], color = MaterialTheme.colorScheme.surfaceContainerHigh) {
                 var langs by remember { mutableStateOf(prefs.subLangs) }
                 OutlinedTextField(langs, { langs = it.take(100); if (it.isNotBlank()) prefs.subLangs = it.trim() }, Modifier.fillMaxWidth().padding(16.dp), singleLine = true,
                     label = { Text(stringResource(R.string.dl_sublangs)) }, supportingText = { Text(stringResource(R.string.dl_sublangs_hint)) })

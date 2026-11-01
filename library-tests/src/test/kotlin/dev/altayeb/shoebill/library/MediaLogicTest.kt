@@ -68,6 +68,47 @@ class MediaLogicTest {
         assertTrue("--embed-subs" in DownloadLogic.args(DownloadOptions(subtitles = true), "/o"))
         assertFalse("--embed-subs" in DownloadLogic.args(DownloadOptions(Quality.M4A, subtitles = true), "/o"))
     }
+    @Test fun defaultsLeaveArgsUnchanged() {
+        assertEquals(
+            listOf("-o", "/o/%(title).150B [%(id)s].%(ext)s", "--no-mtime", "--no-part", "--newline", "--trim-filenames", "180", "--no-playlist",
+                "--embed-metadata", "-f", "bv*[height<=720]+ba/b[height<=720]/b", "--merge-output-format", "mkv", "--embed-thumbnail",
+                "--write-subs", "--write-auto-subs", "--sub-langs", "ar.*,en.*", "--embed-subs"),
+            DownloadLogic.args(DownloadOptions(Quality.P720, subtitles = true), "/o"),
+        )
+    }
+    @Test fun playlistFolderInOutputTemplate() {
+        val whole = DownloadLogic.args(DownloadOptions(playlist = true, playlistFolder = true), "/o")
+        assertEquals("/o/%(playlist_title|Playlist)s/%(title).150B [%(id)s].%(ext)s", whole[whole.indexOf("-o") + 1])
+        val picked = DownloadLogic.args(DownloadOptions(playlistFolder = true, playlistName = "Mix/../Road"), "/o")
+        assertEquals("/o/Mix Road/%(title).150B [%(id)s].%(ext)s", picked[picked.indexOf("-o") + 1])
+        val flat = DownloadLogic.args(DownloadOptions(playlistFolder = true), "/o")
+        assertEquals("/o/%(title).150B [%(id)s].%(ext)s", flat[flat.indexOf("-o") + 1])
+    }
+    @Test fun thumbnailAndSubtitleFileArgs() {
+        val t = DownloadLogic.args(DownloadOptions(thumbnailFile = true), "/o")
+        assertTrue("--write-thumbnail" in t)
+        assertEquals("jpg", t[t.indexOf("--convert-thumbnails") + 1])
+        val s = DownloadLogic.args(DownloadOptions(subtitles = true, subtitleFiles = true), "/o")
+        assertTrue("--write-subs" in s)
+        assertFalse("--embed-subs" in s)
+        assertFalse("--write-thumbnail" in DownloadLogic.args(DownloadOptions(), "/o"))
+    }
+    @Test fun folderNameIsOneSafePart() {
+        assertEquals("etc", DownloadLogic.folderName("../../etc"))
+        assertEquals("passwd", DownloadLogic.folderName("..\\..\\passwd"))
+        assertEquals("a b", DownloadLogic.folderName("a/b"))
+        assertFalse(DownloadLogic.folderName("a..b")!!.contains(".."))
+        assertFalse(DownloadLogic.folderName("100%(x)s")!!.contains('%'))
+        assertEquals("a b", DownloadLogic.folderName("a\u0000b"))
+        assertEquals("a b", DownloadLogic.folderName("a‮b"))
+        assertNull(DownloadLogic.folderName(null))
+        assertNull(DownloadLogic.folderName(""))
+        assertNull(DownloadLogic.folderName(" / .. "))
+        assertEquals("موسيقى الصباح", DownloadLogic.folderName("موسيقى   الصباح"))
+        assertEquals(80, DownloadLogic.folderName("ع".repeat(500))!!.length)
+        val emoji = DownloadLogic.folderName("😀".repeat(100))!!
+        assertEquals(80, emoji.codePointCount(0, emoji.length))
+    }
     @Test fun mediaTypes() {
         assertTrue(DownloadLogic.isAudioFile("a.MP3"))
         assertTrue(DownloadLogic.isMediaFile("a.mkv"))

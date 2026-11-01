@@ -202,12 +202,18 @@
     <string name="dl_restrict_sub">أحرف لاتينية فقط بلا مسافات أو رموز. تصبح العناوين العربية غير مقروءة.</string>
     <string name="dl_thumb">إضافة الصورة المصغرة كغلاف</string>
     <string name="dl_thumb_sub">غير متاح لملفات WebM</string>
+    <string name="dl_thumb_file">حفظ الصورة المصغرة كصورة</string>
+    <string name="dl_thumb_file_sub">تُحفظ في Pictures / Shoebill</string>
+    <string name="dl_playlist_folder">حفظ القوائم في مجلد خاص بها</string>
+    <string name="dl_playlist_folder_sub">تُحفظ في Movies أو Music / Shoebill / اسم القائمة</string>
     <string name="dl_nodup">تخطي ما نزلته من قبل</string>
     <string name="dl_nodup_sub">يحتفظ بقائمة خاصة بالفيديوهات المكتملة</string>
     <string name="dl_incognito">الوضع الخاص</string>
     <string name="dl_incognito_sub">لا تُحفظ التنزيلات الجديدة في السجل</string>
     <string name="dl_autosubs">تضمين الترجمة التلقائية</string>
     <string name="dl_autosubs_sub">تُستخدم عندما لا توجد ترجمة مكتوبة</string>
+    <string name="dl_sub_files">حفظ الترجمة كملفات منفصلة</string>
+    <string name="dl_sub_files_sub">تُحفظ بجانب الفيديو بصيغة srt أو vtt بدلًا من دمجها فيه</string>
     <string name="dl_sublangs">لغات الترجمة</string>
     <string name="dl_sublangs_hint">مثال: ar.*,en.* أو all</string>
     <string name="dl_sponsor_what">ما يُزال</string>
@@ -218,7 +224,7 @@
     <string name="dl_ipv4">فرض IPv4</string>
     <string name="dl_ipv4_sub">جرّبه إذا فشلت التنزيلات أو توقفت على شبكتك</string>
     <string name="dl_cookies">ملف كوكيز تسجيل الدخول</string>
-    <string name="dl_cookies_sub">ملف cookies.txt للفيديوهات التي تتطلب حسابك. من يملكه يمكنه استخدام الحساب، فحمّل ملفك فقط.</string>
+    <string name="dl_cookies_sub">في متصفحك ثبّت إضافة لتصدير cookies.txt، وافتح الموقع وأنت مسجّل الدخول، ثم صدّر الملف واختره هنا. من يملكه يستطيع استخدام الحساب، فحمّل ملفك فقط.</string>
     <string name="dl_cookies_saved">تم حفظ الكوكيز.</string>
     <string name="dl_cookies_bad">الكوكيز: تعذرت قراءة الملف أو حجمه أكبر من 2 ميجابايت.</string>
     <string name="dl_extra">خيارات yt-dlp إضافية</string>
