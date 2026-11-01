@@ -75,4 +75,33 @@ class MediaLogicTest {
         assertFalse(DownloadLogic.isMediaFile("noext"))
         assertEquals("video/x-matroska", DownloadLogic.mime("a.MKV"))
     }
+
+    @Test fun proxyAddresses() {
+        for (ok in listOf("", "  ", "socks5://127.0.0.1:1080", "http://proxy.example:8080", "https://a.b:443/", "socks5h://u:p@host:1", "SOCKS4://h:65535")) assertTrue(ok, DownloadLogic.validProxy(ok))
+        for (bad in listOf("127.0.0.1:1080", "ftp://h:21", "http://h", "http://h:0", "http://h:70000", "http://h:٨٠٨٠", "socks5://h h:80", "http://h:80/path", "--exec=x")) assertFalse(bad, DownloadLogic.validProxy(bad))
+    }
+
+    @Test fun limitAndProxyReachYtDlp() {
+        val a = DownloadLogic.args(DownloadOptions(limit = "1M", proxy = "socks5://h:1"), "/o")
+        assertEquals("1M", a[a.indexOf("--limit-rate") + 1])
+        assertEquals("socks5://h:1", a[a.indexOf("--proxy") + 1])
+        val none = DownloadLogic.args(DownloadOptions(), "/o")
+        assertFalse("--limit-rate" in none); assertFalse("--proxy" in none)
+    }
+
+    @Test fun speedLine() {
+        assertEquals("1.20MiB/s", DownloadLogic.speed("[download]  42.0% of 10.00MiB at 1.20MiB/s ETA 00:05"))
+        assertEquals("900.5KiB/s", DownloadLogic.speed("[download] 1% of ~ 3MiB at  900.5KiB/s ETA 01:00"))
+        assertNull(DownloadLogic.speed("[download] Destination: at the zoo.mp4"))
+        assertNull(DownloadLogic.speed(null))
+    }
+
+    @Test fun errorsHideTheProxyPassword() {
+        assertEquals("ERROR: (proxy) refused", DownloadLogic.scrub("ERROR: http://u:secret@h:1 refused", "http://u:secret@h:1"))
+        assertEquals("ERROR: x", DownloadLogic.scrub("ERROR: x", null))
+    }
+
+    @Test fun times() {
+        assertEquals("0:05", DownloadLogic.time(5)); assertEquals("1:01:01", DownloadLogic.time(3661)); assertEquals("0:00", DownloadLogic.time(-3))
+    }
 }

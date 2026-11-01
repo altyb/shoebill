@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Music, gallery, download and player additions, on the emulator. python3 qa/features_e2e.py [section ...]"""
-import os, re, sys, time
+import os, re, subprocess, sys, time
 sys.path.insert(0, os.path.dirname(__file__))
 from ui import *
 PKG = "dev.altayeb.shoebill"
@@ -41,7 +41,8 @@ def sec_music():
     adb("shell", "am", "start", "-n", f"{PKG}/.MainActivity"); time.sleep(2)
     tab("Music") if find("Song 1") is None else None
     time.sleep(1)
-    tap("Artists", exact=True); wait("Artist A", 5); tap("Artist A"); wait("Song 3", 5); back(); time.sleep(.6)
+    tap("Artists", exact=True); wait("Artist A", 5); tap_xy(*min((center(x) for x in nodes() if x.get("text") == "Artist A"), key=lambda c: c[1]));  # the dock shows it too; the list row is higher up
+    wait("Song 3", 5); back(); time.sleep(.6)
     tap("Albums", exact=True); wait("Album X", 5); ok("albums and artists group", True)
     tap("Songs", exact=True); time.sleep(.5)
     e = [x for x in nodes() if x.get("class", "").endswith("EditText")][0]; tap_xy(*center(e)); typ("Song%s3"); time.sleep(1); hide_keys()
@@ -85,20 +86,95 @@ def sec_player():
         ok("frame back steps back", t2 < t1, (t1, t2))
     ok("no crash in player", not crashed())
 
+def sheet_download():
+    """The configure sheet's own Download button: the last one on screen once the link has been read."""
+    end = time.time() + 60
+    while time.time() < end and find("Reading the link") is not None: time.sleep(1.5)
+    tap_xy(*center([n for n in nodes() if n.get("text") == "Download"][-1]))
+
 def dl(url, label, audio=False):
     home(); tab("Downloads"); time.sleep(1)
     e = [x for x in nodes() if x.get("class", "").endswith("EditText")][0]; tap_xy(*center(e)); typ(url); hide_keys()
+    tap("Download", exact=True); time.sleep(2)
     if audio:
-        _, y = center(wait("Best", 5, exact=True))
+        _, y = center(wait("Best", 60, exact=True))
         adb("shell", "input", "swipe", "1000", str(y), "100", str(y), "300"); time.sleep(.8)
         tap("Audio MP3")
-    tap("Download", exact=True); end = time.time() + 240; last = ""
+    sheet_download(); end = time.time() + 240; last = ""
     while time.time() < end:
         t = " | ".join(texts()); 
         if "Saved to your library" in t: return True, t
         if "Failed" in t: return False, t
         time.sleep(3)
     return False, "timeout " + t
+
+def shot(name):
+    with open(os.path.join(os.environ.get("SHOTS", "/tmp"), name + ".png"), "wb") as f:
+        f.write(subprocess.run(["adb", "-s", SERIAL, "exec-out", "screencap", "-p"], capture_output=True).stdout)
+
+def prefs(**kv):
+    """Downloader settings written directly, so one run can test proxy and limit without typing through the settings page."""
+    x = "".join(f'<string name="{k}">{v}</string>' for k, v in kv.items())
+    xml = f"<?xml version='1.0' encoding='utf-8' standalone='yes' ?><map>{x}</map>"
+    adb("shell", "am", "force-stop", PKG)
+    open(os.environ["DL_PREFS"], "w").write(xml)
+    adb("push", os.environ["DL_PREFS"], "/data/local/tmp/dl.xml")
+    adb("shell", f"run-as {PKG} sh -c 'mkdir -p shared_prefs; cp /data/local/tmp/dl.xml shared_prefs/downloads.xml'")
+
+def notif():
+    return adb("shell", "dumpsys", "notification", "--noredact")
+
+DIRECT = "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_5MB.mp4"
+
+def sec_link():
+    """Opening a link from outside: it must show the sheet, and must not start by itself."""
+    prefs()
+    url = "https://www.youtube.com/watch?v=aqz-KE-bpKQ"
+    adb("shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", url, "-n", f"{PKG}/.MainActivity"); time.sleep(3)
+    wait("Big Buck Bunny", 90); shot("link-sheet")
+    ok("youtube link opens the sheet with the real title", True)
+    ok("nothing started by itself", find("Cancel") is not None and "Downloading" not in " ".join(texts()), texts()[:14])
+    tap("Cancel", exact=True); time.sleep(1)
+    adb("shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", f"shoebill://download?url={DIRECT}", "-n", f"{PKG}/.MainActivity"); time.sleep(3)
+    wait("Quality", 30); ok("shoebill link opens the sheet", True)
+    sheet_download(); time.sleep(.6); shot("hero")
+    t = " ".join(texts()); n = notif()
+    ok("notification names the job with cancel", "Cancel" in n and "shoebill" in n, n[:0])
+    end = time.time() + 120
+    while time.time() < end and "Saved to your library" not in " ".join(texts()): time.sleep(2)
+    ok("finishes", "Saved to your library" in " ".join(texts()), texts()[:14])
+    ok("finished notification", "Download finished" in notif())
+    bad = "shoebill://download?url=javascript:alert(1)"
+    adb("shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", f"'{bad}'", "-n", f"{PKG}/.MainActivity"); time.sleep(2)
+    ok("non-web link opens no sheet", find("Quality") is None, texts()[:10])
+    ok("no crash in links", not crashed())
+
+def sec_network():
+    """Real proxy on the laptop, reached from the emulator at 10.0.2.2. The run fails if it saw no traffic."""
+    log = os.environ["PROXY_LOG"]; open(log, "w").close()
+    prefs(proxy="http://10.0.2.2:" + os.environ["PROXY_PORT"], limit="500K")
+    home(); tab("Downloads"); time.sleep(1)
+    e = [x for x in nodes() if x.get("class", "").endswith("EditText")][0]; tap_xy(*center(e)); typ(DIRECT); hide_keys()
+    tap("Download", exact=True); time.sleep(3); sheet_download(); t0 = time.time(); time.sleep(1)
+    end = t0 + 120; speeds = set()
+    while time.time() < end:
+        t = " ".join(texts()); m = re.search(r"[0-9.]+[KM]iB/s", t)
+        if m: speeds.add(m.group(0))
+        if "Saved to your library" in t or "Failed" in t: break
+        time.sleep(1)
+    took = time.time() - t0
+    ok("download through the proxy", "Saved to your library" in t, t[:200])
+    ok("proxy saw the traffic", "test-videos.co.uk" in open(log).read(), open(log).read()[:120])
+    ok("limit holds: 5 MB at 500K takes over 7 s", took > 7 and "Saved to your library" in t, (took, sorted(speeds)[:5]))
+    open(log, "w").close()
+    prefs(proxy="http://10.0.2.2:1")
+    home(); tab("Downloads"); time.sleep(1)
+    e = [x for x in nodes() if x.get("class", "").endswith("EditText")][0]; tap_xy(*center(e)); typ(DIRECT); hide_keys()
+    tap("Download", exact=True); time.sleep(3); end = time.time() + 60
+    while time.time() < end and find("Reading the link") is not None: time.sleep(1.5)
+    t = " ".join(texts()); ok("dead proxy shows an error in the sheet", "ERROR" in t or "Could not read" in t, t[:220])
+    prefs()
+    ok("no crash in network", not crashed())
 
 def sec_download():
     home(); tab("Downloads")
@@ -110,7 +186,7 @@ def sec_download():
     ok("youtube audio as MP3 reaches Music/Shoebill", r and "mp3" in adb("shell", "ls", "/sdcard/Music/Shoebill", check=False), t)
     ok("no crash in downloads", not crashed())
 
-S = dict(music=sec_music, nowplaying=sec_nowplaying, player=sec_player, download=sec_download)
+S = dict(music=sec_music, nowplaying=sec_nowplaying, player=sec_player, download=sec_download, link=sec_link, network=sec_network)
 adb("logcat", "-c", "-b", "crash", check=False)
 for s in sys.argv[1:] or S:
     print("==", s, flush=True)

@@ -8,6 +8,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 object DownloadFeature {
     const val ENABLED = false
     @Composable fun Tab(modifier: Modifier) = Unit
+    @Composable fun SettingsSection() = Unit
+    fun linkFrom(i: android.content.Intent?): String? = null
 }
 
 object SharedLink { val value = MutableStateFlow<String?>(null) }

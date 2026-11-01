@@ -21,6 +21,7 @@ class MusicService : MediaSessionService() {
             .setHandleAudioBecomingNoisy(true)
             .build()
         audioSession = player.audioSessionId
+        running = true
         session = MediaSession.Builder(this, player).build()
     }
 
@@ -33,11 +34,12 @@ class MusicService : MediaSessionService() {
     }
 
     override fun onDestroy() {
+        running = false
         session?.run { player.release(); release() }
         session = null
         audioSession = 0
         super.onDestroy()
     }
 
-    companion object { @Volatile var audioSession = 0 }
+    companion object { @Volatile var audioSession = 0; @Volatile var running = false; private set }
 }

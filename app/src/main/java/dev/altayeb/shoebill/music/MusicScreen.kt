@@ -2,6 +2,19 @@
 
 package dev.altayeb.shoebill.music
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.ui.graphics.graphicsLayer
+import kotlinx.coroutines.launch
 import android.Manifest
 import android.content.ComponentName
 import android.content.pm.PackageManager
@@ -12,7 +25,6 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
@@ -59,20 +71,45 @@ import kotlinx.coroutines.withContext
 private fun audioPermission() = if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_AUDIO else Manifest.permission.READ_EXTERNAL_STORAGE
 
 @Composable
-private fun rememberController(): MediaController? {
+private fun rememberController(connect: Boolean): MediaController? {
     val ctx = LocalContext.current
     var c by remember { mutableStateOf<MediaController?>(null) }
-    DisposableEffect(Unit) {
+    DisposableEffect(connect) {
+        if (!connect) return@DisposableEffect onDispose {}
         val token = SessionToken(ctx, ComponentName(ctx, MusicService::class.java))
         val future = MediaController.Builder(ctx, token).buildAsync()
         future.addListener({ c = runCatching { future.get() }.getOrNull() }, ContextCompat.getMainExecutor(ctx))
-        onDispose { MediaController.releaseFuture(future) }
+        onDispose { c = null; MediaController.releaseFuture(future) }
     }
     return c
 }
 
+/** What the Music tab, the dock and the sheet share. Lives above the tabs so playback stays visible on all of them. */
+class MusicHost(val state: PlayerState, val sheet: Animatable<Float, AnimationVector1D>) {
+    var controller by mutableStateOf<MediaController?>(null)
+    var songs by mutableStateOf<List<Song>?>(null)
+    val hasTrack get() = controller != null && state.current != null
+}
+
+// Opening is rare, so it alone gets the overshoot; closing stays quick. Same split as FilmBox's menu.
+private val sheetOpen = spring<Float>(dampingRatio = 0.72f, stiffness = 260f)
+private val sheetClose = tween<Float>(300, easing = FastOutSlowInEasing)
+
+/** No connection until music is wanted: people who only watch video never start the service or its player. */
 @Composable
-fun MusicTab(modifier: Modifier = Modifier) {
+fun rememberMusicHost(tab: Int): MusicHost {
+    var connect by remember { mutableStateOf(MusicService.running) }
+    LaunchedEffect(tab) { if (tab == MUSIC_TAB) connect = true }
+    val controller = rememberController(connect)
+    val state = rememberPlayerState(controller)
+    val sheet = remember { Animatable(0f) }
+    return remember { MusicHost(state, sheet) }.also { it.controller = controller }
+}
+
+const val MUSIC_TAB = 3
+
+@Composable
+fun MusicTab(host: MusicHost, modifier: Modifier = Modifier) {
     val ctx = LocalContext.current
     val granted = { ContextCompat.checkSelfPermission(ctx, audioPermission()) == PackageManager.PERMISSION_GRANTED }
     var access by remember { mutableStateOf(granted()) }
@@ -88,31 +125,14 @@ fun MusicTab(modifier: Modifier = Modifier) {
         }
         return
     }
-    var songs by remember { mutableStateOf<List<Song>?>(null) }
-    LifecycleResumeEffect(Unit) { onPauseOrDispose {} }
-    LaunchedEffect(Unit) { songs = querySongs(ctx) }
-    val controller = rememberController()
-    var full by rememberSaveable_ { mutableStateOf(false) }
-    val state = rememberPlayerState(controller)
-    if (full && controller != null && state.current != null) {
-        BackHandler { full = false }
-        NowPlaying(controller, state, songs.orEmpty(), modifier) { full = false }
-        return
-    }
-    Column(modifier.fillMaxSize()) {
-        Box(Modifier.weight(1f)) {
-            val all = songs
-            if (all == null) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-            else if (all.isEmpty()) Text(stringResource(R.string.music_empty), Modifier.fillMaxWidth().padding(32.dp), textAlign = TextAlign.Center)
-            else Library(all, controller)
-        }
-        if (controller != null && state.current != null) MiniPlayer(controller, state) { full = true }
+    LaunchedEffect(Unit) { host.songs = querySongs(ctx) }
+    Box(modifier.fillMaxSize()) {
+        val all = host.songs
+        if (all == null) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+        else if (all.isEmpty()) Text(stringResource(R.string.music_empty), Modifier.fillMaxWidth().padding(32.dp), textAlign = TextAlign.Center)
+        else Library(all, host.controller)
     }
 }
-
-// keeps the screen choice through rotation
-@Composable
-private fun <T : Any> rememberSaveable_(init: () -> T): T = androidx.compose.runtime.saveable.rememberSaveable(saver = androidx.compose.runtime.saveable.autoSaver(), init = init)
 
 class PlayerState {
     var current by mutableStateOf<androidx.media3.common.MediaItem?>(null)
@@ -265,24 +285,99 @@ private fun Art(s: Song, sizeDp: Int) {
     else Box(Modifier.size(sizeDp.dp).clip(shape).background(MaterialTheme.colorScheme.secondaryContainer), contentAlignment = Alignment.Center) { Icon(Icons.Rounded.MusicNote, null) }
 }
 
+private fun settle(host: MusicHost, scope: kotlinx.coroutines.CoroutineScope, velocity: Float = 0f) {
+    val open = if (kotlin.math.abs(velocity) > 300f) velocity < 0 else host.sheet.value > 0.3f
+    scope.launch { host.sheet.animateTo(if (open) 1f else 0f, if (open) sheetOpen else sheetClose) }
+}
+
 @Composable
-private fun MiniPlayer(c: MediaController, s: PlayerState, open: () -> Unit) {
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth().clickable(onClick = open)) {
-        Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(s.current?.mediaMetadata?.title?.toString().orEmpty(), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleSmall)
-                Text(s.current?.mediaMetadata?.artist?.toString().orEmpty(), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
+private fun rememberSheetDrag(host: MusicHost, scope: kotlinx.coroutines.CoroutineScope): androidx.compose.foundation.gestures.DraggableState {
+    val range = androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.height.toFloat().coerceAtLeast(1f)
+    return androidx.compose.foundation.gestures.rememberDraggableState { d ->
+        scope.launch { host.sheet.snapTo((host.sheet.value - d / range).coerceIn(0f, 1f)) }
+    }
+}
+
+/** The top of the bottom dock: same surface as the tabs, no card of its own. Tap or drag up to open. */
+@Composable
+fun MiniPlayer(host: MusicHost) {
+    val c = host.controller ?: return
+    val s = host.state
+    val scope = rememberCoroutineScope()
+    val drag = rememberSheetDrag(host, scope)
+    Row(
+        Modifier.fillMaxWidth()
+            .draggable(drag, androidx.compose.foundation.gestures.Orientation.Vertical, onDragStopped = { settle(host, scope, it) })
+            .clickable { scope.launch { host.sheet.animateTo(1f, sheetOpen) } }
+            .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        host.songs?.firstOrNull { it.id == s.current?.mediaId?.toLongOrNull() }?.let { Art(it, 44); Spacer(Modifier.width(12.dp)) }
+        Column(Modifier.weight(1f)) {
+            Text(s.current?.mediaMetadata?.title?.toString().orEmpty(), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleSmall)
+            Text(s.current?.mediaMetadata?.artist?.toString().orEmpty(), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        IconButton(onClick = { if (s.playing) c.pause() else c.play() }) {
+            Icon(if (s.playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, stringResource(if (s.playing) R.string.pause else R.string.play))
+        }
+        IconButton(onClick = { c.seekToNext() }) { Icon(Icons.Rounded.SkipNext, stringResource(R.string.player_next)) }
+    }
+    val cs = MaterialTheme.colorScheme
+    Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(2.dp).clip(RoundedCornerShape(1.dp)).background(cs.outlineVariant)) {
+        Box(Modifier.fillMaxWidth((s.position.toFloat() / s.duration.coerceAtLeast(1)).coerceIn(0f, 1f)).fillMaxHeight().background(cs.primary))
+    }
+}
+
+/**
+ * The dock grows into the now-playing page. It starts as the dock's own rectangle, so nothing appears from nowhere,
+ * then the page's parts follow in order (header, art, controls). The art takes the spring's overshoot.
+ */
+@Composable
+fun MusicSheet(host: MusicHost, dockHeight: Int) {
+    val c = host.controller
+    val p = host.sheet.value
+    val scope = rememberCoroutineScope()
+    if (c == null || !host.hasTrack) {
+        LaunchedEffect(Unit) { host.sheet.snapTo(0f) }
+        return
+    }
+    if (p <= 0f && !host.sheet.isRunning) return
+    BackHandler(host.sheet.targetValue > 0f) { scope.launch { host.sheet.animateTo(0f, sheetClose) } }
+    val ctx = LocalContext.current
+    LaunchedEffect(Unit) {
+        if (host.songs == null && ContextCompat.checkSelfPermission(ctx, audioPermission()) == PackageManager.PERMISSION_GRANTED) host.songs = querySongs(ctx)
+    }
+    val drag = rememberSheetDrag(host, scope)
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+        val density = androidx.compose.ui.platform.LocalDensity.current
+        val full = constraints.maxHeight.toFloat()
+        val q = p.coerceIn(0f, 1f)
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            shape = RoundedCornerShape((24f * (1f - q)).dp),
+            modifier = Modifier.fillMaxWidth()
+                .height(with(density) { (dockHeight + (full - dockHeight) * q).toDp() })
+                .draggable(drag, androidx.compose.foundation.gestures.Orientation.Vertical, onDragStopped = { settle(host, scope, it) }),
+        ) {
+            // Laid out at full size from the first frame and only clipped, so the page never reflows while it grows.
+            Box(Modifier.fillMaxSize().wrapContentHeight(Alignment.Top, unbounded = true)) {
+                NowPlaying(c, host.state, host.songs.orEmpty(), Modifier.height(with(density) { full.toDp() }).statusBarsPadding().navigationBarsPadding(), { host.sheet.value }) {
+                    scope.launch { host.sheet.animateTo(0f, sheetClose) }
+                }
             }
-            IconButton(onClick = { if (s.playing) c.pause() else c.play() }) {
-                Icon(if (s.playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, stringResource(if (s.playing) R.string.pause else R.string.play))
-            }
-            IconButton(onClick = { c.seekToNext() }) { Icon(Icons.Rounded.SkipNext, stringResource(R.string.player_next)) }
         }
     }
 }
 
+/** One part of the page arriving: from `start` of the sheet's travel, over the next 40%. Fade and short rise, FilmBox's stagger. */
+private fun Modifier.arrive(progress: () -> Float, start: Float) = graphicsLayer {
+    val a = ((progress() - start) / 0.4f).coerceIn(0f, 1f)
+    alpha = a
+    translationY = (1f - a) * 24.dp.toPx()
+}
+
 @Composable
-private fun NowPlaying(c: MediaController, s: PlayerState, all: List<Song>, modifier: Modifier, close: () -> Unit) {
+private fun NowPlaying(c: MediaController, s: PlayerState, all: List<Song>, modifier: Modifier, progress: () -> Float, close: () -> Unit) {
     val ctx = LocalContext.current
     val song = remember(s.current, all) { s.current?.mediaId?.toLongOrNull()?.let { id -> all.firstOrNull { it.id == id } } }
     var page by remember { mutableIntStateOf(0) } // 0 art, 1 lyrics, 2 queue, 3 sound
@@ -296,7 +391,7 @@ private fun NowPlaying(c: MediaController, s: PlayerState, all: List<Song>, modi
         if (sleepAt > 0L) { delay((sleepAt - System.currentTimeMillis()).coerceAtLeast(0)); c.pause(); sleepAt = 0L }
     }
     Column(modifier.fillMaxSize().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().arrive(progress, 0.15f), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = close) { Icon(Icons.Rounded.KeyboardArrowDown, stringResource(R.string.back)) }
             Spacer(Modifier.weight(1f))
             listOf(R.string.music_page_art to Icons.Rounded.Album, R.string.music_page_lyrics to Icons.Rounded.Lyrics,
@@ -304,18 +399,21 @@ private fun NowPlaying(c: MediaController, s: PlayerState, all: List<Song>, modi
                 IconToggleButton(page == i, { page = i }) { Icon(ic, stringResource(l)) }
             }
         }
-        Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+        Box(Modifier.weight(1f).fillMaxWidth().arrive(progress, 0.25f), contentAlignment = Alignment.Center) {
             when (page) {
-                0 -> song?.let { Art(it, 280) }
+                // Reads the raw value, so the art alone shows the spring's overshoot past 1.
+                0 -> song?.let { Box(Modifier.graphicsLayer { val v = 0.82f + 0.18f * progress(); scaleX = v; scaleY = v }) { Art(it, 280) } }
                 1 -> LyricsPage(lyrics, s.position, { c.seekTo(it) }) { pick.launch(arrayOf("*/*")) }
                 2 -> QueuePage(c, s)
                 else -> SoundPage(c, s, sleepAt) { sleepAt = it }
             }
         }
-        Text(s.current?.mediaMetadata?.title?.toString().orEmpty(), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
-        Text(s.current?.mediaMetadata?.artist?.toString().orEmpty(), style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Column(Modifier.fillMaxWidth().arrive(progress, 0.35f), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(s.current?.mediaMetadata?.title?.toString().orEmpty(), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+            Text(s.current?.mediaMetadata?.artist?.toString().orEmpty(), style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-            Column {
+            Column(Modifier.arrive(progress, 0.45f)) {
                 var drag by remember { mutableStateOf<Float?>(null) }
                 val dur = s.duration.coerceAtLeast(1)
                 Slider(drag ?: (s.position.toFloat() / dur).coerceIn(0f, 1f), { drag = it }, onValueChangeFinished = { drag?.let { c.seekTo((it * dur).toLong()) }; drag = null })

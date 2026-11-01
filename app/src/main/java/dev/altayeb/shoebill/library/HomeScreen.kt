@@ -1,5 +1,14 @@
 package dev.altayeb.shoebill.library
 
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.layout.absoluteOffset
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
 
@@ -127,8 +136,12 @@ fun HomeScreen(
     val singles = folders.isNotEmpty() && folders.all { it.count == 1 }
     val latest = remember(videos) { videos.sortedByDescending { it.dateAdded }.take(6) }
 
+    val music = dev.altayeb.shoebill.music.rememberMusicHost(tab)
+    var dockHeight by remember { mutableStateOf(0) }
+    Box(Modifier.fillMaxSize()) {
     Scaffold(
-        modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
+        // With the sheet fully open, the tabs under it are hidden from screen readers too.
+        modifier = Modifier.nestedScroll(scroll.nestedScrollConnection).then(if (music.sheet.value >= 1f) Modifier.clearAndSetSemantics {} else Modifier),
         topBar = {
             if (tab == 0) {
                 val headerBg = MaterialTheme.colorScheme.surfaceContainer
@@ -150,13 +163,13 @@ fun HomeScreen(
             }
         },
         bottomBar = {
-            HomeNav(tab) { tab = it }
+            HomeDock(music, tab, Modifier.onSizeChanged { dockHeight = it.height }) { tab = it }
         },
     ) { pad ->
         when (tab) {
             1 -> { PlaylistsTab(onPlayQueue, Modifier.padding(pad)); return@Scaffold }
             2 -> { NetworkTab(onPlay, Modifier.padding(pad)); return@Scaffold }
-            3 -> { dev.altayeb.shoebill.music.MusicTab(Modifier.padding(pad)); return@Scaffold }
+            dev.altayeb.shoebill.music.MUSIC_TAB -> { dev.altayeb.shoebill.music.MusicTab(music, Modifier.padding(pad)); return@Scaffold }
             4 -> { dev.altayeb.shoebill.download.DownloadFeature.Tab(Modifier.padding(pad)); return@Scaffold }
         }
         LazyColumn(
@@ -212,6 +225,8 @@ fun HomeScreen(
             }
             item { Spacer(Modifier.height(16.dp)) }
         }
+    }
+    dev.altayeb.shoebill.music.MusicSheet(music, dockHeight)
     }
 }
 
@@ -316,28 +331,59 @@ private fun FolderRow(f: FolderInfo, shape: Shape, modifier: Modifier, onClick: 
     }
 }
 
-/** Compact bottom bar: rounded top, the selected tab grows into an icon + label pill. */
+/**
+ * One surface from the mini player down to the tabs. A single pill slides between tabs with a little bounce and the
+ * chosen icon gives a small squish: the menu motion from FilmBox, kept short because tabs change often.
+ */
 @Composable
-private fun HomeNav(tab: Int, onTab: (Int) -> Unit) {
+private fun HomeDock(music: dev.altayeb.shoebill.music.MusicHost, tab: Int, modifier: Modifier, onTab: (Int) -> Unit) {
     val cs = MaterialTheme.colorScheme
-    Surface(shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp), color = cs.surfaceContainer) {
-        Row(
-            Modifier.fillMaxWidth().navigationBarsPadding().height(60.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            homeTabs.forEachIndexed { i, (labelRes, icon) ->
-                val label = stringResource(labelRes)
-                val selected = tab == i
-                val bg by animateColorAsState(if (selected) cs.secondaryContainer else Color.Transparent, label = "nav")
+    Surface(modifier, shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp), color = cs.surfaceContainer) {
+        Column(Modifier.animateContentSize(spring(dampingRatio = 0.8f, stiffness = 400f)).navigationBarsPadding()) {
+            if (music.hasTrack) dev.altayeb.shoebill.music.MiniPlayer(music)
+            Box(Modifier.fillMaxWidth().height(60.dp)) {
+                val density = androidx.compose.ui.platform.LocalDensity.current
+                val x = remember { androidx.compose.animation.core.Animatable(0f) }
+                val w = remember { androidx.compose.animation.core.Animatable(0f) }
+                var bounds by remember { mutableStateOf<Pair<Float, Float>?>(null) }
+                // The labelled tab keeps resizing while it opens, so this follows each new measure, not one fixed target.
+                androidx.compose.runtime.LaunchedEffect(bounds) {
+                    val (tx, tw) = bounds ?: return@LaunchedEffect
+                    if (w.value == 0f) { x.snapTo(tx); w.snapTo(tw); return@LaunchedEffect }
+                    val pill = spring<Float>(dampingRatio = 0.68f, stiffness = 420f)
+                    launch { x.animateTo(tx, pill) }
+                    launch { w.animateTo(tw, pill) }
+                }
+                Box(
+                    Modifier.align(androidx.compose.ui.AbsoluteAlignment.CenterLeft)
+                        // Absolute, because the measured bounds are physical positions in Arabic too.
+                        .absoluteOffset { androidx.compose.ui.unit.IntOffset(x.value.toInt(), 0) }
+                        .width(with(density) { w.value.coerceAtLeast(0f).toDp() }).height(40.dp)
+                        .clip(CircleShape).background(cs.secondaryContainer),
+                )
                 Row(
-                    Modifier.clip(CircleShape).background(bg)
-                        .selectable(selected, role = Role.Tab) { onTab(i) }
-                        .padding(horizontal = 10.dp, vertical = 8.dp).animateContentSize(),
+                    Modifier.fillMaxSize(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(icon, label, tint = if (selected) cs.onSecondaryContainer else cs.onSurfaceVariant)
-                    if (selected) Text(label, Modifier.padding(start = 8.dp), style = MaterialTheme.typography.labelLarge, color = cs.onSecondaryContainer)
+                    homeTabs.forEachIndexed { i, (labelRes, icon) ->
+                        val label = stringResource(labelRes)
+                        val selected = tab == i
+                        val squish = remember { androidx.compose.animation.core.Animatable(1f) }
+                        androidx.compose.runtime.LaunchedEffect(selected) {
+                            if (selected) { squish.snapTo(0.8f); squish.animateTo(1f, spring(dampingRatio = 0.45f, stiffness = 500f)) }
+                        }
+                        Row(
+                            Modifier.clip(CircleShape)
+                                .onGloballyPositioned { if (selected) bounds = it.positionInParent().x to it.size.width.toFloat() }
+                                .selectable(selected, role = Role.Tab) { onTab(i) }
+                                .padding(horizontal = 10.dp, vertical = 8.dp).animateContentSize(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(icon, label, Modifier.graphicsLayer { scaleX = squish.value; scaleY = squish.value }, tint = if (selected) cs.onSecondaryContainer else cs.onSurfaceVariant)
+                            if (selected) Text(label, Modifier.padding(start = 8.dp), style = MaterialTheme.typography.labelLarge, color = cs.onSecondaryContainer)
+                        }
+                    }
                 }
             }
         }
