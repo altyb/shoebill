@@ -254,8 +254,11 @@ private fun AudioPanel(player: MpvPlayer, trackVersion: Int, speed: Double, volu
     ConnectedChoice(speeds.map { it to speedText(it) }, speeds.firstOrNull { kotlin.math.abs(speed - it) < 0.01 }) { player.setSpeed(it) }
     Slider(value = speed.toFloat().coerceIn(0.25f, 4f), onValueChange = { player.setSpeed(Math.round(it * 20) / 20.0) }, valueRange = 0.25f..4f)
     AudioDelayAndEq(player)
-    SectionTitle(stringResource(R.string.player_volume_boost, volume.toInt().toString()))
-    Slider(value = volume.toFloat().coerceIn(100f, 200f), onValueChange = { player.setVolume(it.toDouble()) }, valueRange = 100f..200f)
+    val maxVolume = dev.altayeb.shoebill.settings.AppSettings.get(androidx.compose.ui.platform.LocalContext.current).settings.value.maxVolume.toFloat()
+    if (maxVolume > 100f) {
+        SectionTitle(stringResource(R.string.player_volume_boost, volume.toInt().toString()))
+        Slider(value = volume.toFloat().coerceIn(100f, maxVolume), onValueChange = { player.setVolume(it.toDouble()) }, valueRange = 100f..maxVolume)
+    }
 }
 
 @Composable

@@ -346,6 +346,64 @@ def sec_settings():
     ok("private mode writes no history", "Big_Buck" not in hist, hist[:120])
     raw_prefs("downloads", ""); ok("no crash in settings", not crashed())
 
+def sec_video():
+    """Video settings change real playback, read from the debug BrandState line and the window."""
+    def play(name, prefs_xml):
+        raw_prefs("settings", prefs_xml)
+        v = adb("shell", "content", "query", "--uri", "content://media/external/video/media", "--projection", "_id:_display_name")
+        m = re.search(r"_id=(\d+), _display_name=" + name + r"\.mp4", v); assert m, name
+        adb("logcat", "-b", "main", "-c")
+        adb("shell", "am", "start", "-S", "-a", "android.intent.action.VIEW", "-t", "video/*", "-d", f"content://media/external/video/media/{m.group(1)}", "-n", f"{PKG}/.MainActivity"); time.sleep(7)
+        if find("Got it", exact=True) is not None: tap("Got it", exact=True); time.sleep(1)
+    def st():
+        l = [x for x in adb("logcat", "-d", "-s", "BrandState").splitlines() if "BrandState:" in x]
+        return dict(re.findall(r"(\S+?)=(\S*)", l[-1].split("BrandState: ", 1)[1])) if l else {}
+    def rot(): return re.search(r"mCurrentRotation=ROTATION_(\d+)", adb("shell", "dumpsys", "window"))[1]
+    play("v1", '<float name="defaultSpeed" value="1.5" />'); ok("starting speed applies", float(st()["speed"]) == 1.5, st().get("speed"))
+    play("v1", ""); proc = subprocess.Popen(["adb", "-s", SERIAL, "shell", "input", "swipe", "1200", "500", "1200", "500", "2600"]); time.sleep(2.2)
+    held = st().get("speed"); proc.wait(); time.sleep(1.5); ok("hold plays at 2x, then returns", float(held) == 2.0 and float(st()["speed"]) == 1.0, (held, st().get("speed")))
+    play("v1", '<float name="holdSpeed" value="0.0" />'); proc = subprocess.Popen(["adb", "-s", SERIAL, "shell", "input", "swipe", "1200", "500", "1200", "500", "2600"]); time.sleep(2.2)
+    held = st().get("speed"); proc.wait(); ok("hold can be turned off", float(held) == 1.0, held)
+    play("v1", '<boolean name="gestureSeek" value="false" />'); t0 = float(st()["time-pos"]); adb("shell", "input", "swipe", "500", "500", "1900", "500", "400"); time.sleep(2.5)
+    ok("sideways seek off stays put", float(st()["time-pos"]) - t0 < 10, (t0, st().get("time-pos")))
+    play("v1", ""); t0 = float(st()["time-pos"]); adb("shell", "input", "swipe", "500", "500", "1900", "500", "400"); time.sleep(2.5)
+    ok("sideways seek on still jumps", float(st()["time-pos"]) - t0 > 20, (t0, st().get("time-pos")))
+    play("v1", '<int name="maxVolume" value="100" />'); adb("shell", "input", "swipe", "1900", "900", "1900", "100", "400"); time.sleep(2.5)
+    ok("volume limit holds", float(st()["volume"]) <= 100.0, st().get("volume"))
+    play("short", '<boolean name="loopOne" value="true" />'); time.sleep(4); a1 = float(st()["time-pos"]); time.sleep(2.5)
+    ok("repeat keeps a 3 s file playing", st().get("pause") == "no" and float(st()["time-pos"]) < 3.1, (a1, st().get("time-pos"), st().get("pause")))
+    play("langs", '<string name="audioLang">ar</string>'); ok("preferred audio language picks track 2", st().get("aid") == "2", st().get("aid"))
+    raw_prefs("playback", "")  # the app remembers each file's track; forget it for this check
+    play("langs", ""); ok("without it, track 1", st().get("aid") == "1", st().get("aid"))
+    play("whitep", ""); ok("default turns a tall video sideways", rot() in ("90", "270"), rot())
+    play("whitep", '<int name="orientation" value="2" />'); time.sleep(2); ok("follow the video stays upright", rot() == "0", rot())
+    play("v1", '<int name="orientation" value="2" />'); time.sleep(2); ok("follow the video turns a wide one", rot() in ("90", "270"), rot())
+    play("v1", '<int name="orientation" value="3" />'); ok("portrait setting", rot() == "0", rot())
+    raw_prefs("settings", ""); adb("shell", "input", "keyevent", "KEYCODE_HOME"); ok("no crash in video settings", not crashed())
+
+def sec_pip():
+    """Leaving a playing video opens the small window, with three buttons; the setting and Android's own switch both stop it."""
+    def go(xml):
+        raw_prefs("settings", xml)
+        v = adb("shell", "content", "query", "--uri", "content://media/external/video/media", "--projection", "_id:_display_name")
+        m = re.search(r"_id=(\d+), _display_name=v1\.mp4", v)
+        adb("shell", "am", "start", "-S", "-a", "android.intent.action.VIEW", "-t", "video/*", "-d", f"content://media/external/video/media/{m.group(1)}", "-n", f"{PKG}/.MainActivity"); time.sleep(7)
+        adb("shell", "input", "keyevent", "KEYCODE_HOME"); time.sleep(3)
+        return "WINDOWING_MODE_PINNED" in adb("shell", "dumpsys", "activity", "recents") or "windowingMode=pinned" in adb("shell", "dumpsys", "window", "windows") or "mode=pinned" in adb("shell", "dumpsys", "activity", "activities")
+    ok("leaving a playing video opens PiP", go(""))
+    shot("pip")
+    ok("the setting turns it off", not go('<boolean name="autoPip" value="false" />'))
+    adb("shell", "appops", "set", PKG, "PICTURE_IN_PICTURE", "deny")
+    ok("Android's switch off also stops it, with no crash", not go("") and not crashed())
+    adb("shell", "am", "force-stop", PKG); adb("shell", "am", "start", "-n", f"{PKG}/.MainActivity"); time.sleep(4)
+    tap_xy(*center(find("Settings"))); time.sleep(1.5); tap("Video player"); time.sleep(1.5)
+    for _ in range(3):
+        if find("Picture-in-picture is off") is not None: break
+        adb("shell", "input", "swipe", "500", "1500", "500", "900", "300"); time.sleep(.6)
+    ok("settings show the shortcut when Android blocks it", find("Picture-in-picture is off") is not None, texts()[:10])
+    adb("shell", "appops", "set", PKG, "PICTURE_IN_PICTURE", "allow"); adb("shell", "input", "keyevent", "KEYCODE_HOME")
+    ok("no crash in PiP", not crashed())
+
 def sec_download():
     home(); tab("Downloads")
     tap("Download", exact=True); time.sleep(1); ok("empty link names the field", find("Link: enter") is not None, texts()[:10])
@@ -356,7 +414,7 @@ def sec_download():
     ok("youtube audio as MP3 reaches Music/Shoebill", r and "mp3" in adb("shell", "ls", "/sdcard/Music/Shoebill", check=False), t)
     ok("no crash in downloads", not crashed())
 
-S = dict(music=sec_music, nowplaying=sec_nowplaying, player=sec_player, download=sec_download, link=sec_link, network=sec_network, extras=sec_extras, white=sec_white, panels=sec_panels, pages=sec_pages, settings=sec_settings)
+S = dict(music=sec_music, nowplaying=sec_nowplaying, player=sec_player, download=sec_download, link=sec_link, network=sec_network, extras=sec_extras, white=sec_white, panels=sec_panels, pages=sec_pages, settings=sec_settings, video=sec_video, pip=sec_pip)
 adb("logcat", "-c", "-b", "crash", check=False)
 for s in sys.argv[1:] or S:
     print("==", s, flush=True)

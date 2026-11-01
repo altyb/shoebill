@@ -42,6 +42,22 @@ data class Settings(
     val subStyle: SubStyle = SubStyle(),
     // privacy
     val keepHistory: Boolean = true,
+    val defaultSpeed: Float = 1f,
+    val loopOne: Boolean = false,
+    val autoPip: Boolean = true,
+    val orientation: Int = 0, // 0 landscape, 1 auto-rotate, 2 follow the video, 3 portrait
+    val showRemaining: Boolean = true,
+    val rememberBrightness: Boolean = false,
+    val brightness: Float = -1f,
+    val gestureBrightness: Boolean = true,
+    val gestureVolume: Boolean = true,
+    val gestureSeek: Boolean = true,
+    val gestureDoubleTap: Boolean = true,
+    val gesturePinch: Boolean = true,
+    val holdSpeed: Float = 2f, // 0 is off
+    val audioLang: String = "",
+    val subLang: String = "",
+    val maxVolume: Int = 200,
     val controlsHideSec: Int = 3,
     val doubleTapSec: Int = 10,
     val skipSilence: Boolean = false,
@@ -71,6 +87,11 @@ class AppSettings private constructor(context: Context) {
             .putString("darkMode", n.darkMode.name).putBoolean("amoled", n.amoled).putString("contrast", n.contrast.name)
             .putString("decoder", n.decoder.name).putBoolean("autoResume", n.autoResume).putBoolean("playNext", n.playNext)
             .putBoolean("gestures", n.gestures).putBoolean("backgroundAudio", n.backgroundAudio).putBoolean("keepHistory", n.keepHistory)
+            .putFloat("defaultSpeed", n.defaultSpeed).putBoolean("loopOne", n.loopOne).putBoolean("autoPip", n.autoPip).putInt("orientation", n.orientation)
+            .putBoolean("showRemaining", n.showRemaining).putBoolean("rememberBrightness", n.rememberBrightness).putFloat("brightness", n.brightness)
+            .putBoolean("gestureBrightness", n.gestureBrightness).putBoolean("gestureVolume", n.gestureVolume).putBoolean("gestureSeek", n.gestureSeek)
+            .putBoolean("gestureDoubleTap", n.gestureDoubleTap).putBoolean("gesturePinch", n.gesturePinch).putFloat("holdSpeed", n.holdSpeed)
+            .putString("audioLang", n.audioLang).putString("subLang", n.subLang).putInt("maxVolume", n.maxVolume)
             .putInt("controlsHideSec", n.controlsHideSec).putInt("doubleTapSec", n.doubleTapSec).putBoolean("skipSilence", n.skipSilence)
             .putBoolean("rewindBeforePrevious", n.rewindBeforePrevious).putBoolean("pauseOnUnplug", n.pauseOnUnplug).putBoolean("pauseForOthers", n.pauseForOthers)
             .putBoolean("stopOnClose", n.stopOnClose).putBoolean("rememberQueue", n.rememberQueue).putInt("minSongSec", n.minSongSec)
@@ -91,6 +112,13 @@ class AppSettings private constructor(context: Context) {
             decoder = enumOr(p.getString("decoder", null), d.decoder), autoResume = p.getBoolean("autoResume", d.autoResume),
             playNext = p.getBoolean("playNext", d.playNext), gestures = p.getBoolean("gestures", d.gestures),
             backgroundAudio = p.getBoolean("backgroundAudio", d.backgroundAudio), keepHistory = p.getBoolean("keepHistory", d.keepHistory),
+            defaultSpeed = p.getFloat("defaultSpeed", d.defaultSpeed), loopOne = p.getBoolean("loopOne", d.loopOne), autoPip = p.getBoolean("autoPip", d.autoPip),
+            orientation = p.getInt("orientation", d.orientation), showRemaining = p.getBoolean("showRemaining", d.showRemaining),
+            rememberBrightness = p.getBoolean("rememberBrightness", d.rememberBrightness), brightness = p.getFloat("brightness", d.brightness),
+            gestureBrightness = p.getBoolean("gestureBrightness", d.gestureBrightness), gestureVolume = p.getBoolean("gestureVolume", d.gestureVolume),
+            gestureSeek = p.getBoolean("gestureSeek", d.gestureSeek), gestureDoubleTap = p.getBoolean("gestureDoubleTap", d.gestureDoubleTap),
+            gesturePinch = p.getBoolean("gesturePinch", d.gesturePinch), holdSpeed = p.getFloat("holdSpeed", d.holdSpeed),
+            audioLang = p.getString("audioLang", d.audioLang).orEmpty(), subLang = p.getString("subLang", d.subLang).orEmpty(), maxVolume = p.getInt("maxVolume", d.maxVolume),
             controlsHideSec = p.getInt("controlsHideSec", d.controlsHideSec), doubleTapSec = p.getInt("doubleTapSec", d.doubleTapSec),
             skipSilence = p.getBoolean("skipSilence", d.skipSilence),
             rewindBeforePrevious = p.getBoolean("rewindBeforePrevious", d.rewindBeforePrevious), pauseOnUnplug = p.getBoolean("pauseOnUnplug", d.pauseOnUnplug),

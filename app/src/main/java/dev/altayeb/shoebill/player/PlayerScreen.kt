@@ -174,6 +174,10 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
         player.shareableUri = if (private) null else u
         player.onOpenFailed = { notice = Notice(context.getString(R.string.player_open_failed)) }
         player.shareableTitle = currentTitle
+        val prefs = settingsState.value
+        player.setString("alang", prefs.audioLang)
+        player.setString("slang", prefs.subLang)
+        player.setString("loop-file", if (prefs.loopOne) "inf" else "no")
         if (!player.load(u)) notice = Notice(context.getString(R.string.player_open_failed))
     }
 
@@ -189,19 +193,37 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
 
     fun setBrightness(v: Float) {
         window.attributes = window.attributes.also { it.screenBrightness = v }
+        if (settingsState.value.rememberBrightness) AppSettings.get(context).update { it.copy(brightness = v) }
     }
 
     DisposableEffect(player) {
         onDispose { saveState(); player.destroy() }
     }
+    // "Follow the video": turn once the file's shape is known, for each new file.
+    LaunchedEffect(current) {
+        if (settingsState.value.orientation != 2) return@LaunchedEffect
+        var w = 0.0; var h = 0.0
+        repeat(40) {
+            if (w <= 0.0 || h <= 0.0) { delay(250); w = player.getDouble("dwidth") ?: 0.0; h = player.getDouble("dheight") ?: 0.0 }
+        }
+        if (w > 0.0 && h > 0.0) activity.requestedOrientation = if (h > w) ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT else ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+    }
     LaunchedEffect(player) {
+        val start = settingsState.value
+        // Once per session: changing speed mid-way must carry over to the next file.
+        if (start.defaultSpeed != 1f) player.setSpeed(start.defaultSpeed.toDouble())
+        if (start.rememberBrightness && start.brightness >= 0f) window.attributes = window.attributes.also { it.screenBrightness = start.brightness }
         loadAt(uri)
         while (true) { delay(5000); saveState() }
     }
 
     DisposableEffect(Unit) {
         val oldOrientation = activity.requestedOrientation
-        activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        activity.requestedOrientation = when (settingsState.value.orientation) {
+            1 -> ActivityInfo.SCREEN_ORIENTATION_SENSOR
+            3 -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+            else -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        }
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         if (private) SecureWindow.acquire(activity)
         val controller = WindowCompat.getInsetsController(window, window.decorView)
@@ -378,12 +400,27 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
                     var lastVol = 0.0
                     var totalX = 0f
                     var totalY = 0f
+                    // Hold still to play fast until the finger lifts.
+                    var holding = false
+                    var speedBefore = 1.0
+                    val holdRate = settingsState.value.holdSpeed.toDouble()
+                    val holdJob = if (gesturesOn && holdRate > 0.0) scope.launch {
+                        delay(450)
+                        if (axis == Axis.None && !multi && !player.paused.value) {
+                            holding = true
+                            speedBefore = player.getDouble("speed") ?: 1.0
+                            player.setSpeed(holdRate)
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            hud = Hud(HudKind.Tap, label = "\u2066${holdRate.toInt()}×\u2069")
+                        }
+                    } else null
                     do {
                         val event = awaitPointerEvent()
                         val pressed = event.changes.filter { it.pressed }
                         if (pressed.size >= 2) {
                             multi = true
-                            if (gesturesOn) {
+                            holdJob?.cancel()
+                            if (gesturesOn && settingsState.value.gesturePinch) {
                                 val dist = (pressed[0].position - pressed[1].position).getDistance()
                                 if (pinch0 == 0f) {
                                     pinch0 = dist
@@ -402,12 +439,15 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
                             val c = pressed[0]
                             totalX = c.position.x - down.position.x
                             totalY = c.position.y - down.position.y
-                            if (axis == Axis.None && (abs(totalX) > slop || abs(totalY) > slop)) {
+                            if (axis == Axis.None && !holding && (abs(totalX) > slop || abs(totalY) > slop)) {
+                                holdJob?.cancel()
+                                val prefs = settingsState.value
                                 axis = when {
                                     !gesturesOn -> Axis.Blocked
                                     onSub && abs(totalY) > abs(totalX) -> Axis.Subtitle
-                                    abs(totalY) > abs(totalX) -> Axis.Vertical
-                                    else -> Axis.Horizontal
+                                    abs(totalY) > abs(totalX) -> if (if (down.position.x < w / 2) prefs.gestureBrightness else prefs.gestureVolume) Axis.Vertical else Axis.Blocked
+                                    prefs.gestureSeek -> Axis.Horizontal
+                                    else -> Axis.Blocked
                                 }
                                 if (axis == Axis.Vertical) {
                                     if (down.position.x < w / 2) {
@@ -434,11 +474,12 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
                                         setBrightness(b)
                                         hud = Hud(HudKind.Brightness, b, "\u2066${(b * 100).toInt()}%\u2069")
                                     } else {
-                                        val v = (startVol + frac * 200.0).coerceIn(0.0, 200.0)
+                                        val top = settingsState.value.maxVolume.toDouble()
+                                        val v = (startVol + frac * top).coerceIn(0.0, top)
                                         if ((lastVol < 100.0) != (v < 100.0)) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                                         lastVol = v
                                         player.setVolume(v)
-                                        hud = Hud(HudKind.Volume, (v / 200.0).toFloat(), "\u2066${v.toInt()}%\u2069")
+                                        hud = Hud(HudKind.Volume, (v / top).toFloat(), "\u2066${v.toInt()}%\u2069")
                                     }
                                     c.consume()
                                 }
@@ -458,6 +499,12 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
                             }
                         }
                     } while (event.changes.any { it.pressed })
+                    holdJob?.cancel()
+                    if (holding) {
+                        player.setSpeed(speedBefore)
+                        clearHudLater()
+                        return@awaitEachGesture
+                    }
 
                     if (axis == Axis.Horizontal) {
                         seekPreview?.let { player.seekTo(it) }
@@ -479,7 +526,7 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
                         if (isDouble) {
                             lastTapAt = 0L
                             tapToken++
-                            if (gesturesOn) {
+                            if (gesturesOn && settingsState.value.gestureDoubleTap) {
                                 val f = down.position.x / w
                                 when {
                                     f < 1f / 3f -> tapSeek(-1)

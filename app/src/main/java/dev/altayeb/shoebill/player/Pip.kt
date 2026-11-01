@@ -1,5 +1,6 @@
 package dev.altayeb.shoebill.player
 
+import androidx.compose.runtime.collectAsState
 import dev.altayeb.shoebill.R
 import android.app.Activity
 import android.app.PendingIntent
@@ -44,7 +45,10 @@ fun rememberPip(activity: Activity, player: MpvPlayer, paused: Boolean, enabled:
         val listener = Consumer<PictureInPictureModeChangedInfo> { inPip = it.isInPictureInPictureMode }
         (activity as? ComponentActivity)?.addOnPictureInPictureModeChangedListener(listener)
         val receiver = object : BroadcastReceiver() {
-            override fun onReceive(c: Context, i: Intent) { player.togglePause() }
+            override fun onReceive(c: Context, i: Intent) {
+                val skip = i.getIntExtra("skip", 0)
+                if (skip != 0) player.seekBy(skip.toDouble()) else player.togglePause()
+            }
         }
         ContextCompat.registerReceiver(ctx, receiver, IntentFilter(ACTION_TOGGLE), ContextCompat.RECEIVER_NOT_EXPORTED)
         onDispose {
@@ -57,8 +61,9 @@ fun rememberPip(activity: Activity, player: MpvPlayer, paused: Boolean, enabled:
         }
     }
 
-    LaunchedEffect(paused, enabled) {
-        if (!enabled) {
+    val autoPip = dev.altayeb.shoebill.settings.AppSettings.get(ctx).settings.collectAsState().value.autoPip
+    LaunchedEffect(paused, enabled, autoPip) {
+        if (!enabled || !autoPip) {
             PipGate.params = null
             if (Build.VERSION.SDK_INT >= 31) activity.setPictureInPictureParams(PictureInPictureParams.Builder().setAutoEnterEnabled(false).build())
             return@LaunchedEffect
@@ -78,7 +83,13 @@ fun rememberPip(activity: Activity, player: MpvPlayer, paused: Boolean, enabled:
             activity.getString(if (paused) R.string.play else R.string.pause), activity.getString(if (paused) R.string.play else R.string.pause),
             PendingIntent.getBroadcast(ctx, 0, Intent(ACTION_TOGGLE).setPackage(ctx.packageName), PendingIntent.FLAG_IMMUTABLE),
         )
-        val b = PictureInPictureParams.Builder().setAspectRatio(ratio).setActions(listOf(action))
+        fun skip(sec: Int, icon: Int, label: Int) = RemoteAction(
+            Icon.createWithResource(ctx, icon), activity.getString(label), activity.getString(label),
+            PendingIntent.getBroadcast(ctx, sec + 100, Intent(ACTION_TOGGLE).setPackage(ctx.packageName).putExtra("skip", sec), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT),
+        )
+        val actions = listOf(skip(-10, android.R.drawable.ic_media_rew, R.string.player_rewind_10), action, skip(10, android.R.drawable.ic_media_ff, R.string.player_forward_10))
+        // Android caps the buttons; on a phone that allows fewer, play and pause is the one to keep.
+        val b = PictureInPictureParams.Builder().setAspectRatio(ratio).setActions(if (activity.maxNumPictureInPictureActions >= 3) actions else listOf(action))
         if (Build.VERSION.SDK_INT >= 31) b.setAutoEnterEnabled(!paused).setSeamlessResizeEnabled(true)
         val params = b.build()
         PipGate.params = if (paused) null else params
