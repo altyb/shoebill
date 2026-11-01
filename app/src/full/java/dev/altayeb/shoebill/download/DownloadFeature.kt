@@ -315,7 +315,7 @@ object DownloadFeature {
         DlState.Waiting -> stringResource(R.string.dl_waiting)
         DlState.Running -> listOfNotNull(stringResource(R.string.dl_running, j.percent), j.speed, j.etaSec.takeIf { it > 0 }?.let { stringResource(R.string.dl_left, DownloadLogic.time(it)) }).joinToString(" · ")
         DlState.Finishing -> stringResource(R.string.dl_finishing)
-        DlState.Done -> stringResource(R.string.dl_done)
+        DlState.Done -> listOf(stringResource(R.string.dl_done), j.error).filter { it.isNotEmpty() }.joinToString(" · ")
         DlState.Failed -> stringResource(R.string.dl_failed, j.error)
         DlState.Cancelled -> stringResource(R.string.dl_cancelled)
     }
