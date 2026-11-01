@@ -108,6 +108,9 @@ import android.Manifest.permission.READ_MEDIA_IMAGES
 import android.Manifest.permission.READ_MEDIA_VIDEO
 import androidx.activity.result.PickVisualMediaRequest
 import dev.altayeb.shoebill.ui.theme.Radius
+import dev.altayeb.shoebill.BuildConfig
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.spring
 
 private const val READ_IMAGES = "android.permission.READ_MEDIA_IMAGES"
 private const val READ_VIDEO = "android.permission.READ_MEDIA_VIDEO"
@@ -170,7 +173,7 @@ fun VaultGrid(
         onEndSystemHop()
         addFilesNow()
     }
-    val needsAllFiles = { dev.altayeb.shoebill.BuildConfig.ALL_FILES && Build.VERSION.SDK_INT >= 30 && !Environment.isExternalStorageManager() }
+    val needsAllFiles = { BuildConfig.ALL_FILES && Build.VERSION.SDK_INT >= 30 && !Environment.isExternalStorageManager() }
     if (allFilesDialog) {
         AlertDialog(
             onDismissRequest = { allFilesDialog = false },
@@ -252,7 +255,7 @@ fun VaultGrid(
             Column(Modifier.fillMaxSize()) {
                 ui.importing?.let { imp ->
                     val target = if (imp.total == 0) 0f else imp.done.toFloat() / imp.total
-                    val smooth by androidx.compose.animation.core.animateFloatAsState(target, androidx.compose.animation.core.tween(400), label = "import")
+                    val smooth by animateFloatAsState(target, tween(400), label = "import")
                     LinearProgressIndicator(
                         progress = { smooth },
                         modifier = Modifier.fillMaxWidth(),
@@ -264,7 +267,7 @@ fun VaultGrid(
                     }
                 }
                 if (shown.isEmpty()) {
-                    EmptyState(dev.altayeb.shoebill.R.drawable.art_vault, stringResource(R.string.vault_empty), Modifier.weight(1f), body = stringResource(R.string.vault_empty_body))
+                    EmptyState(R.drawable.art_vault, stringResource(R.string.vault_empty), Modifier.weight(1f), body = stringResource(R.string.vault_empty_body))
                 } else {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(3),
@@ -276,9 +279,9 @@ fun VaultGrid(
                         items(shown, key = { it.id }) { e ->
                             Tile(
                                 modifier = Modifier.animateItem(
-                                    fadeInSpec = androidx.compose.animation.core.tween(350),
-                                    placementSpec = androidx.compose.animation.core.spring(dampingRatio = 0.8f, stiffness = 380f),
-                                    fadeOutSpec = androidx.compose.animation.core.tween(200),
+                                    fadeInSpec = tween(350),
+                                    placementSpec = spring(dampingRatio = 0.8f, stiffness = 380f),
+                                    fadeOutSpec = tween(200),
                                 ),
                                 e = e,
                                 thumb = ui.thumbs[e.id],

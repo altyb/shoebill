@@ -112,6 +112,12 @@ import androidx.compose.ui.platform.LocalContext
 import dev.altayeb.shoebill.ui.theme.PlayerColors
 import dev.altayeb.shoebill.ui.theme.Radius
 import kotlinx.coroutines.Dispatchers
+import dev.altayeb.shoebill.settings.AppSettings
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import kotlinx.coroutines.withContext
 
 /** Behind every control, so white icons stay readable on any picture, a white frame included (about 5:1 at worst). */
 private val ControlSurface = PlayerColors.Surface
@@ -156,19 +162,19 @@ fun Controls(
     onScrub: (Double) -> Unit,
     onScrubEnd: (Double?) -> Unit,
 ) {
-    val showRemaining = dev.altayeb.shoebill.settings.AppSettings.get(androidx.compose.ui.platform.LocalContext.current).settings.collectAsState().value.showRemaining
+    val showRemaining = AppSettings.get(LocalContext.current).settings.collectAsState().value.showRemaining
     val motion = MaterialTheme.motionScheme
     // Each part comes from its own edge on the Expressive spring and leaves on the quick one.
     fun Modifier.slideFrom(top: Boolean) = with(scope) {
         animateEnterExit(
-            enter = androidx.compose.animation.slideInVertically(motion.defaultSpatialSpec()) { if (top) -it else it } + fadeIn(motion.defaultEffectsSpec()),
-            exit = androidx.compose.animation.slideOutVertically(motion.fastSpatialSpec()) { if (top) -it else it } + fadeOut(motion.fastEffectsSpec()),
+            enter = slideInVertically(motion.defaultSpatialSpec()) { if (top) -it else it } + fadeIn(motion.defaultEffectsSpec()),
+            exit = slideOutVertically(motion.fastSpatialSpec()) { if (top) -it else it } + fadeOut(motion.fastEffectsSpec()),
         )
     }
     val popIn = with(scope) {
         Modifier.animateEnterExit(
-            enter = androidx.compose.animation.scaleIn(motion.defaultSpatialSpec(), initialScale = 0.8f) + fadeIn(motion.defaultEffectsSpec()),
-            exit = androidx.compose.animation.scaleOut(motion.fastSpatialSpec(), targetScale = 0.9f) + fadeOut(motion.fastEffectsSpec()),
+            enter = scaleIn(motion.defaultSpatialSpec(), initialScale = 0.8f) + fadeIn(motion.defaultEffectsSpec()),
+            exit = scaleOut(motion.fastSpatialSpec(), targetScale = 0.9f) + fadeOut(motion.fastEffectsSpec()),
         )
     }
     Column(
@@ -219,7 +225,7 @@ fun Controls(
                         AnimatedContent(
                             when { eof -> 2; paused -> 0; else -> 1 },
                             transitionSpec = {
-                                (androidx.compose.animation.scaleIn(motion.fastSpatialSpec(), initialScale = 0.6f) + fadeIn(motion.fastEffectsSpec())) togetherWith fadeOut(motion.fastEffectsSpec())
+                                (scaleIn(motion.fastSpatialSpec(), initialScale = 0.6f) + fadeIn(motion.fastEffectsSpec())) togetherWith fadeOut(motion.fastEffectsSpec())
                             },
                             label = "playIcon",
                         ) { state ->
@@ -284,7 +290,7 @@ private fun SeekPreview(uri: Uri?, sec: Double, duration: Double, active: Boolea
     val step = (sec / (duration / 200).coerceAtLeast(1.0)).toInt() // about 200 stops along any video, so a drag does not queue a decode per pixel
     LaunchedEffect(step) {
         delay(80)
-        frame = kotlinx.coroutines.withContext(Dispatchers.IO) {
+        frame = withContext(Dispatchers.IO) {
             runCatching { retriever?.getFrameAtTime((sec * 1_000_000).toLong(), MediaMetadataRetriever.OPTION_CLOSEST_SYNC)?.let {
                 Bitmap.createScaledBitmap(it, 320, (320f * it.height / it.width).toInt().coerceAtLeast(1), true)
             } }.getOrNull()

@@ -146,9 +146,9 @@ fun SearchBody(onBack: () -> Unit, onPlay: (Uri, String) -> Unit) = VideoGate { 
                             }
                         }
                     } else {
-                        EmptyState(dev.altayeb.shoebill.R.drawable.art_empty, stringResource(R.string.lib_search_empty), body = stringResource(R.string.lib_search_empty_body))
+                        EmptyState(R.drawable.art_empty, stringResource(R.string.lib_search_empty), body = stringResource(R.string.lib_search_empty_body))
                     }
-                    1 -> EmptyState(dev.altayeb.shoebill.R.drawable.art_empty,
+                    1 -> EmptyState(R.drawable.art_empty,
                         stringResource(R.string.lib_no_results_for, query.trim()),
                         body = stringResource(R.string.lib_no_results_body),
                         action = {

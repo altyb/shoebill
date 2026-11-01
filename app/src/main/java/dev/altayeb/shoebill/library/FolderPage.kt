@@ -174,7 +174,7 @@ fun FolderBody(folder: String, onBack: () -> Unit, onPlay: (Uri, String) -> Unit
                     }
                 }
                 if (shown.isEmpty()) {
-                    EmptyState(dev.altayeb.shoebill.R.drawable.art_empty, stringResource(R.string.lib_no_videos_here), Modifier.weight(1f), body = stringResource(R.string.lib_no_videos_here_body))
+                    EmptyState(R.drawable.art_empty, stringResource(R.string.lib_no_videos_here), Modifier.weight(1f), body = stringResource(R.string.lib_no_videos_here_body))
                 } else if (grid) {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(2),

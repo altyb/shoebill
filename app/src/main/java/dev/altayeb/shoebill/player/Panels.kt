@@ -69,6 +69,8 @@ import dev.altayeb.shoebill.ui.theme.Radius
 import java.math.BigDecimal
 import java.math.RoundingMode
 import kotlin.math.roundToInt
+import dev.altayeb.shoebill.settings.AppSettings
+import androidx.compose.ui.platform.LocalContext
 
 /** Side sheet, 372 dp, 28 dp corners, over the video, which keeps playing (ق-07). */
 @Composable
@@ -256,7 +258,7 @@ private fun AudioPanel(player: MpvPlayer, trackVersion: Int, speed: Double, volu
     ConnectedChoice(speeds.map { it to speedText(it) }, speeds.firstOrNull { kotlin.math.abs(speed - it) < 0.01 }) { player.setSpeed(it) }
     Slider(value = speed.toFloat().coerceIn(0.25f, 4f), onValueChange = { player.setSpeed(Math.round(it * 20) / 20.0) }, valueRange = 0.25f..4f)
     AudioDelayAndEq(player)
-    val maxVolume = dev.altayeb.shoebill.settings.AppSettings.get(androidx.compose.ui.platform.LocalContext.current).settings.value.maxVolume.toFloat()
+    val maxVolume = AppSettings.get(LocalContext.current).settings.value.maxVolume.toFloat()
     if (maxVolume > 100f) {
         SectionTitle(stringResource(R.string.player_volume_boost, volume.toInt().toString()))
         Slider(value = volume.toFloat().coerceIn(100f, maxVolume), onValueChange = { player.setVolume(it.toDouble()) }, valueRange = 100f..maxVolume)
