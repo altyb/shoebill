@@ -8,10 +8,12 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import kotlinx.coroutines.launch
 
 /** Music keeps playing with the app closed; lock screen, headset and notification controls come from the media session. */
 class MusicService : MediaSessionService() {
     private var session: MediaSession? = null
+    private val settingsScope = kotlinx.coroutines.MainScope()
 
     @OptIn(UnstableApi::class)
     override fun onCreate() {
@@ -23,6 +25,9 @@ class MusicService : MediaSessionService() {
         audioSession = player.audioSessionId
         running = true
         session = MediaSession.Builder(this, player).build()
+        settingsScope.launch {
+            dev.altayeb.shoebill.settings.AppSettings.get(this@MusicService).settings.collect { player.skipSilenceEnabled = it.skipSilence }
+        }
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo) = session
@@ -35,6 +40,7 @@ class MusicService : MediaSessionService() {
 
     override fun onDestroy() {
         running = false
+        settingsScope.coroutineContext[kotlinx.coroutines.Job]?.cancel()
         session?.run { player.release(); release() }
         session = null
         audioSession = 0

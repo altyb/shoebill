@@ -100,7 +100,7 @@ fun SidePanel(
         Box(Modifier.fillMaxSize()) {
             Box(
                 modifier = Modifier.align(Alignment.CenterEnd).padding(12.dp).width(372.dp).fillMaxHeight()
-                    .glass(RoundedCornerShape(28.dp)),
+                    .glass(dev.altayeb.shoebill.ui.theme.Radius.XL),
             ) {
                 Column(Modifier.padding(20.dp).verticalScroll(rememberScrollState())) {
                     PanelHeader(title, onClose)
@@ -128,7 +128,7 @@ private fun trackLabel(t: Track): String {
 private fun TrackRow(label: String, selected: Boolean, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(20.dp),
+        shape = dev.altayeb.shoebill.ui.theme.Radius.L,
         color = if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.White.copy(alpha = 0.06f),
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
     ) {

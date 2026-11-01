@@ -56,7 +56,7 @@ import androidx.compose.ui.unit.dp
 // add Haze/RenderEffect only for screens without video behind.
 /** Frosted-glass surface: translucent tinted gradient, 1 dp light edge. */
 @Composable
-fun Modifier.glass(shape: Shape = RoundedCornerShape(28.dp)): Modifier {
+fun Modifier.glass(shape: Shape = dev.altayeb.shoebill.ui.theme.Radius.XL): Modifier {
     val c = MaterialTheme.colorScheme.surfaceContainer
     return clip(shape)
         .background(Brush.verticalGradient(listOf(c.copy(alpha = 0.90f), c.copy(alpha = 0.80f))))

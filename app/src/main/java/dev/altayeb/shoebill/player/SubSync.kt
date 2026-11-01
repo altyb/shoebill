@@ -100,7 +100,7 @@ fun SubTimingTab(player: MpvPlayer, subFile: File?) {
             }
         }
         Spacer(Modifier.height(12.dp))
-        Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {
+        Surface(shape = dev.altayeb.shoebill.ui.theme.Radius.L, color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(cue.ifBlank { stringResource(R.string.sub_no_cue) }, style = MaterialTheme.typography.titleMedium, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                 Spacer(Modifier.height(12.dp))

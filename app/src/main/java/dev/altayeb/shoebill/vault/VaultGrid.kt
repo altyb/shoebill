@@ -389,7 +389,7 @@ fun VaultGrid(
 private fun Tile(e: VaultEntry, thumb: ByteArray?, selected: Boolean, onClick: () -> Unit, onLong: () -> Unit, modifier: Modifier = Modifier) {
     val img = remember(thumb) { thumb?.let { BitmapFactory.decodeByteArray(it, 0, it.size)?.asImageBitmap() } }
     val scale by animateFloatAsState(if (selected) 0.94f else 1f, label = "tileScale")
-    val shape = RoundedCornerShape(12.dp)
+    val shape = dev.altayeb.shoebill.ui.theme.Radius.S
     Box(
         modifier.aspectRatio(16f / 9f)
             .graphicsLayer { scaleX = scale; scaleY = scale }
@@ -408,7 +408,7 @@ private fun Tile(e: VaultEntry, thumb: ByteArray?, selected: Boolean, onClick: (
         if (e.kind == "video") {
             Text(
                 formatDuration(e.durationMs),
-                Modifier.align(Alignment.BottomEnd).padding(4.dp).background(Color(0xB3000000), RoundedCornerShape(6.dp)).padding(horizontal = 8.dp, vertical = 2.dp),
+                Modifier.align(Alignment.BottomEnd).padding(4.dp).background(Color(0xB3000000), dev.altayeb.shoebill.ui.theme.Radius.XS).padding(horizontal = 8.dp, vertical = 2.dp),
                 color = Color.White, style = MaterialTheme.typography.labelSmall,
             )
         } else {

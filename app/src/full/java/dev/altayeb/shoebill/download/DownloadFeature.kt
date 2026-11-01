@@ -2,6 +2,11 @@
 
 package dev.altayeb.shoebill.download
 
+import dev.altayeb.shoebill.settings.ChoiceRow
+import dev.altayeb.shoebill.settings.GroupTitle
+import dev.altayeb.shoebill.settings.SettingRow
+import dev.altayeb.shoebill.settings.SwitchRow
+import dev.altayeb.shoebill.settings.groupShapes
 import androidx.compose.foundation.clickable
 import dev.altayeb.shoebill.download.logic.Fmt
 import dev.altayeb.shoebill.download.logic.PlEntry
@@ -77,6 +82,8 @@ class DlPrefs(c: Context) {
     var subtitles: Boolean get() = p.getBoolean("subtitles", false); set(v) = p.edit().putBoolean("subtitles", v).apply()
     var limit: String? get() = p.getString("limit", null); set(v) = p.edit().putString("limit", v).apply()
     var proxy: String get() = p.getString("proxy", "").orEmpty(); set(v) = p.edit().putString("proxy", v).apply()
+    var wifiOnly: Boolean get() = p.getBoolean("wifiOnly", false); set(v) = p.edit().putBoolean("wifiOnly", v).apply()
+    var skipSponsors: Boolean get() = p.getBoolean("skipSponsors", false); set(v) = p.edit().putBoolean("skipSponsors", v).apply()
 }
 
 /** Fetches what a link is, with the same proxy the download will use, so a blocked network fails here and not later. */
@@ -222,6 +229,7 @@ object DownloadQueue {
     private suspend fun run(c: Context, j: DlJob) {
         val out = File(c.cacheDir, "downloads/${j.id}").apply { mkdirs() }
         try {
+            if (DlPrefs(c).wifiOnly && c.getSystemService(android.net.ConnectivityManager::class.java).isActiveNetworkMetered) error(c.getString(R.string.dl_wifi_blocked))
             ensureReady(c)
             change(j.id) { it.copy(state = DlState.Running) }
             updateIfStale(c)
@@ -446,8 +454,8 @@ object DownloadFeature {
                 when {
                     i != null -> {
                         if (i.thumb != null) Box {
-                            Thumb(i.thumb, proxy, Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(16.dp)))
-                            if (i.durationSec > 0) Text(DownloadLogic.time(i.durationSec), Modifier.align(Alignment.BottomEnd).padding(8.dp).background(androidx.compose.ui.graphics.Color.Black.copy(alpha = .7f), RoundedCornerShape(6.dp)).padding(horizontal = 8.dp, vertical = 2.dp), color = androidx.compose.ui.graphics.Color.White, style = MaterialTheme.typography.labelSmall)
+                            Thumb(i.thumb, proxy, Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(dev.altayeb.shoebill.ui.theme.Radius.M))
+                            if (i.durationSec > 0) Text(DownloadLogic.time(i.durationSec), Modifier.align(Alignment.BottomEnd).padding(8.dp).background(androidx.compose.ui.graphics.Color.Black.copy(alpha = .7f), dev.altayeb.shoebill.ui.theme.Radius.XS).padding(horizontal = 8.dp, vertical = 2.dp), color = androidx.compose.ui.graphics.Color.White, style = MaterialTheme.typography.labelSmall)
                         }
                         Text(i.title, style = MaterialTheme.typography.titleMedium, maxLines = 3, overflow = TextOverflow.Ellipsis)
                         if (i.uploader.isNotEmpty()) Text(i.uploader, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -468,7 +476,7 @@ object DownloadFeature {
                     LazyColumn(Modifier.fillMaxWidth().heightIn(max = 340.dp)) { items(entries, key = { it.url }) { e ->
                         Row(Modifier.fillMaxWidth().clickable { if (!unpicked.remove(e.url)) unpicked.add(e.url) }, verticalAlignment = Alignment.CenterVertically) {
                             Checkbox(e.url !in unpicked, null, Modifier.padding(end = 12.dp).padding(vertical = 12.dp))
-                            Thumb(e.thumb, proxy, Modifier.width(80.dp).aspectRatio(16f / 9f).clip(RoundedCornerShape(8.dp)))
+                            Thumb(e.thumb, proxy, Modifier.width(80.dp).aspectRatio(16f / 9f).clip(dev.altayeb.shoebill.ui.theme.Radius.XS))
                             Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(e.title, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
@@ -492,7 +500,7 @@ object DownloadFeature {
                 Row(Modifier.padding(horizontal = 16.dp).padding(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = close, Modifier.weight(1f)) { Text(stringResource(R.string.dl_cancel)) }
                     Button(onClick = {
-                        val base = DownloadOptions(quality, playlist, subs, prefs.limit, proxy, format?.id, format?.audioOnly == true)
+                        val base = DownloadOptions(quality, playlist, subs, prefs.limit, proxy, format?.id, format?.audioOnly == true, prefs.skipSponsors)
                         if (entries.isEmpty()) DownloadQueue.add(ctx, url, base, info)
                         else entries.filter { it.url !in unpicked }.forEach { e ->
                             DownloadQueue.add(ctx, e.url, base.copy(playlist = false), Preview(e.title, i?.uploader.orEmpty(), e.thumb, e.durationSec))
@@ -530,7 +538,7 @@ object DownloadFeature {
     /** The download in progress, large, with the same picture as the sheet before it. */
     @Composable
     private fun HeroCard(j: DlJob) {
-        Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+        Surface(shape = dev.altayeb.shoebill.ui.theme.Radius.L, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
             Column {
                 if (j.thumb != null) Thumb(j.thumb, j.options.proxy, Modifier.fillMaxWidth().aspectRatio(16f / 9f))
                 androidx.compose.material3.LinearWavyProgressIndicator(progress = { j.percent / 100f }, Modifier.fillMaxWidth())
@@ -563,9 +571,9 @@ object DownloadFeature {
                 ctx.startActivity(Intent.createChooser(Intent(Intent.ACTION_VIEW).setDataAndType(android.net.Uri.parse(j.fileUri), if (j.audio) "audio/*" else "video/*").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), null))
             }
         }
-        Surface(modifier.fillMaxWidth().then(if (j.state == DlState.Done && j.fileUri != null) Modifier.clickable(onClick = open) else Modifier), shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
+        Surface(modifier.fillMaxWidth().then(if (j.state == DlState.Done && j.fileUri != null) Modifier.clickable(onClick = open) else Modifier), shape = dev.altayeb.shoebill.ui.theme.Radius.M, color = MaterialTheme.colorScheme.surfaceContainer) {
             Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Thumb(j.thumb, j.options.proxy, Modifier.width(112.dp).aspectRatio(16f / 9f).clip(RoundedCornerShape(10.dp)))
+                Thumb(j.thumb, j.options.proxy, Modifier.width(112.dp).aspectRatio(16f / 9f).clip(dev.altayeb.shoebill.ui.theme.Radius.S))
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(j.title.ifEmpty { j.url }, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
@@ -592,28 +600,47 @@ object DownloadFeature {
         var subs by remember { mutableStateOf(prefs.subtitles) }
         var limit by remember { mutableStateOf(prefs.limit) }
         var proxy by remember { mutableStateOf(prefs.proxy) }
+        var wifi by remember { mutableStateOf(prefs.wifiOnly) }
+        var sponsors by remember { mutableStateOf(prefs.skipSponsors) }
         var message by remember { mutableStateOf<String?>(null) }
         var updating by remember { mutableStateOf(false) }
-        Text(stringResource(R.string.dl_settings), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-        Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
-            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(stringResource(R.string.dl_quality), style = MaterialTheme.typography.titleSmall)
-                QualityChips(quality) { quality = it; prefs.quality = it }
-                Row(Modifier.offset(x = (-12).dp), verticalAlignment = Alignment.CenterVertically) { Checkbox(playlist, { playlist = it; prefs.playlist = it }); Text(stringResource(R.string.dl_playlist)) }
-                Row(Modifier.offset(x = (-12).dp), verticalAlignment = Alignment.CenterVertically) { Checkbox(subs, { subs = it; prefs.subtitles = it }); Text(stringResource(R.string.dl_subs)) }
-                Text(stringResource(R.string.dl_limit), style = MaterialTheme.typography.titleSmall)
-                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(limit == null, { limit = null; prefs.limit = null }, { Text(stringResource(R.string.dl_no_limit)) })
-                    DownloadLogic.LIMITS.forEach { l -> FilterChip(limit == l, { limit = l; prefs.limit = l }, { Text(l + "B/s") }) }
-                }
+        val col = androidx.compose.foundation.layout.Arrangement.spacedBy(2.dp)
+
+        GroupTitle(stringResource(R.string.dl_group_defaults))
+        val d = groupShapes(4)
+        Column(verticalArrangement = col) {
+            ChoiceRow(stringResource(R.string.dl_quality), d[0], Quality.entries.map { q -> q to when (q) {
+                Quality.BEST -> stringResource(R.string.dl_best)
+                Quality.M4A -> stringResource(R.string.dl_m4a)
+                Quality.MP3 -> stringResource(R.string.dl_mp3)
+                else -> "${q.height}p"
+            } }, quality) { quality = it; prefs.quality = it }
+            SwitchRow(stringResource(R.string.dl_playlist), d[1], playlist) { playlist = it; prefs.playlist = it }
+            SwitchRow(stringResource(R.string.dl_subs), d[2], subs) { subs = it; prefs.subtitles = it }
+            SwitchRow(stringResource(R.string.dl_sponsors), d[3], sponsors, stringResource(R.string.dl_sponsors_sub)) { sponsors = it; prefs.skipSponsors = it }
+        }
+
+        GroupTitle(stringResource(R.string.dl_group_network))
+        val n = groupShapes(3)
+        Column(verticalArrangement = col) {
+            SwitchRow(stringResource(R.string.dl_wifi), n[0], wifi, stringResource(R.string.dl_wifi_sub)) { wifi = it; prefs.wifiOnly = it }
+            ChoiceRow(stringResource(R.string.dl_limit), n[1], listOf<Pair<String?, String>>(null to stringResource(R.string.dl_no_limit)) + DownloadLogic.LIMITS.map { it to it + "B/s" }, limit) { limit = it; prefs.limit = it }
+            Surface(Modifier.fillMaxWidth(), shape = n[2], color = MaterialTheme.colorScheme.surfaceContainerHigh) {
                 val ok = DownloadLogic.validProxy(proxy)
-                OutlinedTextField(proxy, { proxy = it.take(300); if (DownloadLogic.validProxy(it)) prefs.proxy = it.trim() }, Modifier.fillMaxWidth(), singleLine = true,
+                OutlinedTextField(proxy, { proxy = it.take(300); if (DownloadLogic.validProxy(it)) prefs.proxy = it.trim() }, Modifier.fillMaxWidth().padding(16.dp), singleLine = true,
                     label = { Text(stringResource(R.string.dl_proxy)) }, isError = !ok,
                     supportingText = { Text(stringResource(if (ok) R.string.dl_proxy_hint else R.string.dl_bad_proxy)) })
-                if (Build.VERSION.SDK_INT >= 31) TextButton(contentPadding = PaddingValues(vertical = 8.dp), onClick = {
-                    ctx.startActivity(Intent(android.provider.Settings.ACTION_APP_OPEN_BY_DEFAULT_SETTINGS, android.net.Uri.parse("package:${ctx.packageName}")))
-                }) { Text(stringResource(R.string.dl_open_links)) }
-                TextButton(enabled = !updating, contentPadding = PaddingValues(vertical = 8.dp), onClick = {
+            }
+        }
+
+        GroupTitle(stringResource(R.string.dl_group_tools))
+        val t = groupShapes(if (Build.VERSION.SDK_INT >= 31) 2 else 1)
+        Column(verticalArrangement = col) {
+            if (Build.VERSION.SDK_INT >= 31) SettingRow(stringResource(R.string.dl_open_links), t[0], onClick = {
+                ctx.startActivity(Intent(android.provider.Settings.ACTION_APP_OPEN_BY_DEFAULT_SETTINGS, android.net.Uri.parse("package:${ctx.packageName}")))
+            })
+            SettingRow(stringResource(R.string.dl_update), t.last(), subtitle = message, onClick = {
+                if (!updating) {
                     updating = true; message = null
                     scope.launch {
                         message = withContext(Dispatchers.IO) {
@@ -626,9 +653,8 @@ object DownloadFeature {
                         }
                         updating = false
                     }
-                }) { Text(stringResource(R.string.dl_update)) }
-                message?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
-            }
+                }
+            })
         }
     }
 }

@@ -1,5 +1,16 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+
 package dev.altayeb.shoebill.settings
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.togetherWith
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.PlayCircle
+import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.runtime.saveable.rememberSaveable
 import dev.altayeb.shoebill.Lang
 import dev.altayeb.shoebill.R
 import dev.altayeb.shoebill.data.PlaybackStore
@@ -99,64 +110,103 @@ fun SettingsScreen(onBack: () -> Unit, onAppearance: () -> Unit) {
     val lang = remember { Lang.get(context) }
     val version = remember { runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: "?" }
 
+    var page by rememberSaveable { mutableStateOf(0) } // 0 hub, 1 video, 2 music, 3 downloads, 4 general, 5 about
+    BackHandler(page != 0) { page = 0 }
+    val titles = listOf(R.string.settings_title, R.string.settings_video, R.string.settings_music, R.string.settings_downloads, R.string.settings_general, R.string.settings_about)
     Scaffold(topBar = {
         TopAppBar(
-            title = { Text(stringResource(R.string.settings_title)) },
-            navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back)) } },
+            title = { Text(stringResource(titles[page])) },
+            navigationIcon = { IconButton(onClick = { if (page != 0) page = 0 else onBack() }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back)) } },
         )
     }) { pad ->
+        val motion = MaterialTheme.motionScheme
+        androidx.compose.animation.AnimatedContent(page, Modifier.padding(pad), transitionSpec = {
+            androidx.compose.animation.fadeIn(motion.defaultEffectsSpec()) togetherWith androidx.compose.animation.fadeOut(motion.fastEffectsSpec())
+        }, label = "settingsPage") { p ->
         Column(
-            Modifier.fillMaxSize().padding(pad).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            GroupTitle(stringResource(R.string.settings_player))
-            val player = groupShapes(4)
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                SettingRow(
-                    title = stringResource(R.string.settings_decoder), shape = player[0], subtitle = stringResource(s.decoder.description),
-                    onClick = { decoderDialog = true }, trailing = { Text(s.decoder.label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary) },
-                )
-                SwitchRow(stringResource(R.string.settings_auto_resume), player[1], s.autoResume, stringResource(R.string.settings_auto_resume_sub)) { v -> app.update { it.copy(autoResume = v) } }
-                SwitchRow(stringResource(R.string.settings_play_next), player[2], s.playNext, stringResource(R.string.settings_play_next_sub)) { v -> app.update { it.copy(playNext = v) } }
-                SwitchRow(stringResource(R.string.settings_background), player[3], s.backgroundAudio, stringResource(R.string.settings_background_sub)) { v -> app.update { it.copy(backgroundAudio = v) } }
+            when (p) {
+                0 -> {
+                    TipCard(R.drawable.art_empty, stringResource(R.string.tip_hub))
+                    val cs = MaterialTheme.colorScheme
+                    val hasDl = dev.altayeb.shoebill.download.DownloadFeature.ENABLED
+                    val hub = groupShapes(if (hasDl) 6 else 5)
+                    var n = 0
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        HubRow(Icons.Rounded.PlayCircle, cs.primaryContainer, cs.onPrimaryContainer, stringResource(R.string.settings_video), stringResource(R.string.settings_video_sub), hub[n++]) { page = 1 }
+                        HubRow(Icons.Rounded.MusicNote, cs.tertiaryContainer, cs.onTertiaryContainer, stringResource(R.string.settings_music), stringResource(R.string.settings_music_sub), hub[n++]) { page = 2 }
+                        if (hasDl) HubRow(Icons.Rounded.Download, cs.secondaryContainer, cs.onSecondaryContainer, stringResource(R.string.settings_downloads), stringResource(R.string.settings_downloads_sub), hub[n++]) { page = 3 }
+                        HubRow(Icons.Rounded.Palette, cs.surfaceVariant, cs.onSurfaceVariant, stringResource(R.string.settings_appearance), stringResource(R.string.settings_appearance_sub_hub), hub[n++]) { onAppearance() }
+                        HubRow(Icons.Rounded.Tune, cs.surfaceVariant, cs.onSurfaceVariant, stringResource(R.string.settings_general), stringResource(R.string.settings_general_sub), hub[n++]) { page = 4 }
+                        HubRow(Icons.Rounded.Info, cs.surfaceVariant, cs.onSurfaceVariant, stringResource(R.string.settings_about), stringResource(R.string.settings_about_sub), hub[n]) { page = 5 }
+                    }
+                }
+                1 -> {
+                    TipCard(R.drawable.art_video, stringResource(R.string.tip_video))
+                    GroupTitle(stringResource(R.string.settings_player))
+                    val player = groupShapes(4)
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        SettingRow(
+                            title = stringResource(R.string.settings_decoder), shape = player[0], subtitle = stringResource(s.decoder.description),
+                            onClick = { decoderDialog = true }, trailing = { Text(s.decoder.label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary) },
+                        )
+                        SwitchRow(stringResource(R.string.settings_auto_resume), player[1], s.autoResume, stringResource(R.string.settings_auto_resume_sub)) { v -> app.update { it.copy(autoResume = v) } }
+                        SwitchRow(stringResource(R.string.settings_play_next), player[2], s.playNext, stringResource(R.string.settings_play_next_sub)) { v -> app.update { it.copy(playNext = v) } }
+                        SwitchRow(stringResource(R.string.settings_background), player[3], s.backgroundAudio, stringResource(R.string.settings_background_sub)) { v -> app.update { it.copy(backgroundAudio = v) } }
+                    }
+
+                    GroupTitle(stringResource(R.string.settings_gestures))
+                    SwitchRow(stringResource(R.string.settings_gestures), groupShapes(1)[0], s.gestures, stringResource(R.string.settings_gestures_sub)) { v -> app.update { it.copy(gestures = v) } }
+
+                    GroupTitle(stringResource(R.string.settings_controls))
+                    val c = groupShapes(2)
+                    val secs = @Composable { l: List<Int> -> l.map { it to stringResource(R.string.settings_seconds, it) } }
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        ChoiceRow(stringResource(R.string.settings_hide_delay), c[0], secs(listOf(3, 5, 10)), s.controlsHideSec) { v -> app.update { it.copy(controlsHideSec = v) } }
+                        ChoiceRow(stringResource(R.string.settings_double_tap), c[1], secs(listOf(5, 10, 15, 30)), s.doubleTapSec) { v -> app.update { it.copy(doubleTapSec = v) } }
+                    }
+                }
+                2 -> {
+                    TipCard(R.drawable.art_music, stringResource(R.string.tip_music))
+                    SwitchRow(stringResource(R.string.settings_skip_silence), groupShapes(1)[0], s.skipSilence, stringResource(R.string.settings_skip_silence_sub)) { v -> app.update { it.copy(skipSilence = v) } }
+                }
+                3 -> {
+                    TipCard(R.drawable.art_download, stringResource(R.string.tip_download))
+                    dev.altayeb.shoebill.download.DownloadFeature.SettingsSection()
+                }
+                4 -> {
+                    GroupTitle(stringResource(R.string.language))
+                    val langNames = mapOf("" to stringResource(R.string.language_system), "ar" to "العربية", "en" to "English")
+                    SettingRow(
+                        title = stringResource(R.string.language), shape = groupShapes(1)[0], onClick = { langDialog = true },
+                        trailing = { Text(langNames[lang].orEmpty(), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary) },
+                    )
+
+                    GroupTitle(stringResource(R.string.settings_privacy))
+                    val privacy = groupShapes(2)
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        SwitchRow(stringResource(R.string.settings_history), privacy[0], s.keepHistory, stringResource(R.string.settings_history_sub)) { v -> app.update { it.copy(keepHistory = v) } }
+                        SettingRow(title = stringResource(R.string.settings_clear_history), shape = privacy[1], subtitle = stringResource(R.string.settings_clear_history_sub), onClick = { clearDialog = true })
+                    }
+
+                }
+                else -> {
+                    GroupTitle(stringResource(R.string.settings_about))
+                    val about = groupShapes(6)
+                    val open = { url: String -> runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))) } }
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        SettingRow(title = stringResource(R.string.settings_version), shape = about[0], trailing = { Text(version, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant) })
+                        SettingRow(title = stringResource(R.string.settings_privacy_policy), shape = about[1], subtitle = stringResource(R.string.settings_privacy_policy_sub), onClick = { open("https://github.com/altyb/shoebill/blob/main/PRIVACY.md") })
+                        SettingRow(title = stringResource(R.string.settings_source), shape = about[2], subtitle = stringResource(R.string.settings_source_sub), onClick = { open("https://github.com/altyb/shoebill") })
+                        SettingRow(title = stringResource(R.string.settings_licenses), shape = about[3], onClick = { licenses = true })
+                        SettingRow(title = stringResource(R.string.settings_backup_save), shape = about[4], subtitle = stringResource(R.string.settings_backup_sub), onClick = { saveBackup.launch("shoebill-settings.json") })
+                        SettingRow(title = stringResource(R.string.settings_backup_restore), shape = about[5], onClick = { openBackup.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) })
+                    }
+                }
             }
-
-            dev.altayeb.shoebill.download.DownloadFeature.SettingsSection()
-
-            GroupTitle(stringResource(R.string.settings_gestures))
-            SwitchRow(stringResource(R.string.settings_gestures), groupShapes(1)[0], s.gestures, stringResource(R.string.settings_gestures_sub)) { v -> app.update { it.copy(gestures = v) } }
-
-            GroupTitle(stringResource(R.string.language))
-            val langNames = mapOf("" to stringResource(R.string.language_system), "ar" to "العربية", "en" to "English")
-            SettingRow(
-                title = stringResource(R.string.language), shape = groupShapes(1)[0], onClick = { langDialog = true },
-                trailing = { Text(langNames[lang].orEmpty(), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary) },
-            )
-
-            GroupTitle(stringResource(R.string.settings_appearance))
-            SettingRow(
-                title = stringResource(R.string.settings_appearance), shape = groupShapes(1)[0], subtitle = stringResource(R.string.settings_appearance_sub), onClick = onAppearance,
-                trailing = { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
-            )
-
-            GroupTitle(stringResource(R.string.settings_privacy))
-            val privacy = groupShapes(2)
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                SwitchRow(stringResource(R.string.settings_history), privacy[0], s.keepHistory, stringResource(R.string.settings_history_sub)) { v -> app.update { it.copy(keepHistory = v) } }
-                SettingRow(title = stringResource(R.string.settings_clear_history), shape = privacy[1], subtitle = stringResource(R.string.settings_clear_history_sub), onClick = { clearDialog = true })
-            }
-
-            GroupTitle(stringResource(R.string.settings_about))
-            val about = groupShapes(6)
-            val open = { url: String -> runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))) } }
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                SettingRow(title = stringResource(R.string.settings_version), shape = about[0], trailing = { Text(version, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant) })
-                SettingRow(title = stringResource(R.string.settings_privacy_policy), shape = about[1], subtitle = stringResource(R.string.settings_privacy_policy_sub), onClick = { open("https://github.com/altyb/shoebill/blob/main/PRIVACY.md") })
-                SettingRow(title = stringResource(R.string.settings_source), shape = about[2], subtitle = stringResource(R.string.settings_source_sub), onClick = { open("https://github.com/altyb/shoebill") })
-                SettingRow(title = stringResource(R.string.settings_licenses), shape = about[3], onClick = { licenses = true })
-                SettingRow(title = stringResource(R.string.settings_backup_save), shape = about[4], subtitle = stringResource(R.string.settings_backup_sub), onClick = { saveBackup.launch("shoebill-settings.json") })
-                SettingRow(title = stringResource(R.string.settings_backup_restore), shape = about[5], onClick = { openBackup.launch(arrayOf("application/json", "text/plain", "application/octet-stream")) })
-            }
+        }
         }
     }
 
@@ -370,7 +420,7 @@ private fun <T> Choice(options: List<Pair<T, String>>, selected: T, onSelect: (T
 private fun PreviewCard() {
     val c = MaterialTheme.colorScheme
     Card(
-        shape = RoundedCornerShape(28.dp),
+        shape = dev.altayeb.shoebill.ui.theme.Radius.XL,
         colors = CardDefaults.cardColors(containerColor = c.surfaceContainer),
     ) {
         Row(Modifier.fillMaxWidth().padding(16.dp).height(110.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -383,7 +433,7 @@ private fun PreviewCard() {
 
 @Composable
 private fun Block(label: String, bg: Color, fg: Color, modifier: Modifier) {
-    Box(modifier.clip(RoundedCornerShape(20.dp)).background(bg), contentAlignment = Alignment.BottomStart) {
+    Box(modifier.clip(dev.altayeb.shoebill.ui.theme.Radius.L).background(bg), contentAlignment = Alignment.BottomStart) {
         Text(label, color = fg, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(12.dp))
     }
 }

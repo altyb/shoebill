@@ -188,7 +188,7 @@ private fun PlaylistRow(p: Playlist, onOpen: () -> Unit, onRename: () -> Unit, o
     val cs = MaterialTheme.colorScheme
     var menu by remember(p.id) { mutableStateOf(false) }
     Surface(
-        shape = RoundedCornerShape(20.dp),
+        shape = dev.altayeb.shoebill.ui.theme.Radius.L,
         color = cs.surfaceContainer,
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
             .combinedClickable(onClick = onOpen, onLongClick = { menu = true }),

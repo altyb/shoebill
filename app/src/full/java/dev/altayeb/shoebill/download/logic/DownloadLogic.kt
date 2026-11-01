@@ -12,6 +12,7 @@ data class DownloadOptions(
     val proxy: String? = null,
     val formatId: String? = null, // one exact format picked from the list; overrides quality
     val formatAudioOnly: Boolean = false,
+    val skipSponsors: Boolean = false, // SponsorBlock: cut sponsor segments out of the file
 )
 
 /** One format yt-dlp offers. Size is 0 when the site does not say. */
@@ -34,6 +35,7 @@ object DownloadLogic {
         a += if (o.playlist) "--yes-playlist" else "--no-playlist"
         o.limit?.let { a += listOf("--limit-rate", it) }
         o.proxy?.let { a += listOf("--proxy", it) }
+        if (o.skipSponsors) a += listOf("--sponsorblock-remove", "default")
         if (o.formatId != null) {
             a += listOf("-f", if (o.formatAudioOnly) o.formatId else "${o.formatId}+ba/${o.formatId}")
             if (!o.formatAudioOnly) a += listOf("--merge-output-format", "mkv")
