@@ -168,15 +168,46 @@ fun SettingsScreen(onBack: () -> Unit, onAppearance: () -> Unit) {
                         SwitchRow(stringResource(R.string.settings_background), player[3], s.backgroundAudio, stringResource(R.string.settings_background_sub)) { v -> app.update { it.copy(backgroundAudio = v) } }
                     }
 
-                    GroupTitle(stringResource(R.string.settings_gestures))
-                    SwitchRow(stringResource(R.string.settings_gestures), groupShapes(1)[0], s.gestures, stringResource(R.string.settings_gestures_sub)) { v -> app.update { it.copy(gestures = v) } }
-
-                    GroupTitle(stringResource(R.string.settings_controls))
-                    val c = groupShapes(2)
-                    val secs = @Composable { l: List<Int> -> l.map { it to stringResource(R.string.settings_seconds, it) } }
+                    GroupTitle(stringResource(R.string.video_group_playback))
+                    val vp = groupShapes(3)
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        ChoiceRow(stringResource(R.string.settings_hide_delay), c[0], secs(listOf(3, 5, 10)), s.controlsHideSec) { v -> app.update { it.copy(controlsHideSec = v) } }
-                        ChoiceRow(stringResource(R.string.settings_double_tap), c[1], secs(listOf(5, 10, 15, 30)), s.doubleTapSec) { v -> app.update { it.copy(doubleTapSec = v) } }
+                        ChoiceRow(stringResource(R.string.video_default_speed), vp[0], listOf(0.75f, 1f, 1.25f, 1.5f, 2f).map { it to "$it×" }, s.defaultSpeed) { v -> app.update { it.copy(defaultSpeed = v) } }
+                        SwitchRow(stringResource(R.string.video_loop), vp[1], s.loopOne, stringResource(R.string.video_loop_sub)) { v -> app.update { it.copy(loopOne = v) } }
+                        SwitchRow(stringResource(R.string.video_pip), vp[2], s.autoPip, stringResource(R.string.video_pip_sub)) { v -> app.update { it.copy(autoPip = v) } }
+                        // Android has its own per-app switch for this. No permission to ask for, so point at the switch when it is off.
+                        val pipAllowed = remember { (context.getSystemService(android.app.AppOpsManager::class.java)).unsafeCheckOpNoThrow(android.app.AppOpsManager.OPSTR_PICTURE_IN_PICTURE, android.os.Process.myUid(), context.packageName) == android.app.AppOpsManager.MODE_ALLOWED }
+                        if (!pipAllowed) SettingRow(stringResource(R.string.video_pip_blocked), groupShapes(1)[0], stringResource(R.string.video_pip_blocked_sub), onClick = {
+                            runCatching { context.startActivity(android.content.Intent("android.settings.PICTURE_IN_PICTURE_SETTINGS", android.net.Uri.parse("package:" + context.packageName))) }
+                        })
+                    }
+                    GroupTitle(stringResource(R.string.settings_gestures))
+                    val ge = groupShapes(if (s.gestures) 8 else 1)
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        SwitchRow(stringResource(R.string.settings_gestures), ge[0], s.gestures, stringResource(R.string.settings_gestures_sub)) { v -> app.update { it.copy(gestures = v) } }
+                        if (s.gestures) {
+                            SwitchRow(stringResource(R.string.video_g_brightness), ge[1], s.gestureBrightness) { v -> app.update { it.copy(gestureBrightness = v) } }
+                            SwitchRow(stringResource(R.string.video_g_volume), ge[2], s.gestureVolume) { v -> app.update { it.copy(gestureVolume = v) } }
+                            SwitchRow(stringResource(R.string.video_g_seek), ge[3], s.gestureSeek) { v -> app.update { it.copy(gestureSeek = v) } }
+                            SwitchRow(stringResource(R.string.video_g_pinch), ge[4], s.gesturePinch) { v -> app.update { it.copy(gesturePinch = v) } }
+                            SwitchRow(stringResource(R.string.video_g_double), ge[5], s.gestureDoubleTap) { v -> app.update { it.copy(gestureDoubleTap = v) } }
+                            ChoiceRow(stringResource(R.string.settings_double_tap), ge[6], listOf(5, 10, 15, 30).map { it to stringResource(R.string.settings_seconds, it) }, s.doubleTapSec) { v -> app.update { it.copy(doubleTapSec = v) } }
+                            ChoiceRow(stringResource(R.string.video_hold), ge[7], listOf(0f to stringResource(R.string.off), 1.5f to "1.5×", 2f to "2×", 3f to "3×"), s.holdSpeed) { v -> app.update { it.copy(holdSpeed = v) } }
+                        }
+                    }
+                    GroupTitle(stringResource(R.string.video_group_screen))
+                    val vs = groupShapes(4)
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        ChoiceRow(stringResource(R.string.video_orientation), vs[0], listOf(0 to stringResource(R.string.video_o_landscape), 1 to stringResource(R.string.video_o_auto), 2 to stringResource(R.string.video_o_follow), 3 to stringResource(R.string.video_o_portrait)), s.orientation) { v -> app.update { it.copy(orientation = v) } }
+                        ChoiceRow(stringResource(R.string.settings_hide_delay), vs[1], listOf(3, 5, 10).map { it to stringResource(R.string.settings_seconds, it) }, s.controlsHideSec) { v -> app.update { it.copy(controlsHideSec = v) } }
+                        SwitchRow(stringResource(R.string.video_remaining), vs[2], s.showRemaining, stringResource(R.string.video_remaining_sub)) { v -> app.update { it.copy(showRemaining = v) } }
+                        SwitchRow(stringResource(R.string.video_brightness), vs[3], s.rememberBrightness, stringResource(R.string.video_brightness_sub)) { v -> app.update { it.copy(rememberBrightness = v) } }
+                    }
+                    GroupTitle(stringResource(R.string.video_group_language))
+                    val la = groupShapes(3)
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        LangField(stringResource(R.string.video_audio_lang), la[0], s.audioLang) { v -> app.update { it.copy(audioLang = v) } }
+                        LangField(stringResource(R.string.video_sub_lang), la[1], s.subLang) { v -> app.update { it.copy(subLang = v) } }
+                        ChoiceRow(stringResource(R.string.video_max_volume), la[2], listOf(100, 150, 200).map { it to "$it%" }, s.maxVolume) { v -> app.update { it.copy(maxVolume = v) } }
                     }
                 }
                 2 -> {
@@ -450,6 +481,20 @@ fun AppearanceScreen(onBack: () -> Unit) {
 @Composable
 private fun <T> Choice(options: List<Pair<T, String>>, selected: T, onSelect: (T) -> Unit) =
     dev.altayeb.shoebill.ui.ConnectedChoice(options, selected, pick = onSelect)
+
+/** Preferred track languages, as mpv takes them: ISO codes, most wanted first. */
+@Composable
+private fun LangField(title: String, shape: androidx.compose.ui.graphics.Shape, value: String, set: (String) -> Unit) {
+    var text by remember { mutableStateOf(value) }
+    val ok = text.isBlank() || Regex("[a-zA-Z]{2,3}(,[a-zA-Z]{2,3})*").matches(text.trim())
+    Surface(Modifier.fillMaxWidth(), shape = shape, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+        androidx.compose.material3.OutlinedTextField(
+            text, { text = it.take(40); if (it.isBlank() || Regex("[a-zA-Z]{2,3}(,[a-zA-Z]{2,3})*").matches(it.trim())) set(it.trim().lowercase()) },
+            Modifier.fillMaxWidth().padding(16.dp), singleLine = true, label = { Text(title) }, isError = !ok,
+            supportingText = { Text(if (ok) stringResource(R.string.video_lang_hint) else title + ": " + stringResource(R.string.video_lang_bad)) },
+        )
+    }
+}
 
 @Composable
 private fun PreviewCard() {

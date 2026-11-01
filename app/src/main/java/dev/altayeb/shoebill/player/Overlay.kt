@@ -1,5 +1,6 @@
 package dev.altayeb.shoebill.player
 
+import androidx.compose.runtime.collectAsState
 import androidx.compose.animation.togetherWith
 import dev.altayeb.shoebill.R
 import androidx.compose.ui.res.stringResource
@@ -153,6 +154,7 @@ fun Controls(
     onScrub: (Double) -> Unit,
     onScrubEnd: (Double?) -> Unit,
 ) {
+    val showRemaining = dev.altayeb.shoebill.settings.AppSettings.get(androidx.compose.ui.platform.LocalContext.current).settings.collectAsState().value.showRemaining
     val motion = MaterialTheme.motionScheme
     // Each part comes from its own edge on the Expressive spring and leaves on the quick one.
     fun Modifier.slideFrom(top: Boolean) = with(scope) {
@@ -244,7 +246,7 @@ fun Controls(
                 Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(formatTime((shownSec * 1000).toLong()), color = PlayerColors.On, style = MaterialTheme.typography.labelLarge)
                     Text(
-                        "-" + formatTime((max(0.0, durationSec - shownSec) * 1000).toLong()),
+                        if (showRemaining) "-" + formatTime((max(0.0, durationSec - shownSec) * 1000).toLong()) else formatTime((durationSec * 1000).toLong()),
                         color = PlayerColors.On, style = MaterialTheme.typography.labelLarge,
                     )
                 }
