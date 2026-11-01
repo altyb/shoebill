@@ -184,6 +184,7 @@ class MainActivity : FragmentActivity() { // FragmentActivity: BiometricPrompt (
     }
 
     private fun takeViewIntent(i: Intent?) {
+        if (i?.action == Intent.ACTION_SEND) { dev.altayeb.shoebill.download.SharedLink.value.value = i.getStringExtra(Intent.EXTRA_TEXT); return }
         val uri = i?.takeIf { it.action == Intent.ACTION_VIEW }?.data ?: return
         incoming.value = Incoming(uri)
     }
