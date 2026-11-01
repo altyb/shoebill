@@ -82,7 +82,6 @@
     <string name="music_no_lyrics">لا توجد كلمات لهذه الأغنية.</string>
     <string name="music_pick_lyrics">اختر ملف كلمات (lrc)</string>
     <string name="music_remove">إزالة</string>
-    <string name="music_sleep_on">مؤقت النوم يعمل.</string>
     <string name="dl_url">رابط فيديو أو أغنية</string>
     <string name="dl_paste">لصق</string>
     <string name="dl_start">تنزيل</string>
@@ -163,4 +162,6 @@
     <string name="tip_music">اسحب الشريط فوق التبويبات لأعلى لفتح الأغنية. ضع ملف ‎.lrc بجانب الأغنية لكلمات متزامنة.</string>
     <string name="tip_download">شارك رابطًا إلى Shoebill من أي تطبيق، ثم اختر طريقة الحفظ.</string>
     <string name="tip_vault">الملفات هنا مشفرة. النسخة الاحتياطية هي طريقك الوحيد لاستعادتها إذا فقدت الهاتف، فأنشئ واحدة.</string>
+    <string name="music_sleep_left">يتوقف بعد %1$s</string>
+    <string name="dl_starting">جارٍ البدء…</string>
 </resources>

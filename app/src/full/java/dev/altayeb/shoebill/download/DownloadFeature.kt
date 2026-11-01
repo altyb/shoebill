@@ -2,6 +2,13 @@
 
 package dev.altayeb.shoebill.download
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LinearWavyProgressIndicator
+import androidx.compose.material3.Icon
 import dev.altayeb.shoebill.settings.ChoiceRow
 import dev.altayeb.shoebill.settings.GroupTitle
 import dev.altayeb.shoebill.settings.SettingRow
@@ -72,7 +79,6 @@ import android.util.LruCache
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -268,20 +274,41 @@ object DownloadFeature {
     /** The download in progress, large, with the same picture as the sheet before it. */
     @Composable
     private fun HeroCard(j: DlJob) {
-        Surface(shape = Radius.L, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+        val cs = MaterialTheme.colorScheme
+        Surface(shape = Radius.L, color = cs.surfaceContainerHigh) {
             Column {
                 if (j.thumb != null) Thumb(j.thumb, j.options.proxy, Modifier.fillMaxWidth().aspectRatio(16f / 9f))
-                LinearWavyProgressIndicator(progress = { j.percent / 100f }, Modifier.fillMaxWidth())
-                Row(Modifier.padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(j.title.ifEmpty { j.url }, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        Text(status(j), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (j.thumb == null) { // a plain file has no picture: a tile keeps the card from looking empty
+                            Surface(Modifier.size(48.dp), shape = Radius.M, color = cs.secondaryContainer, contentColor = cs.onSecondaryContainer) {
+                                Box(contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Download, null) }
+                            }
+                            Spacer(Modifier.width(12.dp))
+                        }
+                        Column(Modifier.weight(1f)) {
+                            Text(j.title.ifEmpty { j.url }, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            Text(heroLine(j), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        FilledTonalIconButton(onClick = { DownloadQueue.cancel(j) }, shapes = IconButtonDefaults.shapes()) { Icon(Icons.Rounded.Close, stringResource(R.string.dl_cancel)) }
                     }
-                    TextButton(onClick = { DownloadQueue.cancel(j) }) { Text(stringResource(R.string.dl_cancel)) }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        // Inside the padding, so the wave has room and is never cut by the card edge.
+                        LinearWavyProgressIndicator(progress = { j.percent / 100f }, Modifier.weight(1f))
+                        Spacer(Modifier.width(12.dp))
+                        Text("${j.percent}%", style = MaterialTheme.typography.labelLarge, color = cs.primary)
+                    }
                 }
             }
         }
     }
+
+    /** The percent has its own place beside the bar, so this line carries only speed and time left. */
+    @Composable
+    private fun heroLine(j: DlJob): String =
+        if (j.state != DlState.Running) status(j)
+        else listOfNotNull(j.speed, j.etaSec.takeIf { it > 0 }?.let { stringResource(R.string.dl_left, DownloadLogic.time(it)) }).joinToString(" · ").ifEmpty { stringResource(R.string.dl_starting) }
 
     @Composable
     private fun status(j: DlJob): String = when (j.state) {

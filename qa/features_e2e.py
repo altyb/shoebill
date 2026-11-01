@@ -60,6 +60,7 @@ def sec_nowplaying():
     ok("beside .lrc read, or a clear way to pick one", find("Second line") is not None or find("Choose a lyrics file") is not None, texts()[:10])
     tap("Queue"); time.sleep(1); ok("queue lists the rest", find("Song 2") is not None, texts()[:10])
     tap("Sound"); time.sleep(1); ok("sound page has speed and sleep", find("15") is not None, texts()[:14])
+    tap("15"); time.sleep(1.5); ok("sleep timer shows a countdown", find("Stops in") is not None, texts()[:16]); shot("sound"); tap("Off", exact=True); time.sleep(.5)
     back(); adb("shell", "input", "keyevent", "KEYCODE_MEDIA_PAUSE")
 
 def open_more():

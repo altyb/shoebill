@@ -2,6 +2,7 @@
 
 package dev.altayeb.shoebill.music
 
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
@@ -267,6 +268,37 @@ private fun SongList(songs: List<Song>, c: MediaController?, onLong: (Song) -> U
 /** One decode per album, so scrolling back never decodes again or flashes the placeholder. */
 private val artCache = LruCache<Long, Bitmap>(64)
 
+/** One group of sound options on its own card. */
+@Composable
+private fun SoundCard(title: String?, content: @Composable () -> Unit) {
+    Surface(Modifier.fillMaxWidth(), shape = dev.altayeb.shoebill.ui.theme.Radius.L, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            title?.let { Text(it, style = MaterialTheme.typography.titleSmall) }
+            content()
+        }
+    }
+}
+
+/** A row of equal-width options joined into one control. Equal widths mean a label can never squeeze into wrapping. */
+@Composable
+private fun <T> Connected(options: List<Pair<T, String>>, selected: T?, pick: (T) -> Unit) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(androidx.compose.material3.ButtonGroupDefaults.ConnectedSpaceBetween)) {
+        options.forEachIndexed { i, (v, label) ->
+            androidx.compose.material3.ToggleButton(
+                checked = v == selected,
+                onCheckedChange = { pick(v) },
+                modifier = Modifier.weight(1f),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 4.dp),
+                shapes = when (i) {
+                    0 -> androidx.compose.material3.ButtonGroupDefaults.connectedLeadingButtonShapes()
+                    options.lastIndex -> androidx.compose.material3.ButtonGroupDefaults.connectedTrailingButtonShapes()
+                    else -> androidx.compose.material3.ButtonGroupDefaults.connectedMiddleButtonShapes()
+                },
+            ) { Text(label, maxLines = 1, softWrap = false, style = MaterialTheme.typography.labelMedium) }
+        }
+    }
+}
+
 private class MorphShape(val morph: Morph, val progress: Float) : Shape {
     override fun createOutline(size: androidx.compose.ui.geometry.Size, layoutDirection: LayoutDirection, density: Density): Outline {
         val path = Path()
@@ -457,6 +489,7 @@ private fun NowPlaying(c: MediaController, s: PlayerState, all: List<Song>, modi
         if (uri != null && song != null) lyricScope.launch { lyrics = Lyrics.save(ctx, song, uri) }
     }
     var sleepAt by remember { mutableLongStateOf(0L) }
+    var sleepMinutes by remember { mutableIntStateOf(0) }
     LaunchedEffect(sleepAt) {
         if (sleepAt > 0L) { delay((sleepAt - System.currentTimeMillis()).coerceAtLeast(0)); c.pause(); sleepAt = 0L }
     }
@@ -483,7 +516,7 @@ private fun NowPlaying(c: MediaController, s: PlayerState, all: List<Song>, modi
                 }
                 1 -> LyricsPage(lyrics, s.position, { c.seekTo(it) }) { pick.launch(arrayOf("*/*")) }
                 2 -> QueuePage(c, s)
-                else -> SoundPage(c, s, sleepAt) { sleepAt = it }
+                else -> SoundPage(c, s, sleepAt, sleepMinutes) { m -> sleepMinutes = m; sleepAt = if (m == 0) 0L else System.currentTimeMillis() + m * 60_000L }
             } }
         }
         Column(Modifier.fillMaxWidth().arrive(progress, 0.35f), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -553,23 +586,26 @@ private fun QueuePage(c: MediaController, s: PlayerState) {
 }
 
 @Composable
-private fun SoundPage(c: MediaController, s: PlayerState, sleepAt: Long, setSleep: (Long) -> Unit) {
+private fun SoundPage(c: MediaController, s: PlayerState, sleepAt: Long, sleepMinutes: Int, setSleep: (Int) -> Unit) {
     val ctx = LocalContext.current
-    Column(Modifier.fillMaxSize().padding(8.dp).then(Modifier), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(stringResource(R.string.player_speed), style = MaterialTheme.typography.titleSmall)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf(0.75f, 1f, 1.25f, 1.5f, 2f).forEach { v -> FilterChip(kotlin.math.abs(s.speed - v) < 0.01f, { c.setPlaybackSpeed(v) }, { Text("$v×") }) }
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SoundCard(stringResource(R.string.player_speed)) {
+            Connected(listOf(0.75f, 1f, 1.25f, 1.5f, 2f).map { it to "$it×" }, listOf(0.75f, 1f, 1.25f, 1.5f, 2f).firstOrNull { kotlin.math.abs(s.speed - it) < 0.01f }) { c.setPlaybackSpeed(it) }
         }
-        Text(stringResource(R.string.player_sleep_timer), style = MaterialTheme.typography.titleSmall)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf(15, 30, 60).forEach { m -> OutlinedButton(onClick = { setSleep(System.currentTimeMillis() + m * 60_000L) }) { Text(stringResource(R.string.player_minutes_short, m.toString())) } }
-            OutlinedButton(onClick = { setSleep(0L) }) { Text(stringResource(R.string.off)) }
+        SoundCard(stringResource(R.string.player_sleep_timer)) {
+            val off = stringResource(R.string.off)
+            Connected(listOf(0 to off) + listOf(15, 30, 60).map { it to stringResource(R.string.player_minutes_short, it.toString()) }, if (sleepAt > 0L) sleepMinutes else 0, setSleep)
+            if (sleepAt > 0L) {
+                val left by produceState(sleepAt - System.currentTimeMillis(), sleepAt) {
+                    while (true) { value = sleepAt - System.currentTimeMillis(); delay(1000) }
+                }
+                Text(stringResource(R.string.music_sleep_left, formatTime(left.coerceAtLeast(0))), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+            }
         }
-        if (sleepAt > 0L) Text(stringResource(R.string.music_sleep_on))
         val session = MusicService.audioSession
         val fx = remember(session) { if (session != 0) AudioFx.open(ctx, session) else null }
         DisposableEffect(fx) { onDispose { runCatching { fx?.release() } } }
-        if (fx != null) {
+        if (fx != null) SoundCard(null) {
             var on by remember { mutableStateOf(fx.enabled) }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.player_equalizer), Modifier.weight(1f), style = MaterialTheme.typography.titleSmall)
