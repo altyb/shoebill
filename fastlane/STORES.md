@@ -4,7 +4,7 @@ Order: GitHub release → F-Droid (main repo, from 2027-01-30) → Google Play.
 
 ## 1. GitHub release
 
-Tag `v0.1.0`, attach `app-full-release.apk` (arm64-v8a + armeabi-v7a, signed with the release key).
+Tag `v0.1.0`, attach the four `app-full-<abi>-release.apk` files from `app/build/outputs/apk/full/release/` (arm64-v8a, armeabi-v7a, x86_64, universal; signed with the release key). Version codes: release number × 10 + slot (universal 0, armeabi-v7a 1, arm64-v8a 2, x86_64 3); fastlane changelogs carry one file per code.
 Signing certificate SHA-256: `AE:C6:44:AE:81:38:A6:FD:30:19:03:DD:15:3F:BC:18:10:65:E9:BE:24:53:73:B4:8E:C5:D1:E6:C6:53:2B:75`
 
 ## 2. IzzyOnDroid: not eligible

@@ -1,0 +1,19 @@
+# Library tests plus a debug build of both flavors. Only the newest push on main runs; older runs are cancelled.
+name: check
+on:
+  push:
+    branches: [main]
+  pull_request:
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 17 }
+      - uses: gradle/actions/setup-gradle@v4
+      - run: cd library-tests && ./gradlew -q test
+      - run: ./gradlew -q assembleFullDebug assemblePlayDebug -PdevAbis=arm64-v8a
