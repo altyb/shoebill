@@ -1,37 +1,24 @@
 package dev.altayeb.shoebill.vault
 
-import android.util.Log
 import kotlinx.coroutines.withContext
-import android.content.ContentResolver
-import android.content.ContentUris
 import kotlinx.coroutines.runBlocking
 import android.app.Activity
 import android.app.Application
 import android.app.PendingIntent
-import android.content.ContentValues
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.media.MediaMetadataRetriever
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
-import android.os.Environment
-import android.provider.MediaStore
-import android.provider.OpenableColumns
 import android.security.keystore.UserNotAuthenticatedException
-import android.util.Size
 import androidx.lifecycle.AndroidViewModel
 import dev.altayeb.shoebill.R
 import androidx.lifecycle.viewModelScope
-import dev.altayeb.shoebill.vault.crypto.BackupFormat
 import dev.altayeb.shoebill.vault.logic.PinStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -39,7 +26,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
 import java.io.ByteArrayOutputStream
-import java.io.IOException
 import android.content.Context
 import android.os.Handler
 import android.os.HandlerThread
@@ -82,15 +68,15 @@ data class VaultUi(
 )
 
 /** The user backed out of an auth prompt; the operation is dropped quietly. */
-private class VaultAuthCancelled : Exception()
+internal class VaultAuthCancelled : Exception()
 
 /**
  * Owns the unlocked vault. Keystore calls go through [authed]: if the 30 s window has lapsed, the op suspends,
  * the UI shows the biometric prompt, and the op retries. Nothing outlives [lock]: keys, thumbnails and open playback descriptors are wiped.
  */
 class VaultViewModel(app: Application) : AndroidViewModel(app) {
-    private fun str(id: Int, vararg args: Any): String = getApplication<Application>().getString(id, *args)
-    private fun plural(id: Int, n: Int): String = getApplication<Application>().resources.getQuantityString(id, n, n)
+    internal fun str(id: Int, vararg args: Any): String = getApplication<Application>().getString(id, *args)
+    internal fun plural(id: Int, n: Int): String = getApplication<Application>().resources.getQuantityString(id, n, n)
 
     private val prefs = app.getSharedPreferences("vault", Context.MODE_PRIVATE)
     private val pins = PinStore(object : PinStore.Storage {
@@ -102,7 +88,7 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
             e.commit() // failed-attempt counters must survive a process kill
         }
     }, SystemClock::elapsedRealtime, 150_000, pepper = PinPepper::mac)
-    private val _ui = MutableStateFlow(
+    internal val _ui = MutableStateFlow(
         VaultUi(
             phase = if (gated()) Phase.Locked else Phase.Setup,
             autoLock = AutoLock.entries.firstOrNull { it.name == prefs.getString("autoLock", null) } ?: AutoLock.Immediately,
@@ -113,7 +99,7 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
     )
     val ui: StateFlow<VaultUi> = _ui.asStateFlow()
 
-    private var repo: VaultRepo? = null
+    internal var repo: VaultRepo? = null
     // open vault file descriptors (one per playback); closing the channel ends the read side, so lock() kills playback
     private val openChannels = mutableListOf<SeekableByteChannel>()
     private val fdThread by lazy { HandlerThread("vault-fd").apply { start() } }
@@ -348,118 +334,10 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
     /** isSet is a plain storage read, no hashing, so it runs on the caller's thread. */
     private fun pinsSet(): Set<PinStore.Role> = PinStore.Role.entries.filter { pins.isSet(it) }.toSet()
 
-    // ---- import (ق-15)
+    // ---- import (ق-15): VaultGalleryOps.kt; the hop flag stays here with the lock logic
 
     fun beginSystemHop() { systemHop = true }
     fun endSystemHop() { systemHop = false }
-
-    fun importMedia(uris: List<Uri>) = launchOp {
-        val r = repo ?: return@launchOp
-        val verified = mutableListOf<Uri>()
-        var failed = 0
-        try {
-            uris.forEachIndexed { i, uri ->
-                currentCoroutineContext().ensureActive()
-                val name = displayName(uri)
-                _ui.update { it.copy(importing = Importing(i, uris.size, name)) }
-                try {
-                    authed { addOne(r, uri, name) }
-                    verified += uri
-                } catch (e: VaultAuthCancelled) {
-                    throw e
-                } catch (e: Exception) {
-                    if (e is CancellationException) throw e
-                    Log.w("vault", "add failed: ${e.javaClass.simpleName}") // type only: messages can hold file names
-                    failed++
-                }
-                _ui.update { it.copy(entries = r.items, thumbs = r.thumbnails()) }
-            }
-        } finally {
-            _ui.update { it.copy(entries = r.items, thumbs = r.thumbnails()) }
-        }
-        val app = getApplication<Application>()
-        val parts = mutableListOf(plural(R.plurals.vault_added, verified.size))
-        if (failed > 0) parts += plural(R.plurals.vault_verify_failed, failed)
-        if (verified.isEmpty()) {
-            _ui.update { it.copy(message = parts.joinToString(" · ")) }
-            return@launchOp
-        }
-        if (Build.VERSION.SDK_INT >= 30) {
-            // the photo picker hands out media/picker/... links; the delete request only takes real MediaStore items
-            val mapped = verified.map(::mediaStoreUri)
-            // link shapes only (authority + path without the id), never names
-            // With "All files access" the vault moves files: originals are deleted here, no dialog. Without it,
-            // Android requires its "Allow … to delete?" dialog.
-            val leftover = if (Build.VERSION.SDK_INT >= 30 && Environment.isExternalStorageManager()) {
-                mapped.filter { u -> runCatching { app.contentResolver.delete(u, null, null) > 0 }.getOrDefault(false).not() }
-            } else mapped
-            val pi = if (leftover.isEmpty()) null else runCatching { MediaStore.createDeleteRequest(app.contentResolver, leftover) }
-                .onFailure { Log.w("vault", "createDeleteRequest failed", it) }.getOrNull()
-            if (leftover.isNotEmpty() && pi == null) parts += str(R.string.vault_delete_originals_failed)
-            _ui.update { it.copy(deleteRequest = pi, message = parts.joinToString(" · ")) }
-        } else {
-            parts += str(R.string.vault_old_android_originals)
-            _ui.update { it.copy(message = parts.joinToString(" · ")) }
-        }
-    }
-
-    private fun mediaStoreUri(u: Uri): Uri {
-        if (u.authority != MediaStore.AUTHORITY || "picker" !in u.pathSegments.joinToString("/")) return u
-        val id = u.lastPathSegment?.toLongOrNull() ?: return u
-        val mime = getApplication<Application>().contentResolver.getType(u).orEmpty()
-        val collection = if (mime.startsWith("image/")) MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
-            else MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
-        return ContentUris.withAppendedId(collection, id)
-    }
-
-    fun onDeleteDialogDone() = _ui.update { it.copy(deleteRequest = null) }
-
-    private fun addOne(r: VaultRepo, uri: Uri, name: String) {
-        val cr = getApplication<Application>().contentResolver
-        val mime = cr.getType(uri) ?: "application/octet-stream"
-        val video = mime.startsWith("video/")
-        // from the source, before anything is encrypted; a format the phone cannot decode just gets the placeholder tile
-        val thumb = runCatching { makeThumb(uri) }.getOrNull()
-        val duration = if (video) durationOf(uri) else 0L
-        r.add(name, mime, duration, thumb, originalFolder(uri)) { cr.openInputStream(uri) ?: throw IOException("no input") }
-    }
-
-    /** Original gallery folder (e.g. "DCIM/Camera/"), or null when it cannot be read (no permission, picker, error). */
-    private fun originalFolder(uri: Uri): String? = runCatching {
-        getApplication<Application>().contentResolver
-            .query(mediaStoreUri(uri), arrayOf(MediaStore.MediaColumns.RELATIVE_PATH), null, null, null)?.use { c ->
-                if (c.moveToFirst()) c.getString(0) else null
-            }
-    }.getOrNull()?.takeIf { it.isNotBlank() }
-
-    private fun makeThumb(uri: Uri): ByteArray? {
-        // ponytail: pre-Android 10 gets no thumbnail (placeholder tile); add a decode fallback if that matters.
-        if (Build.VERSION.SDK_INT < 29) return null
-        val bmp = getApplication<Application>().contentResolver.loadThumbnail(uri, Size(320, 180), null)
-        return ByteArrayOutputStream().also { bmp.compress(Bitmap.CompressFormat.JPEG, 85, it) }.toByteArray()
-    }
-
-    private fun durationOf(uri: Uri): Long {
-        val mmr = MediaMetadataRetriever()
-        return try {
-            mmr.setDataSource(getApplication(), uri)
-            mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L
-        } catch (e: Exception) {
-            0L
-        } finally {
-            mmr.release()
-        }
-    }
-
-    // The photo picker reports names like "754.mp4" (its own id); the real name lives on the gallery row, so ask that
-    // first and fall back to the picker's name, then to the link itself.
-    private fun displayName(uri: Uri): String {
-        val cr = getApplication<Application>().contentResolver
-        fun nameOf(u: Uri) = runCatching {
-            cr.query(u, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
-        }.getOrNull()
-        return nameOf(mediaStoreUri(uri)) ?: nameOf(uri) ?: uri.lastPathSegment.orEmpty()
-    }
 
     // ---- item actions
 
@@ -468,66 +346,6 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
         authed { r.remove(id) }
         _ui.update { it.copy(entries = r.items, thumbs = r.thumbnails()) }
     }
-
-    fun exportToGallery(id: String) = returnToGallery(setOf(id))
-
-    /**
-     * Moves items back to the gallery: each goes into a new MediaStore row in its original folder (default folder if that
-     * is refused), and leaves the vault only after its write succeeds. A failed write deletes its half-written row.
-     */
-    fun returnToGallery(ids: Set<String>) = launchOp {
-        val r = repo ?: return@launchOp
-        val list = ids.mapNotNull { r.find(it) }
-        if (list.isEmpty()) return@launchOp
-        if (Build.VERSION.SDK_INT < 29) {
-            _ui.update { it.copy(message = str(R.string.vault_export_needs_android10)) }
-            return@launchOp
-        }
-        val cr = getApplication<Application>().contentResolver
-        var ok = 0
-        var failed = 0
-        try {
-            list.forEachIndexed { i, e ->
-                currentCoroutineContext().ensureActive()
-                _ui.update { it.copy(message = str(R.string.vault_returning_progress, i + 1, list.size)) }
-                val fallback = if (e.kind == "video") Environment.DIRECTORY_MOVIES else Environment.DIRECTORY_PICTURES
-                val name = r.nameOf(e)
-                val original = r.pathOf(e)
-                val target = insertPending(cr, e, name, original ?: fallback)
-                    ?: original?.takeIf { it != fallback }?.let { insertPending(cr, e, name, fallback) }
-                if (target == null) {
-                    failed++
-                    return@forEachIndexed
-                }
-                try {
-                    // a retry reopens the output in "w" mode, so a re-prompt restarts the write instead of appending
-                    authed { cr.openOutputStream(target)?.use { r.exportTo(e, it) } ?: throw IOException("no output") }
-                    cr.update(target, ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }, null, null)
-                    authed { r.remove(e.id) }
-                    ok++
-                } catch (t: Throwable) {
-                    cr.delete(target, null, null)
-                    if (t is CancellationException || t is VaultAuthCancelled) throw t
-                    failed++
-                }
-            }
-        } finally {
-            _ui.update { it.copy(entries = r.items, thumbs = r.thumbnails()) }
-        }
-        _ui.update { it.copy(message = buildString { append(plural(R.plurals.vault_returned, ok)); if (failed > 0) append(str(R.string.vault_failed_suffix, failed)) }) }
-    }
-
-    private fun insertPending(cr: ContentResolver, e: VaultEntry, name: String, folder: String): Uri? = runCatching {
-        cr.insert(
-            if (e.kind == "video") MediaStore.Video.Media.EXTERNAL_CONTENT_URI else MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-            ContentValues().apply {
-                put(MediaStore.MediaColumns.DISPLAY_NAME, name)
-                put(MediaStore.MediaColumns.MIME_TYPE, e.mime)
-                put(MediaStore.MediaColumns.RELATIVE_PATH, folder)
-                put(MediaStore.MediaColumns.IS_PENDING, 1)
-            },
-        )
-    }.getOrNull()
 
     /** Permanent delete of several vault items. */
     fun deleteMany(ids: Set<String>) = launchOp {
@@ -553,47 +371,6 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
             BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
         } finally {
             bytes.fill(0)
-        }
-    }
-
-    // ---- encrypted backup
-
-    fun exportBackup(uri: Uri, password: CharArray) = backupOp(password) {
-        val r = checkNotNull(repo)
-        authed { r.warmKeys() }
-        getApplication<Application>().contentResolver.openOutputStream(uri)?.use { r.exportBackup(it, password) }
-            ?: throw IOException("no output")
-        plural(R.plurals.vault_backup_saved, r.items.size)
-    }
-
-    fun importBackup(uri: Uri, password: CharArray) = backupOp(password) {
-        val r = checkNotNull(repo)
-        try {
-            val n = getApplication<Application>().contentResolver.openInputStream(uri)?.use { input ->
-                r.importBackup(input, password, addOne = { add -> runBlocking { authed(add) } }) { done ->
-                    _ui.update { it.copy(message = plural(R.plurals.vault_restore_progress, done)) }
-                }
-            } ?: throw IOException("no input")
-            plural(R.plurals.vault_restored, n)
-        } finally {
-            _ui.update { it.copy(entries = r.items, thumbs = r.thumbnails()) }
-        }
-    }
-
-    /** Runs a backup op on the IO dispatcher, maps its failures to localized messages and always zeroes the password. */
-    private fun backupOp(password: CharArray, block: suspend () -> String) = launchOp {
-        try {
-            val ok = block()
-            _ui.update { it.copy(message = ok) }
-        } catch (e: BackupFormat.BadPasswordException) {
-            _ui.update { it.copy(message = str(R.string.vault_wrong_password)) }
-        } catch (e: BackupFormat.CorruptBackupException) {
-            _ui.update { it.copy(message = str(R.string.vault_bad_backup)) }
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            _ui.update { it.copy(message = str(R.string.vault_op_failed)) }
-        } finally {
-            password.fill('\u0000')
         }
     }
 
@@ -638,7 +415,7 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
 
     // ---- plumbing
 
-    private fun launchOp(block: suspend () -> Unit) {
+    internal fun launchOp(block: suspend () -> Unit) {
         opJob = viewModelScope.launch(Dispatchers.IO) {
             _ui.update { it.copy(busy = true, message = null) }
             try {
@@ -655,7 +432,7 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Runs [block]; if Keystore refuses because the 30 s window lapsed, waits for a fresh prompt and retries. */
-    private suspend fun <T> authed(block: () -> T): T {
+    internal suspend fun <T> authed(block: () -> T): T {
         while (true) {
             try {
                 return block()
