@@ -83,7 +83,6 @@
     <string name="music_no_lyrics">No lyrics for this song.</string>
     <string name="music_pick_lyrics">Choose a lyrics file (.lrc)</string>
     <string name="music_remove">Remove</string>
-    <string name="music_sleep_on">Sleep timer is on.</string>
     <string name="dl_url">Link to a video or song</string>
     <string name="dl_paste">Paste</string>
     <string name="dl_start">Download</string>
@@ -164,4 +163,6 @@
     <string name="tip_music">Drag the bar above the tabs up to open the song. Add a .lrc file beside a song for synced lyrics.</string>
     <string name="tip_download">Share a link to Shoebill from any app, then choose how to save it.</string>
     <string name="tip_vault">Files here are encrypted. A backup is the only way back if you lose this phone, so make one.</string>
+    <string name="music_sleep_left">Stops in %1$s</string>
+    <string name="dl_starting">Starting…</string>
 </resources>
