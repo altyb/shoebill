@@ -126,7 +126,7 @@ fun VideoGate(content: @Composable (List<Video>) -> Unit) {
     }
 
     if (access == Access.None) {
-        EmptyState(dev.altayeb.shoebill.R.drawable.art_video,
+        EmptyState(R.drawable.art_video,
             if (asked) stringResource(R.string.lib_access_denied)
             else stringResource(R.string.lib_access_needed),
             action = {
@@ -161,7 +161,7 @@ fun VideoGate(content: @Composable (List<Video>) -> Unit) {
         Box(Modifier.weight(1f).then(inset)) {
             when {
                 list == null -> CenteredGate { BrandLoader() }
-                list.isEmpty() -> EmptyState(dev.altayeb.shoebill.R.drawable.art_video, stringResource(R.string.lib_no_videos))
+                list.isEmpty() -> EmptyState(R.drawable.art_video, stringResource(R.string.lib_no_videos))
                 else -> content(list)
             }
         }

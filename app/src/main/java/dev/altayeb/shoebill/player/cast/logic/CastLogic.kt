@@ -8,6 +8,7 @@ import java.net.Socket
 import java.net.URI
 import java.net.URL
 import java.security.SecureRandom
+import java.io.IOException
 
 /** Plain DLNA/UPnP, no Google library, so the app stays free software. No android imports: see library-tests. */
 data class Renderer(val name: String, val control: String)
@@ -69,7 +70,7 @@ object Dlna {
                     "</u:${action.first}></s:Body></s:Envelope>").toByteArray())
             }
             val code = c.responseCode
-            if (code !in 200..299) throw java.io.IOException("${action.first}: HTTP $code")
+            if (code !in 200..299) throw IOException("${action.first}: HTTP $code")
         } finally { c.disconnect() }
     }
 }

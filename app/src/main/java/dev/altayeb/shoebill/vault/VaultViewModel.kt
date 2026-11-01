@@ -236,7 +236,7 @@ class VaultViewModel(app: Application) : AndroidViewModel(app) {
         val r = repo
         repo = null
         // a running op keeps its own reference until it finishes; wipe after it, never under it
-        if (r != null) kotlin.concurrent.thread(name = "vault-wipe") { kotlinx.coroutines.runBlocking { opMutex.withLock { r.wipe() } } }
+        if (r != null) kotlin.concurrent.thread(name = "vault-wipe") { runBlocking { opMutex.withLock { r.wipe() } } }
         waiter?.complete(false)
         waiter = null
         // A wipe PIN deletes the real key: with no key left the next session starts at Setup, not at a dead unlock.

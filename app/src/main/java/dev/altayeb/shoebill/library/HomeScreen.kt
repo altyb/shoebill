@@ -1,4 +1,4 @@
-@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
 
 package dev.altayeb.shoebill.library
 
@@ -113,6 +113,12 @@ import dev.altayeb.shoebill.music.MusicHost
 import dev.altayeb.shoebill.music.MusicSheet
 import dev.altayeb.shoebill.music.MusicTab
 import dev.altayeb.shoebill.ui.theme.Radius
+import dev.altayeb.shoebill.music.rememberMusicHost
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.runtime.derivedStateOf
 
 // Index order is what HomeScreen switches on. Downloads exists only in the full build, so it stays last.
 private val homeTabs = listOf(
@@ -150,10 +156,10 @@ fun HomeScreen(
     val singles = folders.isNotEmpty() && folders.all { it.count == 1 }
     val latest = remember(videos) { videos.sortedByDescending { it.dateAdded }.take(6) }
 
-    val music = dev.altayeb.shoebill.music.rememberMusicHost(tab)
+    val music = rememberMusicHost(tab)
     var dockHeight by remember { mutableStateOf(0) }
     // Derived, so the sheet's animation does not recompose the whole home screen on every frame.
-    val sheetFull by remember(music) { androidx.compose.runtime.derivedStateOf { music.sheet.value >= 1f } }
+    val sheetFull by remember(music) { derivedStateOf { music.sheet.value >= 1f } }
     val motion = MaterialTheme.motionScheme
     Box(Modifier.fillMaxSize()) {
     Scaffold(
@@ -164,8 +170,8 @@ fun HomeScreen(
             val name = if (tab == 0) "Shoebill" else stringResource(homeTabs[tab].first)
             TopAppBar(
                 title = {
-                    androidx.compose.animation.AnimatedContent(name, transitionSpec = {
-                        androidx.compose.animation.fadeIn(motion.fastEffectsSpec()) togetherWith androidx.compose.animation.fadeOut(motion.fastEffectsSpec())
+                    AnimatedContent(name, transitionSpec = {
+                        fadeIn(motion.fastEffectsSpec()) togetherWith fadeOut(motion.fastEffectsSpec())
                     }, label = "headerTitle") { Text(it, fontWeight = FontWeight.Bold, maxLines = 1) }
                 },
                 navigationIcon = { Logo(onLongClick = onVault) },
@@ -179,8 +185,8 @@ fun HomeScreen(
         },
     ) { pad ->
         // Plain fade between tabs: scaling a whole list of thumbnails costs frames for little gain.
-        androidx.compose.animation.AnimatedContent(tab, transitionSpec = {
-            androidx.compose.animation.fadeIn(motion.defaultEffectsSpec()) togetherWith androidx.compose.animation.fadeOut(motion.fastEffectsSpec())
+        AnimatedContent(tab, transitionSpec = {
+            fadeIn(motion.defaultEffectsSpec()) togetherWith fadeOut(motion.fastEffectsSpec())
         }, label = "tabs") { tab ->
         when (tab) {
             1 -> { PlaylistsTab(onPlayQueue, Modifier.padding(pad)); return@AnimatedContent }
@@ -339,14 +345,14 @@ private fun HomeDock(music: MusicHost, tab: Int, modifier: Modifier, onTab: (Int
         Column(Modifier.animateContentSize(MaterialTheme.motionScheme.defaultSpatialSpec())) {
             if (music.hasTrack) MiniPlayer(music)
             // Narrow phones get one smaller size for all five labels, so they stay equal and do not collide.
-            val navLabel = if (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp < 360) MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp) else MaterialTheme.typography.labelMedium
+            val navLabel = if (LocalConfiguration.current.screenWidthDp < 360) MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp) else MaterialTheme.typography.labelMedium
             ShortNavigationBar(containerColor = Color.Transparent) {
                 homeTabs.forEachIndexed { i, (labelRes, icon) ->
                     ShortNavigationBarItem(
                         selected = tab == i,
                         onClick = { onTab(i) },
                         icon = { Icon(icon, null) },
-                        label = { Text(stringResource(labelRes), maxLines = 1, softWrap = false, style = navLabel, autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = 8.sp, maxFontSize = navLabel.fontSize)) },
+                        label = { Text(stringResource(labelRes), maxLines = 1, softWrap = false, style = navLabel, autoSize = TextAutoSize.StepBased(minFontSize = 8.sp, maxFontSize = navLabel.fontSize)) },
                     )
                 }
             }

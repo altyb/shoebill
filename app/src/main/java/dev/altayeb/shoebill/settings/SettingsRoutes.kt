@@ -1,4 +1,4 @@
-@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
 
 package dev.altayeb.shoebill.settings
 
@@ -92,6 +92,18 @@ import androidx.compose.animation.AnimatedContent
 import dev.altayeb.shoebill.download.DownloadFeature
 import dev.altayeb.shoebill.ui.theme.Radius
 import kotlinx.coroutines.Dispatchers
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import android.app.AppOpsManager
+import android.os.Process
+import androidx.compose.runtime.produceState
+import dev.altayeb.shoebill.music.querySongs
+import dev.altayeb.shoebill.ui.ConnectedChoice
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.foundation.text.TextAutoSize
 
 // Entry points MainActivity calls (exact signatures).
 
@@ -104,14 +116,14 @@ fun SettingsScreen(onBack: () -> Unit, onAppearance: () -> Unit) {
     var decoderDialog by remember { mutableStateOf(false) }
     var licenses by remember { mutableStateOf(false) }
     var backupNote by remember { mutableStateOf<Int?>(null) }
-    val backupScope = androidx.compose.runtime.rememberCoroutineScope()
-    val saveBackup = androidx.activity.compose.rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+    val backupScope = rememberCoroutineScope()
+    val saveBackup = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         if (uri != null) backupScope.launch(Dispatchers.IO) {
             val ok = runCatching { context.contentResolver.openOutputStream(uri)!!.use { SettingsBackup.write(context, it) } }.isSuccess
             backupNote = if (ok) R.string.settings_backup_saved else R.string.settings_backup_failed
         }
     }
-    val openBackup = androidx.activity.compose.rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    val openBackup = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) backupScope.launch(Dispatchers.IO) {
             val ok = runCatching { context.contentResolver.openInputStream(uri)!!.use { SettingsBackup.read(context, it) } }.isSuccess
             backupNote = if (ok) R.string.settings_backup_restored else R.string.settings_backup_bad
@@ -133,7 +145,7 @@ fun SettingsScreen(onBack: () -> Unit, onAppearance: () -> Unit) {
     }) { pad ->
         val motion = MaterialTheme.motionScheme
         AnimatedContent(page, Modifier.padding(pad), transitionSpec = {
-            androidx.compose.animation.fadeIn(motion.defaultEffectsSpec()) togetherWith androidx.compose.animation.fadeOut(motion.fastEffectsSpec())
+            fadeIn(motion.defaultEffectsSpec()) togetherWith fadeOut(motion.fastEffectsSpec())
         }, label = "settingsPage") { p ->
         Column(
             Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
@@ -176,9 +188,9 @@ fun SettingsScreen(onBack: () -> Unit, onAppearance: () -> Unit) {
                         SwitchRow(stringResource(R.string.video_loop), vp[1], s.loopOne, stringResource(R.string.video_loop_sub)) { v -> app.update { it.copy(loopOne = v) } }
                         SwitchRow(stringResource(R.string.video_pip), vp[2], s.autoPip, stringResource(R.string.video_pip_sub)) { v -> app.update { it.copy(autoPip = v) } }
                         // Android has its own per-app switch for this. No permission to ask for, so point at the switch when it is off.
-                        val pipAllowed = remember { (context.getSystemService(android.app.AppOpsManager::class.java)).unsafeCheckOpNoThrow(android.app.AppOpsManager.OPSTR_PICTURE_IN_PICTURE, android.os.Process.myUid(), context.packageName) == android.app.AppOpsManager.MODE_ALLOWED }
+                        val pipAllowed = remember { (context.getSystemService(AppOpsManager::class.java)).unsafeCheckOpNoThrow(AppOpsManager.OPSTR_PICTURE_IN_PICTURE, Process.myUid(), context.packageName) == AppOpsManager.MODE_ALLOWED }
                         if (!pipAllowed) SettingRow(stringResource(R.string.video_pip_blocked), groupShapes(1)[0], stringResource(R.string.video_pip_blocked_sub), onClick = {
-                            runCatching { context.startActivity(android.content.Intent("android.settings.PICTURE_IN_PICTURE_SETTINGS", android.net.Uri.parse("package:" + context.packageName))) }
+                            runCatching { context.startActivity(Intent("android.settings.PICTURE_IN_PICTURE_SETTINGS", Uri.parse("package:" + context.packageName))) }
                         })
                     }
                     GroupTitle(stringResource(R.string.settings_gestures))
@@ -229,14 +241,14 @@ fun SettingsScreen(onBack: () -> Unit, onAppearance: () -> Unit) {
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         ChoiceRow(stringResource(R.string.music_start_tab), lib[0], listOf(R.string.music_songs, R.string.music_albums, R.string.music_artists, R.string.music_genres, R.string.music_folders, R.string.music_lists).mapIndexed { i, r -> i to stringResource(r) }, s.musicStartTab) { v -> app.update { it.copy(musicStartTab = v) } }
                         ChoiceRow(stringResource(R.string.music_min_length), lib[1], listOf(0, 30, 60, 120).map { it to if (it == 0) stringResource(R.string.off) else stringResource(R.string.settings_seconds, it) }, s.minSongSec) { v -> app.update { it.copy(minSongSec = v) } }
-                        val folders by androidx.compose.runtime.produceState(emptyList<String>()) {
-                            value = runCatching { dev.altayeb.shoebill.music.querySongs(context, raw = true) }.getOrDefault(emptyList()).map { it.folder }.filter { it.isNotEmpty() }.distinct().sorted()
+                        val folders by produceState(emptyList<String>()) {
+                            value = runCatching { querySongs(context, raw = true) }.getOrDefault(emptyList()).map { it.folder }.filter { it.isNotEmpty() }.distinct().sorted()
                         }
                         Surface(Modifier.fillMaxWidth(), shape = lib[2], color = MaterialTheme.colorScheme.surfaceContainerHigh) {
                             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text(stringResource(R.string.music_folders_shown), style = MaterialTheme.typography.bodyLarge)
                                 Text(stringResource(R.string.music_folders_shown_sub), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     folders.forEach { f ->
                                         FilterChip(f !in s.hiddenFolders, { app.update { it.copy(hiddenFolders = if (f in it.hiddenFolders) it.hiddenFolders - f else it.hiddenFolders + f) } }, { Text(f) })
                                     }
@@ -301,7 +313,7 @@ fun SettingsScreen(onBack: () -> Unit, onAppearance: () -> Unit) {
         AlertDialog(
             onDismissRequest = { licenses = false },
             title = { Text(stringResource(R.string.settings_licenses)) },
-            text = { Text(text, Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()), style = MaterialTheme.typography.bodySmall) },
+            text = { Text(text, Modifier.verticalScroll(rememberScrollState()), style = MaterialTheme.typography.bodySmall) },
             confirmButton = { TextButton(onClick = { licenses = false }) { Text(stringResource(R.string.close_label)) } },
         )
     }
@@ -488,15 +500,15 @@ fun AppearanceScreen(onBack: () -> Unit) {
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun <T> Choice(options: List<Pair<T, String>>, selected: T, onSelect: (T) -> Unit) =
-    dev.altayeb.shoebill.ui.ConnectedChoice(options, selected, pick = onSelect)
+    ConnectedChoice(options, selected, pick = onSelect)
 
 /** Preferred track languages, as mpv takes them: ISO codes, most wanted first. */
 @Composable
-private fun LangField(title: String, shape: androidx.compose.ui.graphics.Shape, value: String, set: (String) -> Unit) {
+private fun LangField(title: String, shape: Shape, value: String, set: (String) -> Unit) {
     var text by remember { mutableStateOf(value) }
     val ok = text.isBlank() || Regex("[a-zA-Z]{2,3}(,[a-zA-Z]{2,3})*").matches(text.trim())
     Surface(Modifier.fillMaxWidth(), shape = shape, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
-        androidx.compose.material3.OutlinedTextField(
+        OutlinedTextField(
             text, { text = it.take(40); if (it.isBlank() || Regex("[a-zA-Z]{2,3}(,[a-zA-Z]{2,3})*").matches(it.trim())) set(it.trim().lowercase()) },
             Modifier.fillMaxWidth().padding(16.dp), singleLine = true, label = { Text(title) }, isError = !ok,
             supportingText = { Text(if (ok) stringResource(R.string.video_lang_hint) else title + ": " + stringResource(R.string.video_lang_bad)) },
@@ -522,7 +534,7 @@ private fun PreviewCard() {
 @Composable
 private fun Block(label: String, bg: Color, fg: Color, modifier: Modifier) {
     Box(modifier.clip(Radius.L).background(bg), contentAlignment = Alignment.BottomStart) {
-        Text(label, color = fg, maxLines = 1, softWrap = false, style = MaterialTheme.typography.labelMedium, modifier = Modifier.fillMaxWidth().padding(8.dp), autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = 8.sp, maxFontSize = MaterialTheme.typography.labelMedium.fontSize))
+        Text(label, color = fg, maxLines = 1, softWrap = false, style = MaterialTheme.typography.labelMedium, modifier = Modifier.fillMaxWidth().padding(8.dp), autoSize = TextAutoSize.StepBased(minFontSize = 8.sp, maxFontSize = MaterialTheme.typography.labelMedium.fontSize))
     }
 }
 

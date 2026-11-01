@@ -30,6 +30,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.vector.ImageVector
 import dev.altayeb.shoebill.ui.theme.Radius
+import dev.altayeb.shoebill.ui.ConnectedChoice
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.ui.res.painterResource
 
 /** Android 16 grouped list: 24 dp outer corners, 4 dp inner corners. */
 fun groupShapes(count: Int): List<Shape> = List(count) { i ->
@@ -101,9 +105,9 @@ fun <T> ChoiceRow(title: String, shape: Shape, options: List<Pair<T, String>>, s
             Text(title, style = MaterialTheme.typography.bodyLarge)
             Spacer(Modifier.padding(top = 8.dp))
             // Few short answers: one joined control. Long ones: chips that wrap, so none hides off the edge.
-            if (options.size <= 4 && options.all { it.second.length <= 9 }) dev.altayeb.shoebill.ui.ConnectedChoice(options, selected, pick = pick)
-            else @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class) androidx.compose.foundation.layout.FlowRow(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
-                options.forEach { (v, label) -> androidx.compose.material3.FilterChip(v == selected, { pick(v) }, { Text(label) }) }
+            if (options.size <= 4 && options.all { it.second.length <= 9 }) ConnectedChoice(options, selected, pick = pick)
+            else @OptIn(ExperimentalLayoutApi::class) FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                options.forEach { (v, label) -> FilterChip(v == selected, { pick(v) }, { Text(label) }) }
             }
         }
     }
@@ -132,7 +136,7 @@ fun TipCard(art: Int, text: String) {
     val cs = MaterialTheme.colorScheme
     Surface(Modifier.fillMaxWidth(), shape = Radius.L, color = cs.secondaryContainer, contentColor = cs.onSecondaryContainer) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Image(androidx.compose.ui.res.painterResource(art), null, Modifier.size(56.dp), colorFilter = ColorFilter.tint(cs.onSecondaryContainer))
+            Image(painterResource(art), null, Modifier.size(56.dp), colorFilter = ColorFilter.tint(cs.onSecondaryContainer))
             Spacer(Modifier.width(16.dp))
             Text(text, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
         }
