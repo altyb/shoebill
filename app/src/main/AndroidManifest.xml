@@ -44,7 +44,10 @@
                 <data android:mimeType="video/*" android:scheme="file" />
             </intent-filter>
         </activity>
+        <!-- Android Auto: the car app must declare media support, which is what the automotive descriptor says -->
+        <meta-data android:name="com.google.android.gms.car.application" android:resource="@xml/automotive_app_desc" />
         <service android:name=".music.MusicService" android:exported="true" android:foregroundServiceType="mediaPlayback">
+            <intent-filter><action android:name="androidx.media3.session.MediaLibraryService" /></intent-filter>
             <intent-filter><action android:name="androidx.media3.session.MediaSessionService" /></intent-filter>
         </service>
         <!-- *#*#code#*#* from the phone app opens the vault (code chosen in vault settings) -->
