@@ -1,12 +1,8 @@
 package dev.altayeb.shoebill.library
 
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.animation.core.spring
-import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringResource
@@ -331,59 +327,22 @@ private fun FolderRow(f: FolderInfo, shape: Shape, modifier: Modifier, onClick: 
     }
 }
 
-/**
- * One surface from the mini player down to the tabs. A single pill slides between tabs with a little bounce and the
- * chosen icon gives a small squish: the menu motion from FilmBox, kept short because tabs change often.
- */
+/** One surface from the mini player down to the tabs. The tabs are Material 3 Expressive's own bar, with its own motion. */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun HomeDock(music: dev.altayeb.shoebill.music.MusicHost, tab: Int, modifier: Modifier, onTab: (Int) -> Unit) {
     val cs = MaterialTheme.colorScheme
     Surface(modifier, shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp), color = cs.surfaceContainer) {
-        Column(Modifier.animateContentSize(spring(dampingRatio = 0.8f, stiffness = 400f)).navigationBarsPadding()) {
+        Column(Modifier.animateContentSize(MaterialTheme.motionScheme.defaultSpatialSpec())) {
             if (music.hasTrack) dev.altayeb.shoebill.music.MiniPlayer(music)
-            Box(Modifier.fillMaxWidth().height(60.dp)) {
-                val density = androidx.compose.ui.platform.LocalDensity.current
-                val x = remember { androidx.compose.animation.core.Animatable(0f) }
-                val w = remember { androidx.compose.animation.core.Animatable(0f) }
-                var bounds by remember { mutableStateOf<Pair<Float, Float>?>(null) }
-                // The labelled tab keeps resizing while it opens, so this follows each new measure, not one fixed target.
-                androidx.compose.runtime.LaunchedEffect(bounds) {
-                    val (tx, tw) = bounds ?: return@LaunchedEffect
-                    if (w.value == 0f) { x.snapTo(tx); w.snapTo(tw); return@LaunchedEffect }
-                    val pill = spring<Float>(dampingRatio = 0.68f, stiffness = 420f)
-                    launch { x.animateTo(tx, pill) }
-                    launch { w.animateTo(tw, pill) }
-                }
-                Box(
-                    Modifier.align(androidx.compose.ui.AbsoluteAlignment.CenterLeft)
-                        // Absolute, because the measured bounds are physical positions in Arabic too.
-                        .absoluteOffset { androidx.compose.ui.unit.IntOffset(x.value.toInt(), 0) }
-                        .width(with(density) { w.value.coerceAtLeast(0f).toDp() }).height(40.dp)
-                        .clip(CircleShape).background(cs.secondaryContainer),
-                )
-                Row(
-                    Modifier.fillMaxSize(),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    homeTabs.forEachIndexed { i, (labelRes, icon) ->
-                        val label = stringResource(labelRes)
-                        val selected = tab == i
-                        val squish = remember { androidx.compose.animation.core.Animatable(1f) }
-                        androidx.compose.runtime.LaunchedEffect(selected) {
-                            if (selected) { squish.snapTo(0.8f); squish.animateTo(1f, spring(dampingRatio = 0.45f, stiffness = 500f)) }
-                        }
-                        Row(
-                            Modifier.clip(CircleShape)
-                                .onGloballyPositioned { if (selected) bounds = it.positionInParent().x to it.size.width.toFloat() }
-                                .selectable(selected, role = Role.Tab) { onTab(i) }
-                                .padding(horizontal = 10.dp, vertical = 8.dp).animateContentSize(),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Icon(icon, label, Modifier.graphicsLayer { scaleX = squish.value; scaleY = squish.value }, tint = if (selected) cs.onSecondaryContainer else cs.onSurfaceVariant)
-                            if (selected) Text(label, Modifier.padding(start = 8.dp), style = MaterialTheme.typography.labelLarge, color = cs.onSecondaryContainer)
-                        }
-                    }
+            androidx.compose.material3.ShortNavigationBar(containerColor = Color.Transparent) {
+                homeTabs.forEachIndexed { i, (labelRes, icon) ->
+                    androidx.compose.material3.ShortNavigationBarItem(
+                        selected = tab == i,
+                        onClick = { onTab(i) },
+                        icon = { Icon(icon, null) },
+                        label = { Text(stringResource(labelRes), maxLines = 1) },
+                    )
                 }
             }
         }

@@ -314,6 +314,16 @@ private fun OptionsPanel(
             else FilledTonalButton(onClick = onClick) { Text(decoderName(d)) }
         }
     }
+    val chapters = remember { player.chapters() }
+    if (chapters.isNotEmpty()) {
+        SectionTitle(stringResource(R.string.player_chapters))
+        chapters.forEachIndexed { i, (title, sec) ->
+            androidx.compose.material3.TextButton(onClick = { player.seekTo(sec) }, modifier = Modifier.fillMaxWidth()) {
+                Text(title.ifEmpty { stringResource(R.string.player_chapter_n, i + 1) }, Modifier.weight(1f), maxLines = 1)
+                Text("%d:%02d".format(java.util.Locale.ROOT, sec.toInt() / 60, sec.toInt() % 60))
+            }
+        }
+    }
     SectionTitle(stringResource(R.string.player_frame_step))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         OutlinedButton(onClick = { player.command("frame-back-step") }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.player_frame_back)) }

@@ -134,6 +134,15 @@ class MpvPlayer(context: Context) : MPVLib.EventObserver {
     fun setVolume(v: Double) = mpv.setPropertyDouble("volume", v)
 
     /** Scalar sub-properties only: track-list as a node would need a node reader this wrapper lacks. */
+    /** Title and start second of each chapter in the file. */
+    fun chapters(): List<Pair<String, Double>> {
+        val n = runCatching { mpv.getPropertyInt("chapter-list/count") }.getOrNull() ?: return emptyList()
+        return (0 until n).mapNotNull { i ->
+            val t = runCatching { mpv.getPropertyDouble("chapter-list/$i/time") }.getOrNull() ?: return@mapNotNull null
+            (runCatching { mpv.getPropertyString("chapter-list/$i/title") }.getOrNull().orEmpty()) to t
+        }
+    }
+
     fun tracks(): List<Track> {
         val n = mpv.getPropertyInt("track-list/count") ?: 0
         return (0 until n).map { i ->

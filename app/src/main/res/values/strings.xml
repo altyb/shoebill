@@ -125,4 +125,14 @@
     <string name="dl_proxy_hint">Optional. Example: socks5://127.0.0.1:1080</string>
     <string name="dl_bad_proxy">Proxy: use http, https, socks4 or socks5, with host and port. Example: socks5://127.0.0.1:1080</string>
     <string name="dl_open_links">Open video-site links in Shoebill</string>
+    <string name="music_genres">Genres</string>
+    <string name="player_chapters">Chapters</string>
+    <string name="player_chapter_n">Chapter %1$d</string>
+    <string name="dl_all">All</string>
+    <string name="dl_video">Video</string>
+    <string name="dl_audio">Audio</string>
+    <string name="dl_pick_count">%1$d of %2$d selected</string>
+    <string name="dl_select_all">Select all</string>
+    <string name="dl_select_none">Select none</string>
+    <string name="dl_all_formats">All formats (%1$d)</string>
 </resources>
