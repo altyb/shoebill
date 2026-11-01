@@ -123,6 +123,9 @@ class DlPrefs(c: Context) {
     var noDuplicates: Boolean get() = p.getBoolean("noDup", false); set(v) = p.edit().putBoolean("noDup", v).apply()
     var incognito: Boolean get() = p.getBoolean("incognito", false); set(v) = p.edit().putBoolean("incognito", v).apply()
     var extra: String get() = p.getString("extra", "").orEmpty(); set(v) = p.edit().putString("extra", v).apply()
+    var playlistFolder: Boolean get() = p.getBoolean("playlistFolder", false); set(v) = p.edit().putBoolean("playlistFolder", v).apply()
+    var thumbFile: Boolean get() = p.getBoolean("thumbFile", false); set(v) = p.edit().putBoolean("thumbFile", v).apply()
+    var subFiles: Boolean get() = p.getBoolean("subFiles", false); set(v) = p.edit().putBoolean("subFiles", v).apply()
     var autoUpdate: Boolean get() = p.getBoolean("autoUpdate", true); set(v) = p.edit().putBoolean("autoUpdate", v).apply()
     var nightly: Boolean get() = p.getBoolean("nightly", false); set(v) = p.edit().putBoolean("nightly", v).apply()
     private val dir = c.applicationContext.filesDir
@@ -134,6 +137,7 @@ class DlPrefs(c: Context) {
         quality, playlist, subs, limit, proxy.takeIf { it.isNotBlank() }?.trim(), formatId, formatAudioOnly, skipSponsors, sponsorCategories, container, codec, filename,
         restrictNames, embedThumbnail, embedMetadata, subLangs, autoSubs, forceIpv4, threads, cookiesFile.takeIf { it.exists() }?.path,
         archiveFile.path.takeIf { noDuplicates }, DownloadLogic.parseExtra(extra).orEmpty(),
+        playlistFolder = playlistFolder, thumbnailFile = thumbFile, subtitleFiles = subFiles,
     )
 }
 
@@ -302,10 +306,16 @@ object DownloadQueue {
             }
             if (jobs.value.firstOrNull { it.id == j.id }?.state == DlState.Cancelled) return
             change(j.id) { it.copy(state = DlState.Finishing, percent = 100) }
-            val files = out.listFiles().orEmpty().filter { DownloadLogic.isMediaFile(it.name) }
-            check(files.isNotEmpty()) { if (j.options.archiveFile != null) c.getString(R.string.dl_already) else "no file was produced" }
-            val saved = files.map { publish(c, it) }
-            change(j.id) { it.copy(state = DlState.Done, title = it.title.ifEmpty { files.first().nameWithoutExtension }, audio = DownloadLogic.isAudioFile(files.first().name), fileUri = saved.first()) }
+            val all = out.walkTopDown().filter { it.isFile }.toList()
+            val media = all.filter { DownloadLogic.isMediaFile(it.name) }
+            check(media.isNotEmpty()) { if (j.options.archiveFile != null) c.getString(R.string.dl_already) else "no file was produced" }
+            val saved = media.map { publish(c, it, folderOf(out, it)) }
+            // Sidecars come after the check and never fail the job: the video is already in the library by then.
+            all.forEach { f ->
+                val side = (j.options.thumbnailFile && DownloadLogic.isThumbFile(f.name)) || (j.options.subtitleFiles && DownloadLogic.isSubtitleFile(f.name))
+                if (side) runCatching { publish(c, f, folderOf(out, f)) }.onFailure { Log.w("Download", "sidecar: ${it.javaClass.simpleName}") }
+            }
+            change(j.id) { it.copy(state = DlState.Done, title = it.title.ifEmpty { media.first().nameWithoutExtension }, audio = DownloadLogic.isAudioFile(media.first().name), fileUri = saved.first()) }
             saveHistory()
             VideoIndex.refresh(c)
         } catch (e: Throwable) { // a broken runtime throws LinkageError; that must fail the job, not kill music and video too
@@ -319,16 +329,31 @@ object DownloadQueue {
         }
     }
 
-    /** Pending until fully copied, so a kill mid-copy never leaves half a file in the library. */
-    private fun publish(c: Context, f: File): String {
+    /** The playlist folder a file sits in, as safe path parts under the private output folder. Empty for a flat download. */
+    private fun folderOf(out: File, f: File): String =
+        f.parentFile.relativeTo(out).invariantSeparatorsPath.split('/').mapNotNull { DownloadLogic.folderName(it) }.joinToString("/")
+
+    /**
+     * Pending until fully copied, so a kill mid-copy never leaves half a file in the library.
+     * Pictures go to Pictures/Shoebill, subtitles to Movies/Shoebill (beside the video; MediaStore.Files takes any file type there).
+     */
+    private fun publish(c: Context, f: File, folder: String): String {
         val audio = DownloadLogic.isAudioFile(f.name)
+        val thumb = DownloadLogic.isThumbFile(f.name)
+        val root = when { thumb -> Environment.DIRECTORY_PICTURES; audio -> Environment.DIRECTORY_MUSIC; else -> Environment.DIRECTORY_MOVIES }
+        val rel = listOf("Shoebill", folder).filter { it.isNotEmpty() }.joinToString("/")
         val r = c.contentResolver
         if (Build.VERSION.SDK_INT >= 29) {
-            val base = if (audio) MediaStore.Audio.Media.EXTERNAL_CONTENT_URI else MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+            val base = when {
+                thumb -> MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+                DownloadLogic.isSubtitleFile(f.name) -> MediaStore.Files.getContentUri("external")
+                audio -> MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+                else -> MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+            }
             val v = ContentValues().apply {
                 put(MediaStore.MediaColumns.DISPLAY_NAME, f.name)
                 put(MediaStore.MediaColumns.MIME_TYPE, DownloadLogic.mime(f.name))
-                put(MediaStore.MediaColumns.RELATIVE_PATH, (if (audio) Environment.DIRECTORY_MUSIC else Environment.DIRECTORY_MOVIES) + "/Shoebill")
+                put(MediaStore.MediaColumns.RELATIVE_PATH, "$root/$rel")
                 put(MediaStore.MediaColumns.IS_PENDING, 1)
             }
             val uri = r.insert(base, v) ?: error("could not save the file")
@@ -341,7 +366,7 @@ object DownloadQueue {
                 throw e
             }
         } else {
-            val dir = File(Environment.getExternalStoragePublicDirectory(if (audio) Environment.DIRECTORY_MUSIC else Environment.DIRECTORY_MOVIES), "Shoebill").apply { mkdirs() }
+            val dir = File(Environment.getExternalStoragePublicDirectory(root), rel).apply { mkdirs() }
             val to = File(dir, f.name)
             f.copyTo(to, overwrite = true)
             MediaScannerConnection.scanFile(c, arrayOf(to.path), null, null)

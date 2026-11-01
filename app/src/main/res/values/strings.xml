@@ -203,12 +203,18 @@
     <string name="dl_restrict_sub">Plain letters only, no spaces or symbols. Arabic titles become unreadable.</string>
     <string name="dl_thumb">Add the thumbnail as cover art</string>
     <string name="dl_thumb_sub">Not available for WebM files</string>
+    <string name="dl_thumb_file">Save the thumbnail as a picture</string>
+    <string name="dl_thumb_file_sub">Saved to Pictures / Shoebill</string>
+    <string name="dl_playlist_folder">Save playlists in their own folder</string>
+    <string name="dl_playlist_folder_sub">Saved to Movies or Music / Shoebill / playlist name</string>
     <string name="dl_nodup">Skip what you already downloaded</string>
     <string name="dl_nodup_sub">Keeps a private list of finished videos</string>
     <string name="dl_incognito">Private mode</string>
     <string name="dl_incognito_sub">New downloads are not saved to the history</string>
     <string name="dl_autosubs">Include auto-generated subtitles</string>
     <string name="dl_autosubs_sub">Used when a video has no written ones</string>
+    <string name="dl_sub_files">Keep subtitles as files</string>
+    <string name="dl_sub_files_sub">Saved beside the video as .srt or .vtt, not embedded in it</string>
     <string name="dl_sublangs">Subtitle languages</string>
     <string name="dl_sublangs_hint">Example: ar.*,en.* or all</string>
     <string name="dl_sponsor_what">What to remove</string>
@@ -219,7 +225,7 @@
     <string name="dl_ipv4">Force IPv4</string>
     <string name="dl_ipv4_sub">Try this if downloads fail or stall on your network</string>
     <string name="dl_cookies">Sign-in cookies file</string>
-    <string name="dl_cookies_sub">A cookies.txt, for videos that need your account. It lets anyone who holds it use that account, so only load your own.</string>
+    <string name="dl_cookies_sub">In your browser, install a cookies.txt export extension, open the site signed in, export cookies.txt, then pick it here. Whoever holds it can use that account, so load only your own.</string>
     <string name="dl_cookies_saved">Cookies saved.</string>
     <string name="dl_cookies_bad">Cookies: could not read that file, or it is over 2 MB.</string>
     <string name="dl_extra">Extra yt-dlp options</string>
