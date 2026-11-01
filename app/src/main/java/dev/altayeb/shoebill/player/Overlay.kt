@@ -1,11 +1,11 @@
 package dev.altayeb.shoebill.player
 
+import androidx.compose.animation.togetherWith
 import dev.altayeb.shoebill.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -81,7 +81,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.core.Spring
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.Dp
@@ -91,6 +90,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.max
+
+/** Behind every control, so white icons stay readable on any picture, a white frame included (about 5:1 at worst). */
+private val ControlSurface = Color.Black.copy(alpha = 0.62f)
 
 enum class Panel { Subs, Audio, Options }
 enum class HudKind { Brightness, Volume, Seek, Tap }
@@ -105,6 +107,7 @@ class Notice(val text: String, val action: String? = null, val onAction: () -> U
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun Controls(
+    scope: androidx.compose.animation.AnimatedVisibilityScope,
     player: MpvPlayer,
     title: String,
     codec: String?,
@@ -130,15 +133,29 @@ fun Controls(
     onScrub: (Double) -> Unit,
     onScrubEnd: (Double?) -> Unit,
 ) {
+    val motion = MaterialTheme.motionScheme
+    // Each part comes from its own edge on the Expressive spring and leaves on the quick one.
+    fun Modifier.slideFrom(top: Boolean) = with(scope) {
+        animateEnterExit(
+            enter = androidx.compose.animation.slideInVertically(motion.defaultSpatialSpec()) { if (top) -it else it } + fadeIn(motion.defaultEffectsSpec()),
+            exit = androidx.compose.animation.slideOutVertically(motion.fastSpatialSpec()) { if (top) -it else it } + fadeOut(motion.fastEffectsSpec()),
+        )
+    }
+    val popIn = with(scope) {
+        Modifier.animateEnterExit(
+            enter = androidx.compose.animation.scaleIn(motion.defaultSpatialSpec(), initialScale = 0.8f) + fadeIn(motion.defaultEffectsSpec()),
+            exit = androidx.compose.animation.scaleOut(motion.fastSpatialSpec(), targetScale = 0.9f) + fadeOut(motion.fastEffectsSpec()),
+        )
+    }
     Column(
         Modifier.fillMaxSize().background(
             Brush.verticalGradient(
-                listOf(Color.Black.copy(alpha = 0.65f), Color.Transparent, Color.Transparent, Color.Black.copy(alpha = 0.75f)),
+                listOf(Color.Black.copy(alpha = 0.35f), Color.Transparent, Color.Transparent, Color.Black.copy(alpha = 0.35f)),
             ),
         ).padding(horizontal = 12.dp, vertical = 8.dp),
     ) {
         // top bar
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Surface(Modifier.slideFrom(top = true), shape = RoundedCornerShape(28.dp), color = ControlSurface) { Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back), tint = Color.White) }
             Column(Modifier.weight(1f).padding(horizontal = 4.dp)) {
                 Text(title, color = Color.White, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -147,57 +164,65 @@ fun Controls(
             IconButton(onClick = { onPanel(Panel.Subs) }) { Icon(Icons.Rounded.Subtitles, stringResource(R.string.player_subtitles), tint = Color.White) }
             IconButton(onClick = { onPanel(Panel.Audio) }) { Icon(Icons.Rounded.Audiotrack, stringResource(R.string.player_audio), tint = Color.White) }
             IconButton(onClick = { onPanel(Panel.Options) }) { Icon(Icons.Rounded.MoreVert, stringResource(R.string.player_more), tint = Color.White) }
-        }
+        } }
 
         Spacer(Modifier.weight(1f))
 
         // transport: prev / -10 / play-pause / +10 / next, always in this order
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onPrev, enabled = hasPrev, modifier = Modifier.size(56.dp)) {
-                    Icon(Icons.Rounded.SkipPrevious, stringResource(R.string.player_previous), tint = Color.White, modifier = Modifier.size(36.dp))
+            Row(Modifier.fillMaxWidth().then(popIn), horizontalArrangement = Arrangement.Center) { Surface(shape = RoundedCornerShape(50), color = ControlSurface) {
+                // A Button Group: the pressed button widens and squeezes its neighbours, Expressive's own press motion.
+                androidx.compose.material3.ButtonGroup(overflowIndicator = {}, modifier = Modifier.padding(6.dp).width(320.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                    fun side(icon: androidx.compose.ui.graphics.vector.ImageVector, label: Int, enabled: Boolean, onClick: () -> Unit) = customItem({
+                        val src = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                        IconButton(onClick = onClick, enabled = enabled, modifier = Modifier.weight(1f).height(52.dp).animateWidth(src), interactionSource = src, shapes = IconButtonDefaults.shapes()) {
+                            Icon(icon, stringResource(label), tint = Color.White.copy(alpha = if (enabled) 1f else 0.38f), modifier = Modifier.size(30.dp))
+                        }
+                    }, {})
+                    side(Icons.Rounded.SkipPrevious, R.string.player_previous, hasPrev, onPrev)
+                    side(Icons.Rounded.Replay10, R.string.player_rewind_10, true) { player.seekBy(-10.0) }
+                    customItem({
+                        val src = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                        // Round when paused, square while playing: the stock toggle shapes, no hand-made corner spring.
+                        androidx.compose.material3.FilledIconToggleButton(
+                            checked = !paused && !eof,
+                            onCheckedChange = { if (eof) { player.seekTo(0.0); player.setPaused(false) } else player.togglePause() },
+                            modifier = Modifier.padding(horizontal = 4.dp).weight(1.4f).height(72.dp).animateWidth(src),
+                            interactionSource = src,
+                            shapes = IconButtonDefaults.toggleableShapes(),
+                            colors = IconButtonDefaults.filledIconToggleButtonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                checkedContainerColor = MaterialTheme.colorScheme.primaryContainer, checkedContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            ),
+                        ) {
+                            androidx.compose.animation.AnimatedContent(
+                                when { eof -> 2; paused -> 0; else -> 1 },
+                                transitionSpec = {
+                                    (androidx.compose.animation.scaleIn(motion.fastSpatialSpec(), initialScale = 0.6f) + fadeIn(motion.fastEffectsSpec())) togetherWith fadeOut(motion.fastEffectsSpec())
+                                },
+                                label = "playIcon",
+                            ) { state ->
+                                Icon(
+                                    when (state) { 2 -> Icons.Rounded.Replay; 0 -> Icons.Rounded.PlayArrow; else -> Icons.Rounded.Pause },
+                                    stringResource(if (state == 1) R.string.pause else R.string.play),
+                                    modifier = Modifier.size(38.dp),
+                                )
+                            }
+                        }
+                    }, {})
+                    side(Icons.Rounded.Forward10, R.string.player_forward_10, true) { player.seekBy(10.0) }
+                    side(Icons.Rounded.SkipNext, R.string.player_next, hasNext, onNext)
                 }
-                IconButton(onClick = { player.seekBy(-10.0) }, modifier = Modifier.size(56.dp)) {
-                    Icon(Icons.Rounded.Replay10, stringResource(R.string.player_rewind_10), tint = Color.White, modifier = Modifier.size(36.dp))
-                }
-                val corner by animateDpAsState(
-                    targetValue = if (paused) 48.dp else 24.dp,
-                    animationSpec = spring(dampingRatio = 0.55f, stiffness = Spring.StiffnessMediumLow),
-                    label = "playCorner",
-                )
-                FilledIconButton(
-                    onClick = {
-                        if (eof) { player.seekTo(0.0); player.setPaused(false) } else player.togglePause()
-                    },
-                    modifier = Modifier.padding(horizontal = 12.dp).size(96.dp),
-                    shape = RoundedCornerShape(corner),
-                    colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    ),
-                ) {
-                    Icon(
-                        when { eof -> Icons.Rounded.Replay; paused -> Icons.Rounded.PlayArrow; else -> Icons.Rounded.Pause },
-                        stringResource(if (paused) R.string.play else R.string.pause),
-                        modifier = Modifier.size(48.dp),
-                    )
-                }
-                IconButton(onClick = { player.seekBy(10.0) }, modifier = Modifier.size(56.dp)) {
-                    Icon(Icons.Rounded.Forward10, stringResource(R.string.player_forward_10), tint = Color.White, modifier = Modifier.size(36.dp))
-                }
-                IconButton(onClick = onNext, enabled = hasNext, modifier = Modifier.size(56.dp)) {
-                    Icon(Icons.Rounded.SkipNext, stringResource(R.string.player_next), tint = Color.White, modifier = Modifier.size(36.dp))
-                }
-            }
+            } }
         }
 
         Spacer(Modifier.weight(1f))
 
-        // bottom: LTR seek bar, times, two floating pills
+        // bottom: LTR seek bar, times and actions on one card; the preview floats above it
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-            Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
-                var scrubbing by remember { mutableStateOf(false) }
-                SeekPreview(player.shareableUri, shownSec, durationSec, scrubbing)
+            var scrubbing by remember { mutableStateOf(false) }
+            SeekPreview(player.shareableUri, shownSec, durationSec, scrubbing)
+            Surface(Modifier.slideFrom(top = false), shape = RoundedCornerShape(28.dp), color = ControlSurface) { Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)) {
                 SeekBar(durationSec, shownSec, paused, abA, abB, { scrubbing = true; onScrub(it) }, { scrubbing = false; onScrubEnd(it) })
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(formatTime((shownSec * 1000).toLong()), color = Color.White, style = MaterialTheme.typography.labelLarge)
@@ -206,12 +231,12 @@ fun Controls(
                         color = Color.White, style = MaterialTheme.typography.labelLarge,
                     )
                 }
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(4.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Pill {
-                        IconButton(onClick = onLock) { Icon(Icons.Rounded.Lock, stringResource(R.string.player_lock), tint = Color.White) }
-                        IconButton(onClick = onRotate) { Icon(Icons.Rounded.ScreenRotation, stringResource(R.string.player_rotate), tint = Color.White) }
-                        IconButton(onClick = onAspect) { Icon(Icons.Rounded.AspectRatio, stringResource(R.string.player_aspect), tint = Color.White) }
+                        IconButton(onClick = onLock, shapes = IconButtonDefaults.shapes()) { Icon(Icons.Rounded.Lock, stringResource(R.string.player_lock), tint = Color.White) }
+                        IconButton(onClick = onRotate, shapes = IconButtonDefaults.shapes()) { Icon(Icons.Rounded.ScreenRotation, stringResource(R.string.player_rotate), tint = Color.White) }
+                        IconButton(onClick = onAspect, shapes = IconButtonDefaults.shapes()) { Icon(Icons.Rounded.AspectRatio, stringResource(R.string.player_aspect), tint = Color.White) }
                     }
                     Pill {
                         TextButton(onClick = { onPanel(Panel.Subs) }) { Text(subLabel, color = Color.White) }
@@ -219,7 +244,7 @@ fun Controls(
                         TextButton(onClick = { onPanel(Panel.Options) }) { Text(decoderLabel, color = Color.White) }
                     }
                 }
-            }
+            } }
         }
     }
 }
@@ -253,9 +278,7 @@ private fun SeekPreview(uri: android.net.Uri?, sec: Double, duration: Double, ac
 
 @Composable
 private fun Pill(content: @Composable () -> Unit) {
-    Surface(shape = RoundedCornerShape(50), color = Color.Black.copy(alpha = 0.45f)) {
-        Row(Modifier.padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically, content = { content() })
-    }
+    Row(verticalAlignment = Alignment.CenterVertically, content = { content() })
 }
 
 /** Seek bar: wavy while playing, flat when paused, amber marks for the A-B loop. */
@@ -373,7 +396,7 @@ fun GestureHud(hud: Hud?) {
                 Modifier.fillMaxSize().padding(horizontal = 28.dp),
                 contentAlignment = if (left) AbsoluteAlignment.CenterLeft else AbsoluteAlignment.CenterRight, // physical side (ق-05), not RTL start/end
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Surface(shape = RoundedCornerShape(30.dp), color = ControlSurface) { Column(Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(if (left) Icons.Rounded.BrightnessMedium else Icons.Rounded.VolumeUp, null, tint = Color.White)
                     Spacer(Modifier.height(8.dp))
                     Box(
@@ -388,11 +411,11 @@ fun GestureHud(hud: Hud?) {
                     }
                     Spacer(Modifier.height(8.dp))
                     Text(hud.label, color = Color.White, style = MaterialTheme.typography.labelLarge)
-                }
+                } }
             }
         }
         HudKind.Seek, HudKind.Tap -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Surface(shape = RoundedCornerShape(50), color = Color.Black.copy(alpha = 0.6f)) {
+            Surface(shape = RoundedCornerShape(50), color = ControlSurface) {
                 Text(hud.label, color = Color.White, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp))
             }
         }

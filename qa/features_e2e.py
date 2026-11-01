@@ -211,6 +211,28 @@ def sec_extras():
     tap("Audio", exact=True); time.sleep(1); ok("audio filter leaves the video out", find("Big_Buck_Bunny") is None, texts()[:12]); shot("history")
     ok("no crash in extras", not crashed())
 
+def sec_white():
+    """Controls on a pure white picture: the pixels just inside each control's box must be dark enough for white icons."""
+    from PIL import Image
+    adb("shell", f"run-as {PKG} sh -c 'mkdir -p files; touch files/qa_keep_ui'")  # debug builds only: controls stay up for the measuring
+    v = adb("shell", "content", "query", "--uri", "content://media/external/video/media", "--projection", "_id:_display_name")
+    for name in ("white.mp4", "whitep.mp4"):
+        m = re.search(r"_id=(\d+), _display_name=" + name.replace(".", r"\."), v); assert m, name
+        adb("shell", "am", "start", "-S", "-a", "android.intent.action.VIEW", "-t", "video/*", "-d", f"content://media/external/video/media/{m.group(1)}", "-n", f"{PKG}/.MainActivity"); time.sleep(6)
+        if find("Got it", exact=True) is not None: tap("Got it", exact=True); time.sleep(1)
+        tap_xy(540, 540); time.sleep(1.5)
+        if find("More", exact=True) is None: tap_xy(540, 540); time.sleep(1.5)
+        ns = nodes(); shot(name)
+        im = Image.open(os.path.join(os.environ["SHOTS"], name + ".png")).convert("L")
+        for label in ("Back", "Subtitles", "More", "Previous", "Back 10 seconds", "Forward 10 seconds", "Next", "Lock", "Rotate"):
+            n = find(label, exact=True, ns=ns)
+            if n is None: ok(f"{name} {label} is on screen", False, [x.get("content-desc") for x in ns if x.get("content-desc")]); continue
+            x1, y1, x2, y2 = map(int, re.findall(r"\d+", n.get("bounds")))
+            lum = im.getpixel((x1 + 4, (y1 + y2) // 2))
+            ok(f"{name} {label} sits on a dark surface", lum < 120, lum)
+    adb("shell", f"run-as {PKG} rm files/qa_keep_ui")
+    ok("no crash on white", not crashed())
+
 def sec_download():
     home(); tab("Downloads")
     tap("Download", exact=True); time.sleep(1); ok("empty link names the field", find("Link: enter") is not None, texts()[:10])
@@ -221,7 +243,7 @@ def sec_download():
     ok("youtube audio as MP3 reaches Music/Shoebill", r and "mp3" in adb("shell", "ls", "/sdcard/Music/Shoebill", check=False), t)
     ok("no crash in downloads", not crashed())
 
-S = dict(music=sec_music, nowplaying=sec_nowplaying, player=sec_player, download=sec_download, link=sec_link, network=sec_network, extras=sec_extras)
+S = dict(music=sec_music, nowplaying=sec_nowplaying, player=sec_player, download=sec_download, link=sec_link, network=sec_network, extras=sec_extras, white=sec_white)
 adb("logcat", "-c", "-b", "crash", check=False)
 for s in sys.argv[1:] or S:
     print("==", s, flush=True)

@@ -273,9 +273,9 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
         context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0 &&
             File(context.filesDir, "qa_keep_ui").exists()
     }
-    // overlay auto-hide: 3 s without touch, never while a panel is open, the finger is on the seek bar, or at the end
-    LaunchedEffect(overlayVisible, interaction, panel, searchOpen, seekPreview, eof) {
-        if (!qaKeepUi && overlayVisible && panel == null && !searchOpen && seekPreview == null && !eof) {
+    // overlay auto-hide: 3 s without touch, never while paused, a panel is open, the finger is on the seek bar, or at the end
+    LaunchedEffect(overlayVisible, interaction, panel, searchOpen, seekPreview, eof, paused) {
+        if (!qaKeepUi && overlayVisible && !paused && panel == null && !searchOpen && seekPreview == null && !eof) {
             delay(3000)
             overlayVisible = false
         }
@@ -519,13 +519,14 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
         AnimatedVisibility(
             visible = overlayVisible && panel == null && !searchOpen && !inPip,
             modifier = Modifier.fillMaxSize(),
-            enter = fadeIn(tween(150)),
-            exit = fadeOut(tween(150)),
+            enter = fadeIn(androidx.compose.material3.MaterialTheme.motionScheme.defaultEffectsSpec()),
+            exit = fadeOut(androidx.compose.material3.MaterialTheme.motionScheme.fastEffectsSpec()),
         ) {
             if (locked) {
                 LockOverlay(onUnlock = { locked = false; overlayVisible = true })
             } else {
                 Controls(
+                    scope = this,
                     player = player,
                     title = currentTitle,
                     codec = videoCodec,

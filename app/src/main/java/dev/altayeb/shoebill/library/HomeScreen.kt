@@ -1,5 +1,8 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+
 package dev.altayeb.shoebill.library
 
+import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
@@ -162,11 +165,16 @@ fun HomeScreen(
             HomeDock(music, tab, Modifier.onSizeChanged { dockHeight = it.height }) { tab = it }
         },
     ) { pad ->
+        // Fade-through between tabs, on the Expressive scheme.
+        val motion = MaterialTheme.motionScheme
+        androidx.compose.animation.AnimatedContent(tab, transitionSpec = {
+            (androidx.compose.animation.fadeIn(motion.defaultEffectsSpec()) + androidx.compose.animation.scaleIn(motion.defaultSpatialSpec(), initialScale = 0.97f)) togetherWith androidx.compose.animation.fadeOut(motion.fastEffectsSpec())
+        }, label = "tabs") { tab ->
         when (tab) {
-            1 -> { PlaylistsTab(onPlayQueue, Modifier.padding(pad)); return@Scaffold }
-            2 -> { NetworkTab(onPlay, Modifier.padding(pad)); return@Scaffold }
-            dev.altayeb.shoebill.music.MUSIC_TAB -> { dev.altayeb.shoebill.music.MusicTab(music, Modifier.padding(pad)); return@Scaffold }
-            4 -> { dev.altayeb.shoebill.download.DownloadFeature.Tab(Modifier.padding(pad)); return@Scaffold }
+            1 -> { PlaylistsTab(onPlayQueue, Modifier.padding(pad)); return@AnimatedContent }
+            2 -> { NetworkTab(onPlay, Modifier.padding(pad)); return@AnimatedContent }
+            dev.altayeb.shoebill.music.MUSIC_TAB -> { dev.altayeb.shoebill.music.MusicTab(music, Modifier.padding(pad)); return@AnimatedContent }
+            4 -> { dev.altayeb.shoebill.download.DownloadFeature.Tab(Modifier.padding(pad)); return@AnimatedContent }
         }
         LazyColumn(
             Modifier.fillMaxSize().padding(pad),
@@ -220,6 +228,7 @@ fun HomeScreen(
                     Modifier.padding(vertical = 1.dp).animateItem()) { onOpenFolder(f.id) }
             }
             item { Spacer(Modifier.height(16.dp)) }
+        }
         }
     }
     dev.altayeb.shoebill.music.MusicSheet(music, dockHeight)

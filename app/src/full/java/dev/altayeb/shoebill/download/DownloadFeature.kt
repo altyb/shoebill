@@ -533,7 +533,7 @@ object DownloadFeature {
         Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
             Column {
                 if (j.thumb != null) Thumb(j.thumb, j.options.proxy, Modifier.fillMaxWidth().aspectRatio(16f / 9f))
-                LinearProgressIndicator(progress = { j.percent / 100f }, Modifier.fillMaxWidth())
+                androidx.compose.material3.LinearWavyProgressIndicator(progress = { j.percent / 100f }, Modifier.fillMaxWidth())
                 Row(Modifier.padding(start = 16.dp, end = 8.dp, top = 10.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text(j.title.ifEmpty { j.url }, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)

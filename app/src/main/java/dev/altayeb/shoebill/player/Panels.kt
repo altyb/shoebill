@@ -94,8 +94,8 @@ fun SidePanel(
     AnimatedVisibility(
         visible = panel != null,
         modifier = Modifier.fillMaxSize(),
-        enter = fadeIn(tween(220)) + slideInHorizontally(tween(260)) { side * it / 4 },
-        exit = fadeOut(tween(180)) + slideOutHorizontally(tween(180)) { side * it / 4 },
+        enter = fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()) + slideInHorizontally(MaterialTheme.motionScheme.defaultSpatialSpec()) { side * it / 4 },
+        exit = fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()) + slideOutHorizontally(MaterialTheme.motionScheme.fastSpatialSpec()) { side * it / 4 },
     ) {
         Box(Modifier.fillMaxSize()) {
             Box(
@@ -164,9 +164,10 @@ private fun SubsPanel(
             Tab(selected = tab == i, onClick = { tab = i }, text = { Text(stringResource(name)) })
         }
     }
+    val motion = MaterialTheme.motionScheme
     AnimatedContent(
         targetState = tab,
-        transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) },
+        transitionSpec = { fadeIn(motion.defaultEffectsSpec()) togetherWith fadeOut(motion.fastEffectsSpec()) },
         label = "subsTab",
     ) { t ->
         when (t) {
