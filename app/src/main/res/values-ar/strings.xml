@@ -102,6 +102,7 @@
     <string name="music_no_lyrics">لا توجد كلمات لهذه الأغنية.</string>
     <string name="music_pick_lyrics">اختر ملف كلمات (lrc)</string>
     <string name="music_remove">إزالة</string>
+    <string name="music_play_failed">تعذّر تشغيل %1$s، يتم التخطي</string>
     <string name="dl_url">رابط فيديو أو أغنية</string>
     <string name="dl_paste">لصق</string>
     <string name="dl_start">تنزيل</string>

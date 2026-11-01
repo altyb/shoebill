@@ -103,6 +103,7 @@
     <string name="music_no_lyrics">No lyrics for this song.</string>
     <string name="music_pick_lyrics">Choose a lyrics file (.lrc)</string>
     <string name="music_remove">Remove</string>
+    <string name="music_play_failed">Can’t play %1$s, skipping</string>
     <string name="dl_url">Link to a video or song</string>
     <string name="dl_paste">Paste</string>
     <string name="dl_start">Download</string>
