@@ -112,4 +112,16 @@
     <string name="dl_setup_failed">تعذر تشغيل أداة التنزيل على هذا الهاتف.</string>
     <string name="dl_channel">التنزيلات</string>
     <string name="dl_notify">جارٍ التنزيل</string>
+    <string name="dl_left">متبقي %1$s</string>
+    <string name="dl_notify_done">اكتمل التنزيل</string>
+    <string name="dl_notify_failed">فشل التنزيل</string>
+    <string name="dl_no_preview">تعذرت قراءة هذا الرابط. يمكنك محاولة تنزيله مع ذلك.</string>
+    <string name="dl_reading">جارٍ قراءة الرابط…</string>
+    <string name="dl_settings">التنزيلات</string>
+    <string name="dl_limit">حد السرعة</string>
+    <string name="dl_no_limit">بلا حد</string>
+    <string name="dl_proxy">الوكيل (Proxy)</string>
+    <string name="dl_proxy_hint">اختياري. مثال: socks5://127.0.0.1:1080</string>
+    <string name="dl_bad_proxy">الوكيل: استخدم http أو https أو socks4 أو socks5 مع العنوان والمنفذ. مثال: socks5://127.0.0.1:1080</string>
+    <string name="dl_open_links">فتح روابط مواقع الفيديو في Shoebill</string>
 </resources>

@@ -113,4 +113,16 @@
     <string name="dl_setup_failed">The downloader could not start on this phone.</string>
     <string name="dl_channel">Downloads</string>
     <string name="dl_notify">Downloading</string>
+    <string name="dl_left">%1$s left</string>
+    <string name="dl_notify_done">Download finished</string>
+    <string name="dl_notify_failed">Download failed</string>
+    <string name="dl_no_preview">Could not read this link. You can still try to download it.</string>
+    <string name="dl_reading">Reading the link…</string>
+    <string name="dl_settings">Downloads</string>
+    <string name="dl_limit">Speed limit</string>
+    <string name="dl_no_limit">No limit</string>
+    <string name="dl_proxy">Proxy</string>
+    <string name="dl_proxy_hint">Optional. Example: socks5://127.0.0.1:1080</string>
+    <string name="dl_bad_proxy">Proxy: use http, https, socks4 or socks5, with host and port. Example: socks5://127.0.0.1:1080</string>
+    <string name="dl_open_links">Open video-site links in Shoebill</string>
 </resources>

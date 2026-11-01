@@ -11,6 +11,39 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="text/plain" />
             </intent-filter>
+            <!-- Video-site links. Android 12+ opens them here only after the user allows it; Settings has a button for that. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:scheme="http" />
+                <data android:host="youtube.com" />
+                <data android:host="www.youtube.com" />
+                <data android:host="m.youtube.com" />
+                <data android:host="music.youtube.com" />
+                <data android:host="youtu.be" />
+                <data android:host="tiktok.com" />
+                <data android:host="www.tiktok.com" />
+                <data android:host="vm.tiktok.com" />
+                <data android:host="instagram.com" />
+                <data android:host="www.instagram.com" />
+                <data android:host="x.com" />
+                <data android:host="twitter.com" />
+                <data android:host="fb.watch" />
+                <data android:host="www.facebook.com" />
+                <data android:host="vimeo.com" />
+                <data android:host="soundcloud.com" />
+                <data android:host="www.reddit.com" />
+                <data android:host="www.dailymotion.com" />
+            </intent-filter>
+            <!-- shoebill://download?url=... and the download notification -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="shoebill" android:host="download" />
+            </intent-filter>
         </activity>
     </application>
 </manifest>

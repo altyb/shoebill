@@ -121,6 +121,8 @@ fun SettingsScreen(onBack: () -> Unit, onAppearance: () -> Unit) {
                 SwitchRow(stringResource(R.string.settings_background), player[3], s.backgroundAudio, stringResource(R.string.settings_background_sub)) { v -> app.update { it.copy(backgroundAudio = v) } }
             }
 
+            dev.altayeb.shoebill.download.DownloadFeature.SettingsSection()
+
             GroupTitle(stringResource(R.string.settings_gestures))
             SwitchRow(stringResource(R.string.settings_gestures), groupShapes(1)[0], s.gestures, stringResource(R.string.settings_gestures_sub)) { v -> app.update { it.copy(gestures = v) } }
 
