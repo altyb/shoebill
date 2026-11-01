@@ -44,12 +44,25 @@ Settings, or let it follow the phone.
 - Gestures for seeking, volume and brightness; double-tap to skip; speed; audio and subtitle tracks.
 - Screen lock, picture-in-picture, background audio, resume where you stopped, playlists.
 
+- Chapter marks on the seek bar. Deinterlace, picture controls (brightness, contrast, saturation, gamma) and scale filters.
+- Frame stepping and a seek preview.
+
+**Music**
+- Music tab: albums, artists, genres, playlists and a queue. The mini player sits in the tab bar and grows into the now-playing page.
+- Background playback with notification controls. Album art is cached.
+- Android Auto browsing. Written to the spec; not yet tried in a car.
+
+**Downloader** (GitHub build only; Google Play does not allow it)
+- Paste a link to download video or audio. Choose the format, download playlists, keep subtitles and thumbnails.
+- Private mode, cookies for sites that need a login, proxy and speed limit. The downloader updates itself in the background.
+
 **Network and TV**
-- Browse SMB shares and play from them. Passwords are encrypted under a key in the phone's security chip.
+- Browse SMB, WebDAV, SFTP and FTP sources and play from them. Passwords are encrypted under a key in the phone's security chip. SFTP checks the host key on every connection.
 - Cast to DLNA TVs. The video is served only while casting, at a random address on your Wi-Fi. Vault files can never be cast.
 
 **Audio**
 - Audio delay, and an equalizer on phones that support Android's audio effects.
+- ReplayGain: reads the loudness tags and turns loud tracks down. It never turns anything up.
 
 **Subtitles**
 - Search OpenSubtitles, SubDL and Jimaku (with your own free API keys).
@@ -70,7 +83,7 @@ Settings, or let it follow the phone.
 
 ## Install
 
-- **GitHub:** download the APK from [Releases](../../releases/latest). Android 8.0 or newer.
+- **GitHub:** download the APK from [Releases](../../releases/latest). Android 8.0 or newer. Most phones take `arm64-v8a`; older ones `armeabi-v7a`; `universal` runs anywhere and is the one to use if unsure or when updating from 0.4.0.
 - **[Obtainium](https://github.com/ImranR98/Obtainium):** add `https://github.com/altyb/shoebill` to get updates.
 - **F-Droid app:** add my own repo under Settings, Repositories: `https://altyb.github.io/fdroid/repo?fingerprint=4882F491E55FA2B5630EBA1409087C2DC2F404E8786813D0E60B13569CC1040A`. These are the same signed APKs as the GitHub releases. The apps are not in the main F-Droid catalogue yet.
 
@@ -103,9 +116,14 @@ not against a forensic examination of the phone.
 JDK 17+ and the Android SDK.
 
 ```
-./gradlew assembleFullRelease    # GitHub / F-Droid build
-./gradlew assemblePlayRelease    # Google Play build
+./gradlew assembleFullRelease    # GitHub / F-Droid build: one APK per CPU plus a universal one
+./gradlew bundlePlayRelease      # Google Play build
 ```
+
+Each release has one version code per APK: release number × 10 + slot (universal 0, `armeabi-v7a` 1, `arm64-v8a` 2, `x86_64` 3).
+`-PdevAbis=x86_64` builds one APK for the emulator instead of splits.
+
+Startup profile: `./gradlew :app:generateFullReleaseBaselineProfile` with a phone (Android 13+) over USB; commit the file it writes under `app/src/`.
 
 | Flavor | Difference |
 |---|---|
@@ -118,7 +136,7 @@ Release signing reads `~/.secrets/shoebill-release.properties`
 Tests:
 - `cd vault-tests && ./gradlew test` (vault crypto, PIN, backup format)
 - `cd subs-tests && ./gradlew test` (subtitle search and parsing)
-- `cd library-tests && ./gradlew test` (library logic)
+- `cd library-tests && ./gradlew test` (library logic). GitHub Actions runs this plus a debug build on every push to main.
 - `qa/e2e.py`: end-to-end player checks on a device or emulator. `qa/make-media.sh` creates the test videos;
   build with `-PdevAbis=x86_64` for the emulator.
 
