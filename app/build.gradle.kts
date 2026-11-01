@@ -74,7 +74,15 @@ dependencies {
     implementation("androidx.fragment:fragment-ktx:1.8.9")
     implementation("androidx.profileinstaller:profileinstaller:1.4.1")
     implementation("androidx.compose.animation:animation-graphics:1.9.4")
+    implementation("androidx.media3:media3-exoplayer:1.8.0")
+    implementation("androidx.media3:media3-session:1.8.0")
+    // Downloads exist only in the full build: Play does not allow them, so none of this reaches the Play bundle.
+    "fullImplementation"("io.github.junkfood02.youtubedl-android:library:0.18.1")
+    "fullImplementation"("io.github.junkfood02.youtubedl-android:ffmpeg:0.18.1")
 }
+
+// yt-dlp runs from native libraries on disk, so the full build must extract them; the Play build need not.
+androidComponents { onVariants { v -> v.packaging.jniLibs.useLegacyPackaging.set(v.flavorName == "full") } }
 
 // The licence texts ship inside the app, for Settings > Open source licenses.
 val copyLegal = tasks.register<Copy>("copyLegal") {

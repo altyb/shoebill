@@ -5,6 +5,10 @@
     <!-- finding TVs for casting (SSDP) -->
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- vault "move, not copy": delete originals without the per-batch dialog (asked once, optional) -->
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
@@ -40,6 +44,9 @@
                 <data android:mimeType="video/*" android:scheme="file" />
             </intent-filter>
         </activity>
+        <service android:name=".music.MusicService" android:exported="true" android:foregroundServiceType="mediaPlayback">
+            <intent-filter><action android:name="androidx.media3.session.MediaSessionService" /></intent-filter>
+        </service>
         <!-- *#*#code#*#* from the phone app opens the vault (code chosen in vault settings) -->
         <provider android:name=".library.SmbProvider" android:authorities="${applicationId}.smb" android:exported="false" />
         <receiver android:name=".vault.SecretCodeReceiver" android:exported="true">

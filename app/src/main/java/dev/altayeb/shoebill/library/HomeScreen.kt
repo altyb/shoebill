@@ -47,7 +47,9 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Lan
+import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.PlaylistPlay
 import androidx.compose.material.icons.rounded.Search
@@ -89,11 +91,13 @@ import dev.altayeb.shoebill.data.FileState
 import dev.altayeb.shoebill.data.PlaybackStore
 import dev.altayeb.shoebill.ui.theme.BrandAmber
 
+// Index order is what HomeScreen switches on. Downloads exists only in the full build, so it stays last.
 private val homeTabs = listOf(
     R.string.lib_tab_library to Icons.Rounded.VideoLibrary,
     R.string.lib_tab_playlists to Icons.Rounded.PlaylistPlay,
     R.string.lib_tab_network to Icons.Rounded.Lan,
-)
+    R.string.lib_tab_music to Icons.Rounded.MusicNote,
+) + if (dev.altayeb.shoebill.download.DownloadFeature.ENABLED) listOf(R.string.lib_tab_downloads to Icons.Rounded.Download) else emptyList()
 
 /** ش-02: the home screen. Tabs 2 and 3 are placeholders for now. */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -109,6 +113,9 @@ fun HomeScreen(
     val ctx = LocalContext.current
     val states by PlaybackStore.get(ctx).all.collectAsStateWithLifecycle()
     var tab by rememberSaveable { mutableIntStateOf(0) }
+    // A link shared to the app opens on Downloads.
+    val shared by dev.altayeb.shoebill.download.SharedLink.value.collectAsStateWithLifecycle()
+    androidx.compose.runtime.LaunchedEffect(shared) { if (shared != null && dev.altayeb.shoebill.download.DownloadFeature.ENABLED) tab = 4 }
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val existing = remember(videos) { videos.mapTo(HashSet()) { it.key } }
     // Continue-watching skips files that were trashed or removed since they were played.
@@ -149,6 +156,8 @@ fun HomeScreen(
         when (tab) {
             1 -> { PlaylistsTab(onPlayQueue, Modifier.padding(pad)); return@Scaffold }
             2 -> { NetworkTab(onPlay, Modifier.padding(pad)); return@Scaffold }
+            3 -> { dev.altayeb.shoebill.music.MusicTab(Modifier.padding(pad)); return@Scaffold }
+            4 -> { dev.altayeb.shoebill.download.DownloadFeature.Tab(Modifier.padding(pad)); return@Scaffold }
         }
         LazyColumn(
             Modifier.fillMaxSize().padding(pad),
@@ -324,7 +333,7 @@ private fun HomeNav(tab: Int, onTab: (Int) -> Unit) {
                 Row(
                     Modifier.clip(CircleShape).background(bg)
                         .selectable(selected, role = Role.Tab) { onTab(i) }
-                        .padding(horizontal = 16.dp, vertical = 8.dp).animateContentSize(),
+                        .padding(horizontal = 10.dp, vertical = 8.dp).animateContentSize(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(icon, label, tint = if (selected) cs.onSecondaryContainer else cs.onSurfaceVariant)

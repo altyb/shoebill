@@ -17,3 +17,11 @@
 -dontwarn org.slf4j.**
 -dontwarn net.engio.**
 -dontwarn org.bouncycastle.**
+
+# yt-dlp wrapper (full build): JSON mapped by reflection
+-keep class com.yausername.** { *; }
+-keep class com.fasterxml.jackson.** { *; }
+-dontwarn com.fasterxml.jackson.**
+-dontwarn org.apache.commons.compress.**
+# commons-compress builds its zip extra-field table by reflection; youtubedl-android unzips its runtime with it
+-keep class org.apache.commons.compress.** { *; }

@@ -314,6 +314,11 @@ private fun OptionsPanel(
             else FilledTonalButton(onClick = onClick) { Text(decoderName(d)) }
         }
     }
+    SectionTitle(stringResource(R.string.player_frame_step))
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        OutlinedButton(onClick = { player.command("frame-back-step") }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.player_frame_back)) }
+        OutlinedButton(onClick = { player.command("frame-step") }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.player_frame_next)) }
+    }
     SectionTitle(stringResource(R.string.player_ab_loop))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         OutlinedButton(onClick = onAbA) { Text(if (abA == null) stringResource(R.string.player_ab_set_a) else "A ${fmtSec(abA)}") }

@@ -83,6 +83,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.core.Spring
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.Dp
 import dev.altayeb.shoebill.library.formatTime
 import dev.altayeb.shoebill.ui.theme.BrandAmber
@@ -195,7 +196,9 @@ fun Controls(
         // bottom: LTR seek bar, times, two floating pills
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
             Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp)) {
-                SeekBar(durationSec, shownSec, paused, abA, abB, onScrub, onScrubEnd)
+                var scrubbing by remember { mutableStateOf(false) }
+                SeekPreview(player.shareableUri, shownSec, durationSec, scrubbing)
+                SeekBar(durationSec, shownSec, paused, abA, abB, { scrubbing = true; onScrub(it) }, { scrubbing = false; onScrubEnd(it) })
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(formatTime((shownSec * 1000).toLong()), color = Color.White, style = MaterialTheme.typography.labelLarge)
                     Text(
@@ -218,6 +221,33 @@ fun Controls(
                 }
             }
         }
+    }
+}
+
+/**
+ * A frame above the seek bar while dragging. Only local media-library files: the vault has no shareable uri, so nothing
+ * of it is ever decoded here, and network files would stall on every position.
+ */
+@Composable
+private fun SeekPreview(uri: android.net.Uri?, sec: Double, duration: Double, active: Boolean) {
+    if (!active || uri == null || uri.authority != "media" || duration <= 0) return
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val retriever = remember(uri) { runCatching { android.media.MediaMetadataRetriever().apply { setDataSource(ctx, uri) } }.getOrNull() }
+    androidx.compose.runtime.DisposableEffect(retriever) { onDispose { runCatching { retriever?.release() } } }
+    var frame by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
+    val step = (sec / (duration / 200).coerceAtLeast(1.0)).toInt() // about 200 stops along any video, so a drag does not queue a decode per pixel
+    androidx.compose.runtime.LaunchedEffect(step) {
+        delay(80)
+        frame = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching { retriever?.getFrameAtTime((sec * 1_000_000).toLong(), android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC)?.let {
+                android.graphics.Bitmap.createScaledBitmap(it, 320, (320f * it.height / it.width).toInt().coerceAtLeast(1), true)
+            } }.getOrNull()
+        } ?: frame
+    }
+    val f = frame ?: return
+    val x = (sec / duration).toFloat().coerceIn(0f, 1f)
+    Box(Modifier.fillMaxWidth(), contentAlignment = androidx.compose.ui.BiasAlignment(x * 2 - 1, 0f)) {
+        androidx.compose.foundation.Image(f.asImageBitmap(), null, Modifier.width(160.dp).clip(RoundedCornerShape(10.dp)))
     }
 }
 
