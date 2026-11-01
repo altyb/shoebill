@@ -91,8 +91,8 @@ fun SubTimingTab(player: MpvPlayer, subFile: File?) {
             Text(stringResource(R.string.player_seconds, "%+.2f".format(Locale.ROOT, delaySec)), style = MaterialTheme.typography.titleLarge)
             TextButton(onClick = { player.setDouble("sub-delay", 0.0); delaySec = 0.0 }) { Text(stringResource(R.string.sub_reset)) }
         }
-        Spacer(Modifier.height(6.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Spacer(Modifier.height(8.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(-0.5, -0.1, 0.1, 0.5).forEach { step ->
                 FilledTonalButton(onClick = { nudge(step) }, modifier = Modifier.weight(1f).height(56.dp)) {
                     Text((if (step > 0) "+" else "−") + "%.1f".format(Locale.ROOT, kotlin.math.abs(step)))
@@ -146,8 +146,8 @@ fun SubTimingTab(player: MpvPlayer, subFile: File?) {
 
         Spacer(Modifier.height(16.dp))
         Text(stringResource(R.string.sub_fps_convert), style = MaterialTheme.typography.titleSmall)
-        Spacer(Modifier.height(6.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Spacer(Modifier.height(8.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = { fixFps(23.976, 25.0) }, modifier = Modifier.weight(1f)) { Text("23.976 → 25") }
             OutlinedButton(onClick = { fixFps(25.0, 23.976) }, modifier = Modifier.weight(1f)) { Text("25 → 23.976") }
         }

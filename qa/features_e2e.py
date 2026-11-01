@@ -224,6 +224,11 @@ def sec_white():
         if find("More", exact=True) is None: tap_xy(540, 540); time.sleep(1.5)
         ns = nodes(); shot(name)
         im = Image.open(os.path.join(os.environ["SHOTS"], name + ".png")).convert("L")
+        box = lambda l: list(map(int, re.findall(r"\d+", find(l, exact=True, ns=ns).get("bounds"))))
+        w = im.width; pv, nx = box("Previous"), box("Next")
+        ok(f"{name} transport is centred on the screen", abs(pv[0] - (w - nx[2])) <= 2, (pv, nx, w))
+        ok(f"{name} transport buttons are the same size", pv[2] - pv[0] == nx[2] - nx[0] and box("Back 10 seconds")[2] - box("Back 10 seconds")[0] == pv[2] - pv[0], (pv, nx))
+        ok(f"{name} nothing leaves the screen", nx[2] <= w and pv[0] >= 0)
         for label in ("Back", "Subtitles", "More", "Previous", "Back 10 seconds", "Forward 10 seconds", "Next", "Lock", "Rotate"):
             n = find(label, exact=True, ns=ns)
             if n is None: ok(f"{name} {label} is on screen", False, [x.get("content-desc") for x in ns if x.get("content-desc")]); continue

@@ -173,12 +173,12 @@ fun FolderBody(folder: String, onBack: () -> Unit, onPlay: (Uri, String) -> Unit
                     }
                 }
                 if (shown.isEmpty()) {
-                    EmptyState(Icons.Rounded.SearchOff, stringResource(R.string.lib_no_videos_here), Modifier.weight(1f), body = stringResource(R.string.lib_no_videos_here_body))
+                    EmptyState(dev.altayeb.shoebill.R.drawable.art_empty, stringResource(R.string.lib_no_videos_here), Modifier.weight(1f), body = stringResource(R.string.lib_no_videos_here_body))
                 } else if (grid) {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(2),
                         contentPadding = PaddingValues(12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         items(shown, key = { it.key }) { v ->

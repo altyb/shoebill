@@ -143,8 +143,7 @@ fun PlaylistsTab(onPlayQueue: (List<Pair<Uri, String>>, Int) -> Unit, modifier: 
     } else {
         Box(modifier.fillMaxSize()) {
             if (lists.isEmpty()) {
-                EmptyState(
-                    Icons.AutoMirrored.Rounded.PlaylistPlay,
+                EmptyState(dev.altayeb.shoebill.R.drawable.art_empty,
                     stringResource(R.string.lib_no_playlists),
                     body = stringResource(R.string.lib_no_playlists_body),
                 )
@@ -236,7 +235,7 @@ private fun PlaylistDetail(p: Playlist, onBack: () -> Unit, onPlayQueue: (List<P
             Text(stringResource(R.string.lib_play_all))
         }
         if (p.items.isEmpty()) {
-            EmptyState(Icons.AutoMirrored.Rounded.PlaylistPlay, stringResource(R.string.lib_playlist_empty), Modifier.weight(1f), body = stringResource(R.string.lib_playlist_empty_body))
+            EmptyState(dev.altayeb.shoebill.R.drawable.art_empty, stringResource(R.string.lib_playlist_empty), Modifier.weight(1f), body = stringResource(R.string.lib_playlist_empty_body))
         } else {
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
                 itemsIndexed(p.items, key = { _, u -> u }) { i, uri ->
@@ -247,7 +246,7 @@ private fun PlaylistDetail(p: Playlist, onBack: () -> Unit, onPlayQueue: (List<P
                         Column(
                             Modifier.weight(1f)
                                 .clickable(enabled = qi >= 0) { onPlayQueue(queue, qi) }
-                                .padding(horizontal = 8.dp, vertical = 10.dp),
+                                .padding(horizontal = 8.dp, vertical = 12.dp),
                         ) {
                             when {
                                 !loaded -> Text("…", color = cs.onSurfaceVariant)

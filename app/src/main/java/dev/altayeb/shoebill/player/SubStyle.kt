@@ -64,7 +64,7 @@ fun SubStyleTab(style: SubStyle, onChange: (SubStyle) -> Unit) {
             }
         }
         SectionTitle(stringResource(R.string.sub_color))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             SubColors.forEach { c ->
                 Box(
                     Modifier.size(36.dp).background(Color(c), CircleShape)

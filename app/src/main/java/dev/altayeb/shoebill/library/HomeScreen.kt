@@ -209,7 +209,7 @@ fun HomeScreen(
                 }
                 items(latest.chunked(2), key = { row -> row.first().key }) { row ->
                     Row(Modifier.fillMaxWidth().padding(bottom = 12.dp).animateItem(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         row.forEach { v ->
                             VideoCard(v, states[v.key], false,
                                 onClick = { onPlay(v.uri, v.name) }, onLongClick = {},

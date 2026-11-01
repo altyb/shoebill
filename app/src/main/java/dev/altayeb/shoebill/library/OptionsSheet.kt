@@ -155,7 +155,7 @@ private fun InfoDialog(video: Video, onDismiss: () -> Unit) {
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.lib_file_info)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 InfoLine(stringResource(R.string.lib_name), video.name)
                 InfoLine(stringResource(R.string.lib_path), path ?: "…")
                 InfoLine(stringResource(R.string.lib_size), formatSize(video.sizeBytes))

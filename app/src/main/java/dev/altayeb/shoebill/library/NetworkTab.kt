@@ -76,13 +76,13 @@ fun NetworkTab(onPlay: (Uri, String) -> Unit, modifier: Modifier = Modifier) {
         }
         if (url.isNotBlank() && !valid) {
             Text(stringResource(R.string.lib_stream_invalid), style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 6.dp))
+                color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp))
         }
         Spacer(Modifier.height(8.dp))
         SmbSection(onPlay)
         Spacer(Modifier.height(8.dp))
         if (recents.isEmpty()) {
-            EmptyState(Icons.Rounded.Wifi, stringResource(R.string.lib_network_empty), body = stringResource(R.string.lib_network_empty_body))
+            EmptyState(dev.altayeb.shoebill.R.drawable.art_network, stringResource(R.string.lib_network_empty), body = stringResource(R.string.lib_network_empty_body))
         } else {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.lib_recent_links), style = MaterialTheme.typography.titleSmall)
