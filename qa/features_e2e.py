@@ -11,9 +11,10 @@ def home():
     adb("shell", "input", "keyevent", "KEYCODE_HOME"); time.sleep(.5)
     adb("shell", "am", "start", "-S", "-n", f"{PKG}/.MainActivity"); time.sleep(3)
 def tab(label):
-    n = find(label)
-    if n is None: raise AssertionError(f"no tab {label}: {texts()[:14]}")
-    tap_xy(*center(n)); time.sleep(1.5)
+    # The header repeats the tab's name: the bar is the lowest one.
+    ns = [n for n in nodes() if label.lower() in ((n.get("text") or "") + (n.get("content-desc") or "")).lower()]
+    if not ns: raise AssertionError(f"no tab {label}: {texts()[:14]}")
+    tap_xy(*max((center(n) for n in ns), key=lambda c: c[1])); time.sleep(1.5)
 def media():
     return adb("shell", "dumpsys", "media_session")
 def playing():

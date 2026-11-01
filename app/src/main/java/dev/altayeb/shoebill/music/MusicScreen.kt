@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material3.toPath
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.layout
 import kotlinx.coroutines.launch
 import android.Manifest
 import android.content.ComponentName
@@ -160,7 +161,7 @@ private fun rememberPlayerState(c: MediaController?): PlayerState {
         sync()
         onDispose { c.removeListener(l) }
     }
-    LaunchedEffect(c) { while (c != null) { s.position = c.currentPosition.coerceAtLeast(0); delay(250) } }
+    LaunchedEffect(c) { while (c != null) { if (c.isPlaying) s.position = c.currentPosition.coerceAtLeast(0); delay(250) } }
     return s
 }
 
@@ -237,6 +238,9 @@ private fun SongList(songs: List<Song>, c: MediaController?, onLong: (Song) -> U
     }
 }
 
+/** One decode per album, so scrolling back never decodes again or flashes the placeholder. */
+private val artCache = android.util.LruCache<Long, Bitmap>(64)
+
 private class MorphShape(val morph: androidx.graphics.shapes.Morph, val progress: Float) : androidx.compose.ui.graphics.Shape {
     override fun createOutline(size: androidx.compose.ui.geometry.Size, layoutDirection: androidx.compose.ui.unit.LayoutDirection, density: androidx.compose.ui.unit.Density): androidx.compose.ui.graphics.Outline {
         val path = androidx.compose.ui.graphics.Path()
@@ -301,10 +305,12 @@ private fun SongRow(s: Song, onClick: () -> Unit, onLong: () -> Unit) {
 @Composable
 private fun Art(s: Song, sizeDp: Int) {
     val ctx = LocalContext.current
-    val bmp by produceState<Bitmap?>(null, s.albumId) {
+    val bmp by produceState<Bitmap?>(artCache.get(s.albumId), s.albumId) {
+        if (value != null) return@produceState
         value = withContext(Dispatchers.IO) {
             if (Build.VERSION.SDK_INT >= 29) runCatching { ctx.contentResolver.loadThumbnail(s.uri, Size(256, 256), null) }.getOrNull() else null
         }
+        value?.let { artCache.put(s.albumId, it) }
     }
     val shape = RoundedCornerShape(10.dp)
     val b = bmp
@@ -366,7 +372,6 @@ fun MiniPlayer(host: MusicHost) {
 @Composable
 fun MusicSheet(host: MusicHost, dockHeight: Int) {
     val c = host.controller
-    val p = host.sheet.value
     val scope = rememberCoroutineScope()
     val sheetClose = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
     val sheetOpen = MaterialTheme.motionScheme.slowSpatialSpec<Float>()
@@ -374,7 +379,9 @@ fun MusicSheet(host: MusicHost, dockHeight: Int) {
         LaunchedEffect(Unit) { host.sheet.snapTo(0f) }
         return
     }
-    if (p <= 0f && !host.sheet.isRunning) return
+    // The value is only read in layout and draw below, so a moving sheet relays out one surface and recomposes nothing.
+    val shown by remember(host) { androidx.compose.runtime.derivedStateOf { host.sheet.value > 0f || host.sheet.isRunning } }
+    if (!shown) return
     BackHandler(host.sheet.targetValue > 0f) { scope.launch { host.sheet.animateTo(0f, sheetClose) } }
     val ctx = LocalContext.current
     LaunchedEffect(Unit) {
@@ -384,12 +391,15 @@ fun MusicSheet(host: MusicHost, dockHeight: Int) {
     androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         val density = androidx.compose.ui.platform.LocalDensity.current
         val full = constraints.maxHeight.toFloat()
-        val q = p.coerceIn(0f, 1f)
         Surface(
             color = MaterialTheme.colorScheme.surfaceContainer,
-            shape = RoundedCornerShape((24f * (1f - q)).dp),
             modifier = Modifier.fillMaxWidth()
-                .height(with(density) { (dockHeight + (full - dockHeight) * q).toDp() })
+                .layout { m, c ->
+                    val h = (dockHeight + (full - dockHeight) * host.sheet.value.coerceIn(0f, 1f)).toInt().coerceAtLeast(0)
+                    val pl = m.measure(c.copy(minHeight = h, maxHeight = h))
+                    layout(pl.width, h) { pl.place(0, 0) }
+                }
+                .graphicsLayer { shape = RoundedCornerShape(24.dp * (1f - host.sheet.value.coerceIn(0f, 1f))); clip = true }
                 .draggable(drag, androidx.compose.foundation.gestures.Orientation.Vertical, onDragStopped = { settle(host, scope, sheetOpen, sheetClose, it) }),
         ) {
             // Laid out at full size from the first frame and only clipped, so the page never reflows while it grows.
