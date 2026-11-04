@@ -35,13 +35,16 @@ fun applySubStyle(player: MpvPlayer, s: SubStyle) {
     player.setString("sub-pos", s.pos.toString())
     player.setString("sub-bold", if (s.bold) "yes" else "no")
     player.setString("sub-ass-override", if (s.force) "force" else "scale")
-    player.setString("sub-border-style", if (s.box) "opaque-box" else "outline-and-shadow")
-    val size = if (s.box) 4.0 else s.outline.toDouble()
-    val color = if (s.box) "#%02X000000".format(Locale.ROOT, (s.boxAlpha * 255).roundToInt()) else argb(s.outlineColor)
+    // One box around all lines (background-box: colour = sub-back-color, padding = shadow offset), or a box per line (opaque-box).
+    player.setString("sub-border-style", if (!s.box) "outline-and-shadow" else if (s.boxLines) "opaque-box" else "background-box")
+    val boxColor = "#%02X000000".format(Locale.ROOT, (s.boxAlpha * 255).roundToInt())
     // mpv renamed these across versions; the name a build lacks throws and is skipped
-    for (n in listOf("sub-outline-size", "sub-border-size")) runCatching { player.setDouble(n, size) }
-    for (n in listOf("sub-outline-color", "sub-border-color")) runCatching { player.setString(n, color) }
-    if (s.box) runCatching { player.setString("sub-back-color", color) }
+    val outlineSize = if (s.box) (if (s.boxLines) 4.0 else 0.0) else s.outline.toDouble()
+    for (n in listOf("sub-outline-size", "sub-border-size")) runCatching { player.setDouble(n, outlineSize) }
+    for (n in listOf("sub-outline-color", "sub-border-color")) runCatching { player.setString(n, if (s.box && s.boxLines) boxColor else argb(s.outlineColor)) }
+    runCatching { player.setString("sub-back-color", if (s.box) boxColor else "#80000000") }
+    runCatching { player.setDouble("sub-shadow-offset", if (s.box && !s.boxLines) 6.0 else 0.0) }
+    runCatching { player.setString("sub-font", s.font.ifEmpty { "sans-serif" }) }
 }
 
 private fun argb(c: Long) = "#%08X".format(Locale.ROOT, c)
@@ -79,6 +82,10 @@ fun SubStyleTab(style: SubStyle, onChange: (SubStyle) -> Unit) {
         Slider(value = style.outline, onValueChange = { onChange(style.copy(outline = it)) }, valueRange = 0f..6f, enabled = !style.box)
         SwitchRow(stringResource(R.string.sub_background), style.box) { onChange(style.copy(box = it)) }
         if (style.box) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(!style.boxLines, { onChange(style.copy(boxLines = false)) }, { Text(stringResource(R.string.sub_box_one)) })
+                FilterChip(style.boxLines, { onChange(style.copy(boxLines = true)) }, { Text(stringResource(R.string.sub_box_lines)) })
+            }
             SectionTitle(stringResource(R.string.sub_background_opacity, (style.boxAlpha * 100).roundToInt().toString()))
             Slider(value = style.boxAlpha, onValueChange = { onChange(style.copy(boxAlpha = it)) }, valueRange = 0.2f..1f)
         }
@@ -87,6 +94,12 @@ fun SubStyleTab(style: SubStyle, onChange: (SubStyle) -> Unit) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(stringResource(R.string.sub_top), style = MaterialTheme.typography.labelMedium)
             Text(stringResource(R.string.sub_bottom), style = MaterialTheme.typography.labelMedium)
+        }
+        SectionTitle(stringResource(R.string.sub_font))
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("" to R.string.sub_font_default, "Noto Naskh Arabic" to R.string.sub_font_naskh, "Noto Sans Arabic" to R.string.sub_font_sans, "serif" to R.string.sub_font_serif).forEach { (f, name) ->
+                FilterChip(style.font == f, { onChange(style.copy(font = f)) }, { Text(stringResource(name)) })
+            }
         }
         SwitchRow(stringResource(R.string.sub_bold), style.bold) { onChange(style.copy(bold = it)) }
         SwitchRow(stringResource(R.string.sub_force_style), style.force) { onChange(style.copy(force = it)) }
