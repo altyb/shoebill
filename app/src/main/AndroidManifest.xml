@@ -9,6 +9,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <!-- vault "move, not copy": delete originals without the per-batch dialog (asked once, optional) -->
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
@@ -25,6 +26,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:usesCleartextTraffic="true"
+        android:localeConfig="@xml/locales_config"
         android:theme="@style/Theme.Shoebill">
         <activity
             android:name=".MainActivity"
@@ -37,11 +39,50 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="video/*" android:scheme="content" />
                 <data android:mimeType="video/*" android:scheme="file" />
+                <data android:mimeType="audio/*" android:scheme="content" />
+                <data android:mimeType="audio/*" android:scheme="file" />
+                <data android:mimeType="audio/*" android:scheme="http" />
+                <data android:mimeType="audio/*" android:scheme="https" />
+                <data android:mimeType="video/*" android:scheme="http" />
+                <data android:mimeType="video/*" android:scheme="https" />
+            </intent-filter>
+            <!-- shoebill://music, shoebill://downloads, shoebill://play?url=: notifications and other apps -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="shoebill" android:host="music" />
+                <data android:scheme="shoebill" android:host="downloads" />
+                <data android:scheme="shoebill" android:host="play" />
+            </intent-filter>
+            <!-- playlists and subtitle files opened from a file manager -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" /><data android:scheme="file" />
+                <data android:mimeType="audio/x-mpegurl" /><data android:mimeType="audio/mpegurl" />
+                <data android:mimeType="application/x-mpegurl" /><data android:mimeType="application/vnd.apple.mpegurl" />
+                <data android:mimeType="application/x-subrip" /><data android:mimeType="text/vtt" />
+                <data android:mimeType="text/x-ssa" /><data android:mimeType="application/x-ass" />
+            </intent-filter>
+            <!-- listed among the phone's music apps -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.APP_MUSIC" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <!-- Share a file to Shoebill from another app -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="video/*" />
+                <data android:mimeType="audio/*" />
             </intent-filter>
         </activity>
         <!-- Android Auto: the car app must declare media support, which is what the automotive descriptor says -->
@@ -50,8 +91,23 @@
             <intent-filter><action android:name="androidx.media3.session.MediaLibraryService" /></intent-filter>
             <intent-filter><action android:name="androidx.media3.session.MediaSessionService" /></intent-filter>
         </service>
+        <receiver android:name=".music.MusicWidget" android:exported="false">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_music_info" />
+        </receiver>
+        <service android:name=".music.MusicTile" android:exported="true" android:label="@string/lib_tab_music" android:icon="@mipmap/ic_launcher" android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+        </service>
+        <receiver android:name=".music.BluetoothResume" android:exported="true">
+            <intent-filter><action android:name="android.bluetooth.device.action.ACL_CONNECTED" /></intent-filter>
+        </receiver>
+        <service android:name=".player.VideoPlaybackService" android:exported="false" android:foregroundServiceType="mediaPlayback" />
         <!-- *#*#code#*#* from the phone app opens the vault (code chosen in vault settings) -->
         <provider android:name=".library.SmbProvider" android:authorities="${applicationId}.smb" android:exported="false" />
+        <!-- Headset / Bluetooth play button restarts playback after the app was closed -->
+        <receiver android:name="androidx.media3.session.MediaButtonReceiver" android:exported="true">
+            <intent-filter><action android:name="android.intent.action.MEDIA_BUTTON" /></intent-filter>
+        </receiver>
         <receiver android:name=".vault.SecretCodeReceiver" android:exported="true">
             <intent-filter>
                 <action android:name="android.telephony.action.SECRET_CODE" />

@@ -90,6 +90,7 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
 
     var current by remember(uri) { mutableStateOf(uri) }
     var currentTitle by remember(uri) { mutableStateOf(title) }
+    rememberVideoSession(player, currentTitle, private)
     // these six are shared with the touch handler (PlayerGestures.kt), so the state objects stay reachable
     val overlayVisibleState = remember { mutableStateOf(true) }
     var overlayVisible by overlayVisibleState
@@ -127,9 +128,9 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
     var hiddenProviders by remember { mutableStateOf(setOf<String>()) }
     val keys = remember { SubKeys(prefsKeyStore(context)) }
     fun lastSubId(): String? = player.tracks().lastOrNull { it.type == "sub" }?.id
-    val subPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { picked ->
+    fun addSub(picked: Uri) {
         // same path as sibling subtitles: UTF-8 copy (old windows-1256 Arabic files) and the real name as the track title
-        if (picked != null) runCatching {
+        runCatching {
             val cr = context.contentResolver
             val bytes = cr.openInputStream(picked)!!.use { it.readBytes() }
             val name = cr.query(picked, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
@@ -139,6 +140,11 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
             trackVersion++
         }
     }
+    val subPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { picked -> if (picked != null) addSub(picked) }
+    // a subtitle file opened from a file manager while this video plays
+    val inbox by SubtitleInbox.uri.collectAsStateWithLifecycle()
+    DisposableEffect(Unit) { SubtitleInbox.players++; onDispose { SubtitleInbox.players-- } }
+    LaunchedEffect(inbox) { inbox?.let { addSub(it); SubtitleInbox.uri.value = null } }
 
     /** Remember the current file (ق-03, ق-12). Skipped until mpv knows its duration. */
     fun saveState() {
@@ -390,6 +396,7 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
                                 ActivityInfo.SCREEN_ORIENTATION_SENSOR
                             else ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
                     },
+                    onPip = if (private) null else { { PipGate.button?.let { runCatching { activity.enterPictureInPictureMode(it) } } } },
                     onAspect = {
                         val next = nextAspect(player.getString("video-aspect-override"))
                         player.setString("video-aspect-override", next)
@@ -466,4 +473,10 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
             }
         }
     }
+}
+
+/** A subtitle file opened with Shoebill goes to the video that is playing; with none playing, MainActivity says so. */
+object SubtitleInbox {
+    val uri = kotlinx.coroutines.flow.MutableStateFlow<android.net.Uri?>(null)
+    @Volatile var players = 0
 }

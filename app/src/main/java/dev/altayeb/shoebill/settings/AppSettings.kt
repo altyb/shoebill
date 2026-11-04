@@ -65,6 +65,7 @@ data class Settings(
     val skipSilence: Boolean = false,
     val rewindBeforePrevious: Boolean = true,
     val pauseOnUnplug: Boolean = true,
+    val resumeOnBluetooth: Boolean = false,
     val pauseForOthers: Boolean = true,
     val stopOnClose: Boolean = false,
     val rememberQueue: Boolean = true,
@@ -97,7 +98,7 @@ class AppSettings private constructor(context: Context) {
             .putBoolean("gestureDoubleTap", n.gestureDoubleTap).putBoolean("gesturePinch", n.gesturePinch).putFloat("holdSpeed", n.holdSpeed)
             .putString("audioLang", n.audioLang).putString("subLang", n.subLang).putInt("maxVolume", n.maxVolume)
             .putInt("controlsHideSec", n.controlsHideSec).putInt("doubleTapSec", n.doubleTapSec).putBoolean("skipSilence", n.skipSilence)
-            .putBoolean("rewindBeforePrevious", n.rewindBeforePrevious).putBoolean("pauseOnUnplug", n.pauseOnUnplug).putBoolean("pauseForOthers", n.pauseForOthers)
+            .putBoolean("rewindBeforePrevious", n.rewindBeforePrevious).putBoolean("pauseOnUnplug", n.pauseOnUnplug).putBoolean("resumeOnBluetooth", n.resumeOnBluetooth).putBoolean("pauseForOthers", n.pauseForOthers)
             .putBoolean("stopOnClose", n.stopOnClose).putBoolean("rememberQueue", n.rememberQueue).putInt("minSongSec", n.minSongSec)
             .putStringSet("hiddenFolders", n.hiddenFolders).putInt("musicStartTab", n.musicStartTab).putBoolean("coverMorph", n.coverMorph)
             .putBoolean("lyricsLarge", n.lyricsLarge).putBoolean("keepScreenOnMusic", n.keepScreenOnMusic)
@@ -126,7 +127,7 @@ class AppSettings private constructor(context: Context) {
             audioLang = p.getString("audioLang", d.audioLang).orEmpty(), subLang = p.getString("subLang", d.subLang).orEmpty(), maxVolume = p.getInt("maxVolume", d.maxVolume),
             controlsHideSec = p.getInt("controlsHideSec", d.controlsHideSec), doubleTapSec = p.getInt("doubleTapSec", d.doubleTapSec),
             skipSilence = p.getBoolean("skipSilence", d.skipSilence),
-            rewindBeforePrevious = p.getBoolean("rewindBeforePrevious", d.rewindBeforePrevious), pauseOnUnplug = p.getBoolean("pauseOnUnplug", d.pauseOnUnplug),
+            rewindBeforePrevious = p.getBoolean("rewindBeforePrevious", d.rewindBeforePrevious), pauseOnUnplug = p.getBoolean("pauseOnUnplug", d.pauseOnUnplug), resumeOnBluetooth = p.getBoolean("resumeOnBluetooth", d.resumeOnBluetooth),
             pauseForOthers = p.getBoolean("pauseForOthers", d.pauseForOthers), stopOnClose = p.getBoolean("stopOnClose", d.stopOnClose),
             rememberQueue = p.getBoolean("rememberQueue", d.rememberQueue), minSongSec = p.getInt("minSongSec", d.minSongSec),
             hiddenFolders = p.getStringSet("hiddenFolders", d.hiddenFolders)?.toSet() ?: d.hiddenFolders, musicStartTab = p.getInt("musicStartTab", d.musicStartTab),

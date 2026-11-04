@@ -8,6 +8,13 @@
     <string name="off">إيقاف</string>
     <string name="clear">مسح</string>
     <string name="no_results">لا نتائج</string>
+    <string name="video_channel">تشغيل الفيديو</string>
+    <string name="player_pip">صورة داخل صورة</string>
+    <string name="sub_open_video_first">افتح فيديو أولاً ثم ملف الترجمة.</string>
+    <string name="widget_prev">السابق</string>
+    <string name="widget_next">التالي</string>
+    <string name="music_bt">استئناف عند اتصال البلوتوث</string>
+    <string name="music_bt_sub">يشغّل الموسيقى عند اتصال سماعة أو سيارة</string>
     <string name="play">تشغيل</string>
     <string name="pause">إيقاف مؤقت</string>
     <string name="rename">إعادة تسمية</string>
@@ -124,6 +131,7 @@
     <string name="dl_sidecar_failed">تعذّر حفظ %1$s</string>
     <string name="dl_cancelled">أُلغي</string>
     <string name="dl_cancel">إلغاء</string>
+    <string name="dl_share">مشاركة</string>
     <string name="dl_retry">إعادة المحاولة</string>
     <string name="dl_clear">مسح المكتملة</string>
     <string name="dl_update">تحديث أداة التنزيل</string>

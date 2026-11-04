@@ -404,6 +404,87 @@ def sec_pip():
     adb("shell", "appops", "set", PKG, "PICTURE_IN_PICTURE", "allow"); adb("shell", "input", "keyevent", "KEYCODE_HOME")
     ok("no crash in PiP", not crashed())
 
+def sec_more():
+    """The settings that only count if real behaviour changes."""
+    def vid(name, xml, keep=False):
+        raw_prefs("settings", xml)
+        adb("shell", f"run-as {PKG} sh -c 'rm -f files/qa_keep_ui; mkdir -p files" + ("; touch files/qa_keep_ui" if keep else "") + "'")
+        v = adb("shell", "content", "query", "--uri", "content://media/external/video/media", "--projection", "_id:_display_name")
+        m = re.search(r"_id=(\d+), _display_name=" + name + r"\.mp4", v); assert m, name
+        adb("logcat", "-b", "main", "-c")
+        adb("shell", "am", "start", "-S", "-a", "android.intent.action.VIEW", "-t", "video/*", "-d", f"content://media/external/video/media/{m.group(1)}", "-n", f"{PKG}/.MainActivity"); time.sleep(7)
+    def st():
+        l = [x for x in adb("logcat", "-d", "-s", "BrandState").splitlines() if "BrandState:" in x]
+        return dict(re.findall(r"(\S+?)=(\S*)", l[-1].split("BrandState: ", 1)[1])) if l else {}
+    def attrs(): return adb("shell", "dumpsys", "window", "windows")
+    vid("v1", '<boolean name="showRemaining" value="false" />', keep=True); time.sleep(1.5)
+    t = texts(); ok("full length instead of time left", any(x == "05:00" for x in t) and not any(x.startswith("-") and ":" in x for x in t), t[-10:])
+    vid("v1", "", keep=True); time.sleep(1.5); ok("time left by default", any(x.startswith("-0") for x in texts()), texts()[-10:])
+    raw_prefs("playback", "")
+    vid("subs", '<string name="subLang">ar</string>'); ok("preferred subtitle language picks track 2", st().get("sid") == "2", st().get("sid"))
+    raw_prefs("playback", "")
+    vid("subs", ""); ok("without it, no forced track 2", st().get("sid") != "2", st().get("sid"))
+    vid("v1", '<boolean name="rememberBrightness" value="true" /><float name="brightness" value="0.2" />'); a = attrs()
+    ok("remembered brightness applied", "sb=0.2" in a or "screenBrightness=0.2" in a, re.findall(r"sb=[0-9.]+", a)[:3])
+    vid("v1", ""); adb("shell", "input", "swipe", "400", "900", "400", "100", "400"); time.sleep(1.5); ok("left swipe changes brightness", "sb=" in attrs())
+    vid("v1", '<boolean name="gestureBrightness" value="false" />'); adb("shell", "input", "swipe", "400", "900", "400", "100", "400"); time.sleep(1.5); ok("brightness gesture off", "sb=" not in attrs())
+    vid("v1", '<boolean name="gestureVolume" value="false" />'); v0 = st().get("volume"); adb("shell", "input", "swipe", "1900", "900", "1900", "100", "400"); time.sleep(2.5); ok("volume gesture off", st().get("volume") == v0, (v0, st().get("volume")))
+    adb("shell", f"run-as {PKG} rm -f files/qa_keep_ui")
+    # music
+    def song(xml, name="Song 2"):
+        raw_prefs("settings", xml); raw_prefs("music_queue", "")
+        home(); tab("Music"); wait(name, 15); tap(name); time.sleep(5)
+    def now(): return re.search(r"description=([^,\n]*)", media())
+    song(""); bars = [x for x in nodes() if x.get("text") == "Song 2"]; tap_xy(*center(bars[-1])); time.sleep(2)
+    tap("Previous", exact=True); time.sleep(2); ok("Previous restarts the song first", "Song 2" in media(), (now() or [0, ""])[1])
+    song('<boolean name="rewindBeforePrevious" value="false" />'); bars = [x for x in nodes() if x.get("text") == "Song 2"]; tap_xy(*center(bars[-1])); time.sleep(2)
+    tap("Previous", exact=True); time.sleep(2); ok("off: goes to the previous song", "Song 1" in media() or "أغنية" in media(), (now() or [0, ""])[1])
+    song('<boolean name="keepScreenOnMusic" value="true" />'); bars = [x for x in nodes() if x.get("text") == "Song 2"]; tap_xy(*center(bars[-1])); time.sleep(2)
+    a = attrs(); ok("screen stays on with the song open", "KEEP_SCREEN_ON" in a, "")
+    song(""); bars = [x for x in nodes() if x.get("text") == "Song 2"]; tap_xy(*center(bars[-1])); time.sleep(2); ok("screen timeout normal by default", "KEEP_SCREEN_ON" not in attrs())
+    def pos():
+        m = re.search(r"state=PlaybackState \{state=\w+\(?\d*\)?, position=(\d+)", media()); return int(m[1]) if m else -1
+    def speed_test(xml):
+        raw_prefs("settings", xml); raw_prefs("music_queue", ""); home(); tab("Music"); wait("Gap song", 15); tap("Gap song"); time.sleep(9)
+        p = pos(); adb("shell", "input", "keyevent", "KEYCODE_MEDIA_PAUSE"); return p if p >= 0 else None
+    off_ = speed_test(""); on_ = speed_test('<boolean name="skipSilence" value="true" />')
+    ok("skip silence jumps ahead", on_ is not None and off_ is not None and on_ > off_ + 3000, (off_, on_))
+    raw_prefs("settings", ""); ok("no crash in more", not crashed())
+
+def sec_moredl():
+    SMALL = "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4"
+    def go(url, wait_s=240):
+        adb("shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", f"'{url}'", "-n", f"{PKG}/.MainActivity"); time.sleep(3)
+        wait("Quality", 90); sheet_download(); end = time.time() + wait_s
+        while time.time() < end:
+            t = " ".join(texts())
+            if "Saved to your library" in t or "Failed" in t: return t
+            time.sleep(3)
+        return "timeout " + t
+    def clear():
+        adb("shell", f"run-as {PKG} rm -f files/download-history.json files/download-archive.txt files/cookies.txt")
+    clear(); raw_prefs("downloads", '<boolean name="ipv4" value="true" /><int name="threads" value="4" />')
+    t = go(SMALL); ok("IPv4 and parallel parts download", "Saved to your library" in t, t[:240])
+    clear(); adb("shell", "am", "force-stop", PKG)
+    adb("shell", f"run-as {PKG} sh -c 'mkdir -p files; echo \"# Netscape HTTP Cookie File\" > files/cookies.txt'")
+    t = go(SMALL); ok("download with a cookies file", "Saved to your library" in t, t[:240])
+    clear(); raw_prefs("downloads", '<boolean name="wifiOnly" value="true" />')
+    adb("shell", "cmd", "connectivity", "airplane-mode", "disable", check=False)
+    adb("shell", "svc", "wifi", "disable"); time.sleep(5)
+    t = go(SMALL, 40); blocked = "metered" in t
+    adb("shell", "svc", "wifi", "enable"); time.sleep(6)
+    ok("Wi-Fi only refuses mobile data", blocked, t[:240])
+    clear(); raw_prefs("downloads", '<string name="quality">P480</string><string name="container">mp4</string><string name="codec">h264</string><boolean name="skipSponsors" value="true" /><string name="limit">5M</string>')
+    before = adb("shell", "ls", "/sdcard/Movies/Shoebill", check=False).split("\n")
+    t = go("https://www.youtube.com/watch?v=aqz-KE-bpKQ", 400); ok("YouTube at 480p with MP4, H.264, SponsorBlock", "Saved to your library" in t, t[:300])
+    new = [x for x in adb("shell", "ls", "/sdcard/Movies/Shoebill", check=False).split("\n") if x and x not in before]
+    ok("file type is MP4", any(x.endswith(".mp4") for x in new), new[:3])
+    if new:
+        adb("pull", "/sdcard/Movies/Shoebill/" + new[0], os.environ["SHOTS"] + "/yt.mp4", check=False)
+        pr = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=codec_name,height", "-of", "csv=p=0", os.environ["SHOTS"] + "/yt.mp4"], capture_output=True, text=True).stdout.strip()
+        ok("codec H.264 at 480p or under", pr.startswith("h264") and int(pr.split(",")[1]) <= 480, pr)
+    raw_prefs("downloads", ""); ok("no crash in moredl", not crashed())
+
 def sec_download():
     home(); tab("Downloads")
     tap("Download", exact=True); time.sleep(1); ok("empty link names the field", find("Link: enter") is not None, texts()[:10])
@@ -414,7 +495,7 @@ def sec_download():
     ok("youtube audio as MP3 reaches Music/Shoebill", r and "mp3" in adb("shell", "ls", "/sdcard/Music/Shoebill", check=False), t)
     ok("no crash in downloads", not crashed())
 
-S = dict(music=sec_music, nowplaying=sec_nowplaying, player=sec_player, download=sec_download, link=sec_link, network=sec_network, extras=sec_extras, white=sec_white, panels=sec_panels, pages=sec_pages, settings=sec_settings, video=sec_video, pip=sec_pip)
+S = dict(music=sec_music, nowplaying=sec_nowplaying, player=sec_player, download=sec_download, link=sec_link, network=sec_network, extras=sec_extras, white=sec_white, panels=sec_panels, pages=sec_pages, settings=sec_settings, video=sec_video, pip=sec_pip, more=sec_more, moredl=sec_moredl)
 adb("logcat", "-c", "-b", "crash", check=False)
 for s in sys.argv[1:] or S:
     print("==", s, flush=True)
