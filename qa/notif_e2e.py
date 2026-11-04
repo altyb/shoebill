@@ -27,6 +27,8 @@ def shade():
     for _ in range(3):
         if find("Expand", exact=True) is None: break
         tap("Expand", 5, exact=True); time.sleep(1)
+    if find("Try again", exact=True) is None and find("Download failed", exact=True) is not None:
+        tap("Download failed", 5, exact=True); time.sleep(1)  # a collapsed notification shows its actions only once expanded
     return texts()
 def crashed(): return "FATAL EXCEPTION" in adb("logcat", "-d", "-b", "crash", check=False)
 def mine(): return "\n".join(b for b in notif().split("NotificationRecord") if f"pkg={PKG}" in b)
@@ -86,11 +88,11 @@ def fail():
     fresh(); link("shoebill://download?url=https://test-videos.co.uk/nope/missing.mp4"); time.sleep(4)
     press()
     time.sleep(25); n = mine()
-    ok("failed download posts a notification", "Retry" in n or "Failed" in n or "failed" in n, n[-400:])
-    t = shade(); ok("failed notification offers Retry in the shade", find("Retry", exact=True) is not None, t[:20])
-    if find("Retry", exact=True) is not None:
-        tap("Retry", 5, exact=True); time.sleep(8)
-        ok("Retry runs the job again without a crash", not crashed() and adb("shell", "pidof", PKG, check=False).strip() != "")
+    ok("failed download posts a notification", "Try again" in n or "Failed" in n or "failed" in n, n[-400:])
+    t = shade(); ok("failed notification offers Try again in the shade", find("Try again", exact=True) is not None, t[:20])
+    if find("Try again", exact=True) is not None:
+        tap("Try again", 5, exact=True); time.sleep(8)
+        ok("Try again runs the job again without a crash", not crashed() and adb("shell", "pidof", PKG, check=False).strip() != "")
     adb("shell", "cmd", "statusbar", "collapse", check=False)
 step("download failed", fail)
 

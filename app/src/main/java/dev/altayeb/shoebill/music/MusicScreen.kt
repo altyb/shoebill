@@ -566,21 +566,47 @@ private fun NowPlaying(c: MediaController, host: MusicHost, modifier: Modifier, 
         }
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
             Column(Modifier.arrive(progress, 0.45f)) {
+                QuickRow(c, s)
                 SeekRow(c, s)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                    IconToggleButton(s.shuffle, { c.shuffleModeEnabled = it }) { Icon(Icons.Rounded.Shuffle, stringResource(R.string.music_shuffle)) }
+                    IconToggleButton(s.shuffle, { c.shuffleModeEnabled = it }, shapes = IconButtonDefaults.toggleableShapes(), colors = onColors()) { Icon(Icons.Rounded.Shuffle, stringResource(R.string.music_shuffle)) }
                     IconButton(onClick = { if (prefs.rewindBeforePrevious) c.seekToPrevious() else c.seekToPreviousMediaItem() }, shapes = IconButtonDefaults.shapes()) { Icon(Icons.Rounded.SkipPrevious, stringResource(R.string.player_previous), Modifier.size(36.dp)) }
                     FilledIconButton(onClick = { if (s.playing) c.pause() else c.play() }, modifier = Modifier.size(72.dp), shapes = IconButtonDefaults.shapes()) {
-                        Icon(if (s.playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, stringResource(if (s.playing) R.string.pause else R.string.play), Modifier.size(40.dp))
+                        val m = MaterialTheme.motionScheme
+        AnimatedContent(s.playing, transitionSpec = { (androidx.compose.animation.fadeIn(m.defaultEffectsSpec()) + androidx.compose.animation.scaleIn(m.defaultSpatialSpec(), 0.5f)) togetherWith androidx.compose.animation.fadeOut(m.defaultEffectsSpec()) }, label = "playpause") { playing ->
+            Icon(if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, stringResource(if (playing) R.string.pause else R.string.play), Modifier.size(40.dp))
+        }
                     }
                     IconButton(onClick = { c.seekToNext() }, shapes = IconButtonDefaults.shapes()) { Icon(Icons.Rounded.SkipNext, stringResource(R.string.player_next), Modifier.size(36.dp)) }
-                    IconButton(onClick = { c.repeatMode = (s.repeat + 1) % 3 }) {
-                        Icon(if (s.repeat == Player.REPEAT_MODE_ONE) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat, stringResource(R.string.music_repeat),
-                            tint = if (s.repeat == Player.REPEAT_MODE_OFF) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary)
+                    IconToggleButton(s.repeat != Player.REPEAT_MODE_OFF, { c.repeatMode = (s.repeat + 1) % 3 }, shapes = IconButtonDefaults.toggleableShapes(), colors = onColors()) {
+                        Icon(if (s.repeat == Player.REPEAT_MODE_ONE) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat, stringResource(R.string.music_repeat))
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun onColors() = IconButtonDefaults.iconToggleButtonColors(
+    checkedContainerColor = MaterialTheme.colorScheme.secondaryContainer, checkedContentColor = MaterialTheme.colorScheme.onSecondaryContainer)
+
+/** Speed and sleep timer one tap from the player: each tap steps to the next value, and a chip that is not at its default is tinted. */
+@Composable
+private fun QuickRow(c: MediaController, s: PlayerState) {
+    val speeds = listOf(0.75f, 1f, 1.25f, 1.5f, 2f)
+    val naps = listOf(0, 15, 30, 60)
+    val sleepAt = MusicService.sleepAt
+    val nap = if (sleepAt > 0L) MusicService.sleepMinutes else 0
+    val tint = AssistChipDefaults.assistChipColors(containerColor = MaterialTheme.colorScheme.secondaryContainer, labelColor = MaterialTheme.colorScheme.onSecondaryContainer, leadingIconContentColor = MaterialTheme.colorScheme.onSecondaryContainer)
+    Row(Modifier.fillMaxWidth().padding(bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)) {
+        AssistChip({ c.setPlaybackSpeed(speeds[(speeds.indexOfFirst { kotlin.math.abs(it - s.speed) < 0.01f } + 1) % speeds.size]) },
+            { Text("${s.speed}\u00D7") }, leadingIcon = { Icon(Icons.Rounded.Speed, stringResource(R.string.player_speed), Modifier.size(18.dp)) },
+            colors = if (kotlin.math.abs(s.speed - 1f) > 0.01f) tint else AssistChipDefaults.assistChipColors())
+        AssistChip({ MusicService.setSleep(naps[(naps.indexOf(nap) + 1) % naps.size]) },
+            { Text(if (nap == 0) stringResource(R.string.off) else stringResource(R.string.player_minutes_short, nap.toString())) },
+            leadingIcon = { Icon(Icons.Rounded.Bedtime, stringResource(R.string.player_sleep_timer), Modifier.size(18.dp)) },
+            colors = if (nap != 0) tint else AssistChipDefaults.assistChipColors())
     }
 }
 
