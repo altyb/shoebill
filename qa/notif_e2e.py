@@ -14,7 +14,7 @@ def fresh():
     adb("shell", "am", "force-stop", PKG); adb("shell", "cmd", "notification", "set_dnd", "off", check=False); time.sleep(1)
     adb("shell", "input", "keyevent", "KEYCODE_HOME"); time.sleep(1)
 def press():
-    end = time.time() + 60
+    end = time.time() + 180  # a fresh install spends about a minute unpacking and updating yt-dlp on the first link
     while time.time() < end and find("Reading the link") is not None: time.sleep(1.5)
     for _ in range(4):
         d = [n for n in nodes() if n.get("text") == "Download"]
@@ -74,7 +74,7 @@ step("video notification", video)
 
 def dl():
     fresh(); adb("shell", "cmd", "notification", "cancel_all", check=False) if False else None
-    link("shoebill://download?url=" + SMALL); wait("Quality", 60)
+    link("shoebill://download?url=" + SMALL); wait("Quality", 180)
     press()
     end = time.time() + 120; done = False
     while time.time() < end and not done:
