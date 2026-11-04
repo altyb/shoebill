@@ -128,6 +128,9 @@ private val homeTabs = listOf(
     R.string.lib_tab_music to Icons.Rounded.MusicNote,
 ) + if (DownloadFeature.ENABLED) listOf(R.string.lib_tab_downloads to Icons.Rounded.Download) else emptyList()
 
+/** A deep link (notification, shoebill://music) asks the home screen for a tab. */
+object HomeNav { val tab = kotlinx.coroutines.flow.MutableStateFlow<Int?>(null) }
+
 /** ش-02: the home screen. Tabs 2 and 3 are placeholders for now. */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -145,6 +148,8 @@ fun HomeScreen(
     // A link shared to the app opens on Downloads.
     val shared by SharedLink.value.collectAsStateWithLifecycle()
     LaunchedEffect(shared) { if (shared != null && DownloadFeature.ENABLED) tab = 4 }
+    val navTab by HomeNav.tab.collectAsStateWithLifecycle()
+    LaunchedEffect(navTab) { navTab?.let { if (it < homeTabs.size) tab = it; HomeNav.tab.value = null } }
     val scroll = TopAppBarDefaults.pinnedScrollBehavior()
     val existing = remember(videos) { videos.mapTo(HashSet()) { it.key } }
     // Continue-watching skips files that were trashed or removed since they were played.

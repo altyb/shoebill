@@ -1,7 +1,7 @@
 """Small adb UI driver for the vault end-to-end run. Emulator only: every command names the serial."""
-import re, subprocess, sys, time, xml.etree.ElementTree as ET
+import os, re, subprocess, sys, time, xml.etree.ElementTree as ET
 
-SERIAL = "emulator-5554"
+SERIAL = os.environ.get("SERIAL", "emulator-5554")
 
 def adb(*a, check=True, timeout=120):
     r = subprocess.run(["adb", "-s", SERIAL, *a], capture_output=True, text=True, timeout=timeout)

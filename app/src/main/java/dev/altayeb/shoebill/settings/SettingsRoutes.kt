@@ -227,11 +227,13 @@ fun SettingsScreen(onBack: () -> Unit, onAppearance: () -> Unit) {
                 2 -> {
                     TipCard(R.drawable.art_music, stringResource(R.string.tip_music))
                     GroupTitle(stringResource(R.string.music_group_playback))
-                    val pb = groupShapes(6)
+                    val pb = groupShapes(7)
+                    val btPerm = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { }
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         SwitchRow(stringResource(R.string.settings_skip_silence), pb[0], s.skipSilence, stringResource(R.string.settings_skip_silence_sub)) { v -> app.update { it.copy(skipSilence = v) } }
                         SwitchRow(stringResource(R.string.music_rewind), pb[1], s.rewindBeforePrevious, stringResource(R.string.music_rewind_sub)) { v -> app.update { it.copy(rewindBeforePrevious = v) } }
                         SwitchRow(stringResource(R.string.music_unplug), pb[2], s.pauseOnUnplug, stringResource(R.string.music_unplug_sub)) { v -> app.update { it.copy(pauseOnUnplug = v) } }
+                        SwitchRow(stringResource(R.string.music_bt), pb[6], s.resumeOnBluetooth, stringResource(R.string.music_bt_sub)) { v -> if (v && android.os.Build.VERSION.SDK_INT >= 31) btPerm.launch(android.Manifest.permission.BLUETOOTH_CONNECT); app.update { it.copy(resumeOnBluetooth = v) } }
                         SwitchRow(stringResource(R.string.music_focus), pb[3], s.pauseForOthers, stringResource(R.string.music_focus_sub)) { v -> app.update { it.copy(pauseForOthers = v) } }
                         SwitchRow(stringResource(R.string.music_stop_close), pb[4], s.stopOnClose, stringResource(R.string.music_stop_close_sub)) { v -> app.update { it.copy(stopOnClose = v) } }
                         SwitchRow(stringResource(R.string.music_remember), pb[5], s.rememberQueue, stringResource(R.string.music_remember_sub)) { v -> app.update { it.copy(rememberQueue = v) } }

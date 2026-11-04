@@ -98,7 +98,7 @@ object DownloadFeature {
 
     /** A link from outside: "Share to", an opened video-site address, or shoebill://download?url=. It only ever opens the configure sheet; nothing starts without a tap. */
     fun linkFrom(i: Intent?): String? {
-        if (i?.action == Intent.ACTION_SEND) return i.getStringExtra(Intent.EXTRA_TEXT).orEmpty()
+        if (i?.action == Intent.ACTION_SEND) return if (i.type != "text/plain") null else i.getStringExtra(Intent.EXTRA_TEXT).orEmpty()
         if (i?.action != Intent.ACTION_VIEW) return null
         val u = i.data ?: return null
         return when {
@@ -325,7 +325,8 @@ object DownloadFeature {
         val ctx = LocalContext.current
         val open: () -> Unit = {
             runCatching {
-                ctx.startActivity(Intent.createChooser(Intent(Intent.ACTION_VIEW).setDataAndType(Uri.parse(j.fileUri), if (j.audio) "audio/*" else "video/*").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), null))
+                // our own player, not the system chooser
+                ctx.startActivity(Intent(ctx, dev.altayeb.shoebill.MainActivity::class.java).setAction(Intent.ACTION_VIEW).setDataAndType(Uri.parse(j.fileUri), if (j.audio) "audio/*" else "video/*").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_SINGLE_TOP))
             }
         }
         Surface(modifier.fillMaxWidth().then(if (j.state == DlState.Done && j.fileUri != null) Modifier.clickable(onClick = open) else Modifier), shape = Radius.M, color = MaterialTheme.colorScheme.surfaceContainer) {

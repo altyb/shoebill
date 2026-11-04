@@ -33,6 +33,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Audiotrack
 import androidx.compose.material.icons.rounded.AspectRatio
+import androidx.compose.material.icons.rounded.PictureInPictureAlt
 import androidx.compose.material.icons.rounded.BrightnessMedium
 import androidx.compose.material.icons.rounded.Forward10
 import androidx.compose.material.icons.rounded.Lock
@@ -157,6 +158,7 @@ fun Controls(
     onLock: () -> Unit,
     onRotate: () -> Unit,
     onAspect: () -> Unit,
+    onPip: (() -> Unit)? = null,
     onPrev: () -> Unit,
     onNext: () -> Unit,
     onScrub: (Double) -> Unit,
@@ -264,6 +266,7 @@ fun Controls(
                         IconButton(onClick = onLock, shapes = IconButtonDefaults.shapes()) { Icon(Icons.Rounded.Lock, stringResource(R.string.player_lock), tint = PlayerColors.On) }
                         IconButton(onClick = onRotate, shapes = IconButtonDefaults.shapes()) { Icon(Icons.Rounded.ScreenRotation, stringResource(R.string.player_rotate), tint = PlayerColors.On) }
                         IconButton(onClick = onAspect, shapes = IconButtonDefaults.shapes()) { Icon(Icons.Rounded.AspectRatio, stringResource(R.string.player_aspect), tint = PlayerColors.On) }
+                        if (onPip != null) IconButton(onClick = onPip, shapes = IconButtonDefaults.shapes()) { Icon(Icons.Rounded.PictureInPictureAlt, stringResource(R.string.player_pip), tint = PlayerColors.On) }
                     }
                     Pill {
                         TextButton(onClick = { onPanel(Panel.Subs) }, Modifier.widthIn(max = 96.dp)) { Text(subLabel, color = PlayerColors.On, maxLines = 1, overflow = TextOverflow.Ellipsis) }

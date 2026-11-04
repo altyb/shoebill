@@ -2,6 +2,7 @@ package dev.altayeb.shoebill.music
 
 import androidx.media3.common.Player
 import android.content.Intent
+import dev.altayeb.shoebill.MainActivity
 import android.util.Log
 import android.widget.Toast
 import dev.altayeb.shoebill.BuildConfig
@@ -68,7 +69,9 @@ class MusicService : MediaLibraryService() {
         audioSession = player.audioSessionId
         running = true
         instance = this
-        session = MediaLibrarySession.Builder(this, player, callback).build()
+        session = MediaLibrarySession.Builder(this, player, callback)
+            .setSessionActivity(android.app.PendingIntent.getActivity(this, 0, Intent(Intent.ACTION_VIEW, android.net.Uri.parse("shoebill://music"), this, MainActivity::class.java), android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT))
+            .build()
         val attrs = AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).build()
         settingsScope.launch {
             AppSettings.get(this@MusicService).settings.collect {
@@ -89,12 +92,13 @@ class MusicService : MediaLibraryService() {
 
             // Tags arrive with the track's data; a new track starts without the previous track's gain.
             override fun onMediaItemTransition(item: MediaItem?, reason: Int) {
+                MusicWidget.update(this@MusicService, item?.mediaMetadata?.title?.toString().orEmpty(), player.isPlaying)
                 gainTrack = null
                 gainAlbum = null
                 applyGain(player)
             }
 
-            override fun onIsPlayingChanged(isPlaying: Boolean) { if (isPlaying) failStreak = 0 }
+            override fun onIsPlayingChanged(isPlaying: Boolean) { if (isPlaying) failStreak = 0; MusicWidget.update(this@MusicService, player.mediaMetadata.title?.toString().orEmpty(), isPlaying) }
 
             // A file deleted or no longer readable: say so once, move on, and stop when the whole queue is like that.
             override fun onPlayerError(error: PlaybackException) {
@@ -202,8 +206,14 @@ class MusicService : MediaLibraryService() {
         ): ListenableFuture<MutableList<MediaItem>> = later {
             val all = if (mediaItems.all { it.localConfiguration != null }) emptyList()
             else runCatching { querySongs(this@MusicService, raw = true) }.getOrDefault(emptyList())
-            mediaItems.mapNotNullTo(ArrayList()) { item ->
-                if (item.localConfiguration != null) item else all.firstOrNull { it.id.toString() == item.mediaId }?.item()
+            mediaItems.flatMapTo(ArrayList()) { item ->
+                val q = item.requestMetadata.searchQuery
+                when {
+                    item.localConfiguration != null -> listOf(item)
+                    // "Hey Google, play X in Shoebill": a title, artist, album or genre; an empty query is "play music"
+                    q != null -> all.filter { q.isBlank() || listOf(it.title, it.artist, it.album, it.genre).any { f -> f.contains(q, ignoreCase = true) } }.map { it.item() }
+                    else -> listOfNotNull(all.firstOrNull { it.id.toString() == item.mediaId }?.item())
+                }
             }
         }
     }

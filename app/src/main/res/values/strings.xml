@@ -9,6 +9,13 @@
     <string name="off">Off</string>
     <string name="clear">Clear</string>
     <string name="no_results">No results</string>
+    <string name="video_channel">Video playback</string>
+    <string name="player_pip">Picture in picture</string>
+    <string name="sub_open_video_first">Open a video first, then the subtitle file.</string>
+    <string name="widget_prev">Previous</string>
+    <string name="widget_next">Next</string>
+    <string name="music_bt">Resume when Bluetooth connects</string>
+    <string name="music_bt_sub">Starts your music when a headset or the car connects</string>
     <string name="play">Play</string>
     <string name="pause">Pause</string>
     <string name="rename">Rename</string>
@@ -125,6 +132,7 @@
     <string name="dl_sidecar_failed">Could not save %1$s</string>
     <string name="dl_cancelled">Cancelled</string>
     <string name="dl_cancel">Cancel</string>
+    <string name="dl_share">Share</string>
     <string name="dl_retry">Try again</string>
     <string name="dl_clear">Clear finished</string>
     <string name="dl_update">Update the downloader</string>

@@ -114,16 +114,35 @@ class DownloadService : Service() {
     private fun finished(j: DlJob) {
         if (!notified.add(j.id)) return
         val failed = j.state == DlState.Failed
-        getSystemService(NotificationManager::class.java).notify(j.id.hashCode(), NotificationCompat.Builder(this, CHANNEL)
+        val flags = PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        val file = j.fileUri?.takeIf { !failed }?.let(Uri::parse)
+        val mime = if (j.audio) "audio/*" else "video/*"
+        val b = NotificationCompat.Builder(this, CHANNEL_DONE)
             .setSmallIcon(if (failed) android.R.drawable.stat_notify_error else android.R.drawable.stat_sys_download_done)
             .setContentTitle(getString(if (failed) R.string.dl_notify_failed else R.string.dl_notify_done))
-            .setContentText(j.title.ifEmpty { j.url }).setAutoCancel(true).setContentIntent(openTab()).build())
+            .setContentText(j.title.ifEmpty { j.url }).setAutoCancel(true).setGroup(GROUP)
+            .setCategory(if (failed) NotificationCompat.CATEGORY_ERROR else NotificationCompat.CATEGORY_STATUS)
+        if (file != null) {
+            // tapping plays the file in Shoebill; Share hands it to another app
+            b.setContentIntent(PendingIntent.getActivity(this, j.id.hashCode(), Intent(this, dev.altayeb.shoebill.MainActivity::class.java).setAction(Intent.ACTION_VIEW).setDataAndType(file, mime).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), flags))
+            b.addAction(0, getString(R.string.play), b.build().contentIntent)
+            b.addAction(0, getString(R.string.dl_share), PendingIntent.getActivity(this, j.id.hashCode() + 1,
+                Intent.createChooser(Intent(Intent.ACTION_SEND).setType(mime).putExtra(Intent.EXTRA_STREAM, file).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), null), flags))
+        } else {
+            b.setContentIntent(openTab())
+            if (failed) b.addAction(0, getString(R.string.dl_retry), PendingIntent.getService(this, j.id.hashCode(), Intent(this, DownloadService::class.java).setAction(ACTION_RETRY).putExtra("id", j.id), flags))
+        }
+        val nm = getSystemService(NotificationManager::class.java)
+        nm.notify(j.id.hashCode(), b.build())
+        nm.notify(SUMMARY, NotificationCompat.Builder(this, CHANNEL_DONE).setSmallIcon(android.R.drawable.stat_sys_download_done).setGroup(GROUP).setGroupSummary(true).setAutoCancel(true).setContentIntent(openTab()).build())
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel(CHANNEL_DONE, getString(R.string.dl_notify_done), NotificationManager.IMPORTANCE_DEFAULT))
         getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel(CHANNEL, getString(R.string.dl_channel), NotificationManager.IMPORTANCE_LOW))
         if (Build.VERSION.SDK_INT >= 29) startForeground(ID, note(null), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC) else startForeground(ID, note(null))
         if (intent?.action == ACTION_CANCEL) { DownloadQueue.jobs.value.firstOrNull { it.state == DlState.Running }?.let { DownloadQueue.cancel(it) }; return START_NOT_STICKY }
+        if (intent?.action == ACTION_RETRY) { DownloadQueue.jobs.value.firstOrNull { it.id == intent.getStringExtra("id") }?.let { notified.remove(it.id); DownloadQueue.retry(this, it) } }
         if (collecting) return START_NOT_STICKY
         collecting = true
         scope.launch {
@@ -147,6 +166,6 @@ class DownloadService : Service() {
         DownloadQueue.jobs.value.filter { it.state == DlState.Done || it.state == DlState.Failed }.forEach { finished(it) }
         scope.coroutineContext[Job]?.cancel(); super.onDestroy()
     }
-    private companion object { const val CHANNEL = "downloads"; const val ID = 4101; const val ACTION_CANCEL = "cancel"; val notified = Collections.synchronizedSet(HashSet<String>()) }
+    private companion object { const val CHANNEL = "downloads"; const val ID = 4101; const val ACTION_CANCEL = "cancel"; const val ACTION_RETRY = "retry"; const val CHANNEL_DONE = "downloads_done"; const val GROUP = "dl_done"; const val SUMMARY = 4102; val notified = Collections.synchronizedSet(HashSet<String>()) }
 }
 

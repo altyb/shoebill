@@ -31,6 +31,8 @@ private const val ACTION_TOGGLE = "dev.altayeb.shoebill.PIP_TOGGLE"
 /** Who may enter PiP right now: MainActivity.onUserLeaveHint asks this (pre-Android 12 path). */
 object PipGate {
     var params: PictureInPictureParams? = null
+    /** For the PiP button in the player: set whenever PiP is allowed, even with auto-enter off or the video paused. */
+    var button: PictureInPictureParams? = null
 }
 
 /**
@@ -56,6 +58,7 @@ fun rememberPip(activity: Activity, player: MpvPlayer, paused: Boolean, enabled:
             (activity as? ComponentActivity)?.removeOnPictureInPictureModeChangedListener(listener)
             ctx.unregisterReceiver(receiver)
             PipGate.params = null
+            PipGate.button = null
             if (Build.VERSION.SDK_INT >= 31) {
                 activity.setPictureInPictureParams(PictureInPictureParams.Builder().setAutoEnterEnabled(false).build())
             }
@@ -64,8 +67,9 @@ fun rememberPip(activity: Activity, player: MpvPlayer, paused: Boolean, enabled:
 
     val autoPip = AppSettings.get(ctx).settings.collectAsState().value.autoPip
     LaunchedEffect(paused, enabled, autoPip) {
-        if (!enabled || !autoPip) {
+        if (!enabled) {
             PipGate.params = null
+            PipGate.button = null
             if (Build.VERSION.SDK_INT >= 31) activity.setPictureInPictureParams(PictureInPictureParams.Builder().setAutoEnterEnabled(false).build())
             return@LaunchedEffect
         }
@@ -91,9 +95,10 @@ fun rememberPip(activity: Activity, player: MpvPlayer, paused: Boolean, enabled:
         val actions = listOf(skip(-10, android.R.drawable.ic_media_rew, R.string.player_rewind_10), action, skip(10, android.R.drawable.ic_media_ff, R.string.player_forward_10))
         // Android caps the buttons; on a phone that allows fewer, play and pause is the one to keep.
         val b = PictureInPictureParams.Builder().setAspectRatio(ratio).setActions(if (activity.maxNumPictureInPictureActions >= 3) actions else listOf(action))
-        if (Build.VERSION.SDK_INT >= 31) b.setAutoEnterEnabled(!paused).setSeamlessResizeEnabled(true)
+        if (Build.VERSION.SDK_INT >= 31) b.setAutoEnterEnabled(autoPip && !paused).setSeamlessResizeEnabled(true)
         val params = b.build()
-        PipGate.params = if (paused) null else params
+        PipGate.button = params
+        PipGate.params = if (paused || !autoPip) null else params
         activity.setPictureInPictureParams(params)
     }
     return inPip

@@ -38,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import dev.altayeb.shoebill.library.FolderScreen
+import dev.altayeb.shoebill.library.HomeNav
 import dev.altayeb.shoebill.library.LibraryHome
 import dev.altayeb.shoebill.library.SearchScreen
 import dev.altayeb.shoebill.player.PlayerScreen
@@ -52,6 +53,8 @@ import androidx.compose.animation.ExperimentalSharedTransitionApi
 import dev.altayeb.shoebill.download.DownloadFeature
 import dev.altayeb.shoebill.download.SharedLink
 import dev.altayeb.shoebill.vault.SecretCodeReceiver
+
+private val SUB_TYPES = setOf("application/x-subrip", "text/vtt", "text/x-ssa", "application/x-ass", "text/x-subrip")
 
 /** Every screen of the app. Only MainActivity pushes/pops routes. */
 sealed interface Route {
@@ -110,7 +113,7 @@ class MainActivity : FragmentActivity() { // FragmentActivity: BiometricPrompt (
                     val inc = incoming.value
                     LaunchedEffect(inc) { inc?.let { push(Route.Player(it.uri, displayName(it.uri))) } }
                     val req = routeRequest.value
-                    LaunchedEffect(req) { req?.let { if (stack.last() != it.route) push(it.route) } }
+                    LaunchedEffect(req) { req?.let { if (it.route == Route.Home) while (stack.size > 1) stack.removeAt(stack.lastIndex) else if (stack.last() != it.route) push(it.route) } }
                     BackHandler(stack.size > 1) { pop() }
 
                     // M3 shared-axis X between pages (forward from the end side, back to it); the player fades + scales in.
@@ -198,8 +201,26 @@ class MainActivity : FragmentActivity() { // FragmentActivity: BiometricPrompt (
     }
 
     private fun takeViewIntent(i: Intent?) {
+        // shoebill://music | downloads | play?url=  (download?url= is the downloader's, below)
+        i?.data?.takeIf { i.action == Intent.ACTION_VIEW && it.scheme == "shoebill" }?.let { u ->
+            when (u.host) {
+                "music" -> { HomeNav.tab.value = 3; routeRequest.value = RouteRequest(Route.Home); return }
+                "downloads" -> { HomeNav.tab.value = 4; routeRequest.value = RouteRequest(Route.Home); return }
+                "play" -> { u.getQueryParameter("url")?.let { incoming.value = Incoming(Uri.parse(it)) }; return }
+            }
+        }
+        if (i?.action == Intent.ACTION_VIEW && i.type in SUB_TYPES) {
+            val u = i.data ?: return
+            if (dev.altayeb.shoebill.player.SubtitleInbox.players > 0) dev.altayeb.shoebill.player.SubtitleInbox.uri.value = u
+            else android.widget.Toast.makeText(this, R.string.sub_open_video_first, android.widget.Toast.LENGTH_LONG).show()
+            return
+        }
         DownloadFeature.linkFrom(i)?.let { SharedLink.value.value = it; return }
-        val uri = i?.takeIf { it.action == Intent.ACTION_VIEW }?.data ?: return
+        val uri = when (i?.action) {
+            Intent.ACTION_VIEW -> i.data
+            Intent.ACTION_SEND -> if (Build.VERSION.SDK_INT >= 33) i.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java) else @Suppress("DEPRECATION") i.getParcelableExtra(Intent.EXTRA_STREAM)
+            else -> null
+        } ?: return
         incoming.value = Incoming(uri)
     }
 }
