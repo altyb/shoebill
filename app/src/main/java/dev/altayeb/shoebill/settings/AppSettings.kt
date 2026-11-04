@@ -23,6 +23,8 @@ data class SubStyle(
     val pos: Int = 100,
     val bold: Boolean = false,
     val force: Boolean = false,
+    val boxLines: Boolean = false, // true: one box per line (mpv opaque-box); false: one box around all lines (background-box)
+    val font: String = "", // "" = the player's default
 )
 
 /** Every user setting (rules ق-08, ق-12, ق-18). Shared by player, library, settings and theme. */
@@ -106,6 +108,7 @@ class AppSettings private constructor(context: Context) {
             .putFloat("sub_scale", s.scale).putLong("sub_color", s.color).putFloat("sub_outline", s.outline)
             .putLong("sub_outline_color", s.outlineColor).putBoolean("sub_box", s.box).putFloat("sub_box_alpha", s.boxAlpha)
             .putInt("sub_pos", s.pos).putBoolean("sub_bold", s.bold).putBoolean("sub_force", s.force)
+            .putBoolean("sub_box_lines", s.boxLines).putString("sub_font", s.font)
             .apply()
         _s.value = n
     }
@@ -143,6 +146,7 @@ class AppSettings private constructor(context: Context) {
             outline = p.getFloat("sub_outline", d.outline), outlineColor = p.getLong("sub_outline_color", d.outlineColor),
             box = p.getBoolean("sub_box", d.box), boxAlpha = p.getFloat("sub_box_alpha", d.boxAlpha),
             pos = p.getInt("sub_pos", d.pos), bold = p.getBoolean("sub_bold", d.bold), force = p.getBoolean("sub_force", d.force),
+            boxLines = p.getBoolean("sub_box_lines", d.boxLines), font = p.getString("sub_font", d.font).orEmpty(),
         )
     }
 

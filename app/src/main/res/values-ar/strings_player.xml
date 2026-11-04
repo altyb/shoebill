@@ -63,6 +63,13 @@
     <string name="sub_position">الموضع %1$s</string>
     <string name="sub_top">أعلى</string>
     <string name="sub_bottom">أسفل</string>
+    <string name="sub_box_one">صندوق واحد</string>
+    <string name="sub_box_lines">صندوق لكل سطر</string>
+    <string name="sub_font">الخط</string>
+    <string name="sub_font_default">الافتراضي</string>
+    <string name="sub_font_naskh">نسخ</string>
+    <string name="sub_font_sans">سانس</string>
+    <string name="sub_font_serif">سيريف</string>
     <string name="sub_bold">عريض</string>
     <string name="sub_force_style">فرض أسلوبي على ترجمات ASS</string>
     <string name="sub_force_style_hint">ترجمات الأنمي لها ألوانها الخاصة؛ فعّل هذا لتطبيق اختياراتك</string>

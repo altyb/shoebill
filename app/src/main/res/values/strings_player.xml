@@ -64,6 +64,13 @@
     <string name="sub_position">Position %1$s</string>
     <string name="sub_top">Top</string>
     <string name="sub_bottom">Bottom</string>
+    <string name="sub_box_one">One box</string>
+    <string name="sub_box_lines">Box per line</string>
+    <string name="sub_font">Font</string>
+    <string name="sub_font_default">Default</string>
+    <string name="sub_font_naskh">Naskh</string>
+    <string name="sub_font_sans">Sans</string>
+    <string name="sub_font_serif">Serif</string>
     <string name="sub_bold">Bold</string>
     <string name="sub_force_style">Force my style on ASS subtitles</string>
     <string name="sub_force_style_hint">Anime subtitles have their own colors; turn this on to apply yours</string>
