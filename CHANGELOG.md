@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+Notifications for finished and failed downloads, with a Try again button. `shoebill://` links open the Music and Downloads tabs, play a link, or start a download. Music: a home-screen widget, a Quick Settings tile, a video playback notification, clearer shuffle and repeat, a play/pause animation, and speed and sleep-timer chips on the player page. Subtitles: one background box around all lines (box per line is still a choice), a font choice, and a bundled Arabic font so word spacing no longer depends on the phone's font.
+
 ## 0.5.0 (2026-11-01)
 Music tab with album, artist and genre views, a queue and a mini player that grows into the now-playing page. Downloader in the GitHub build: paste a link, pick a format, playlists, subtitles, thumbnails and cookies. WebDAV, SFTP and FTP sources next to SMB. ReplayGain reads the loudness tags and only turns the volume down, never up. Android Auto browsing (written to the spec, not yet tried in a car). Chapter marks on the seek bar, deinterlace, picture controls and scale filters. Settings split into Video, Music, Downloads, General and About. New logo, loader and splash. Releases now ship one APK per CPU plus a universal one; the universal APK updates any earlier install.
 
