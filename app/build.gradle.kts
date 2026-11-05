@@ -92,7 +92,7 @@ dependencies {
     implementation("com.materialkolor:material-kolor:5.0.1")
     implementation("com.google.crypto.tink:tink-android:1.24.0")
     implementation("androidx.biometric:biometric:1.1.0")
-    implementation("androidx.fragment:fragment-ktx:1.8.9")
+    implementation("androidx.fragment:fragment-ktx:1.9.1")
     implementation("androidx.profileinstaller:profileinstaller:1.4.1")
     implementation("androidx.compose.animation:animation-graphics:1.9.4")
     implementation("androidx.media3:media3-exoplayer:1.8.0")
