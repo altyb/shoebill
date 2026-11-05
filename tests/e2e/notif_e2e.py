@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Notifications and deep links, on a phone with the debug build + qa/make-fixtures.sh media. ANDROID_SERIAL and SERIAL name the phone."""
+"""Notifications and deep links, on a phone with the debug build + tests/e2e/make-fixtures.sh media. ANDROID_SERIAL and SERIAL name the phone."""
 import os, re, sys, time
 sys.path.insert(0, os.path.dirname(__file__))
 from ui import *

@@ -10,6 +10,6 @@ What helps: the app version, your Android version and phone, and the steps to re
 
 **What counts.** A way to open the vault without the PIN, to read decrypted data from storage or a backup,
 to bypass the lockout, or to make the app send data it should not. How the vault is protected, and what it
-does not defend against, is written in the [README](README.md#how-the-vault-is-protected).
+does not defend against, is written in the [README](../README.md#how-the-vault-is-protected).
 
 Only the latest release gets fixes.

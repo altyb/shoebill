@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Music, gallery, download and player additions, on the emulator. python3 qa/features_e2e.py [section ...]"""
+"""Music, gallery, download and player additions, on the emulator. python3 tests/e2e/features_e2e.py [section ...]"""
 import os, re, subprocess, sys, time
 sys.path.insert(0, os.path.dirname(__file__))
 from ui import *

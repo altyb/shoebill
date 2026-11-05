@@ -19,5 +19,5 @@ tasks.test {
 }
 
 // The code under test lives in the app; these JVM tests are the vault contract (tests-first, never edited by the implementer).
-kotlin.sourceSets["main"].kotlin.srcDir("../app/src/main/java/dev/altayeb/shoebill/vault/crypto")
-kotlin.sourceSets["main"].kotlin.srcDir("../app/src/main/java/dev/altayeb/shoebill/vault/logic")
+kotlin.sourceSets["main"].kotlin.srcDir("../../app/src/main/java/dev/altayeb/shoebill/vault/crypto")
+kotlin.sourceSets["main"].kotlin.srcDir("../../app/src/main/java/dev/altayeb/shoebill/vault/logic")

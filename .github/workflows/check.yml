@@ -1,4 +1,4 @@
-# Library tests plus a debug build of both flavors. Only the newest push on main runs; older runs are cancelled.
+# All three JVM test projects plus a debug build of both flavors. Only the newest push on main runs; older runs are cancelled.
 name: check
 on:
   push:
@@ -15,5 +15,7 @@ jobs:
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: 17 }
       - uses: gradle/actions/setup-gradle@v4
-      - run: cd library-tests && ./gradlew -q test
+      - run: cd tests/library && ./gradlew -q test
+      - run: cd tests/subs && ./gradlew -q test
+      - run: cd tests/vault && ./gradlew -q test
       - run: ./gradlew -q assembleFullDebug assemblePlayDebug -PdevAbis=arm64-v8a
