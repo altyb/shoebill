@@ -24,12 +24,14 @@
 </p>
 
 <p align="center">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1.png" width="23%" alt="Home">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2.png" width="23%" alt="Folder">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1.png" width="23%" alt="Library">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2.png" width="23%" alt="Music">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3.png" width="23%" alt="Now playing">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/6.png" width="23%" alt="Downloads">
 </p>
 <p align="center">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3.png" width="47%" alt="Player">
-  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4.png" width="47%" alt="Subtitle style">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4.jpg" width="48%" alt="Player with Arabic subtitles in one box">
+  <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/5.jpg" width="48%" alt="Subtitle style panel">
 </p>
 
 Sister app: [Hudhud Keyboard](https://github.com/altyb/hudhud).
@@ -49,12 +51,19 @@ Settings, or let it follow the phone.
 
 **Music**
 - Music tab: albums, artists, genres, playlists and a queue. The mini player sits in the tab bar and grows into the now-playing page.
+- Shuffle and repeat show clearly when they are on. Speed and the sleep timer are chips on the player page: tap to step to the next value.
 - Background playback with notification controls. Album art is cached.
+- Home-screen widget (title, previous, play/pause, next), a Quick Settings tile that plays and pauses, and a Music app shortcut.
 - Android Auto browsing. Written to the spec; not yet tried in a car.
 
 **Downloader** (GitHub build only; Google Play does not allow it)
-- Paste a link to download video or audio. Choose the format, download playlists, keep subtitles and thumbnails.
+- Paste a link to download video or audio from more than 1,700 sites (it uses yt-dlp). Choose the format, download playlists, keep subtitles and thumbnails.
+- One download runs at a time; the rest wait in the queue. Speed limit (500 KB/s to 5 MB/s) and a Wi-Fi only switch.
+- A notification when a download finishes, or fails with a Try again button.
 - Private mode, cookies for sites that need a login, proxy and speed limit. The downloader updates itself in the background.
+
+**Links into the app**
+- `shoebill://music` and `shoebill://downloads` open those tabs, `shoebill://play?url=<address>` plays a link, and `shoebill://download?url=<address>` opens the downloader with it filled in.
 
 **Network and TV**
 - Browse SMB, WebDAV, SFTP and FTP sources and play from them. Passwords are encrypted under a key in the phone's security chip. SFTP checks the host key on every connection.
@@ -67,7 +76,8 @@ Settings, or let it follow the phone.
 **Subtitles**
 - Search OpenSubtitles, SubDL and Jimaku (with your own free API keys).
 - Sync automatically from the audio (`.srt` files, audio your phone can decode). It changes nothing if it is not sure.
-- Style them: colour, size, outline, background box, bold, presets.
+- Style them: colour, size, outline, bold, presets, font. The background is one box around all the lines, or a box per line.
+- Arabic subtitles use a bundled Noto Naskh Arabic font, so word spacing looks the same on every phone, whatever its system font draws.
 - Drag a subtitle on screen to move it; pinch it to resize it. Manual timing sync.
 - Old Arabic `windows-1256` files are converted automatically.
 
@@ -91,6 +101,12 @@ Use the GitHub APK. The Google Play version cannot ask for "All files access", s
 files into the vault shows Android's delete dialog each time.
 
 **Installed a version before 0.4.0?** It will not update, because the app ID changed. In the old app open Vault settings and tap Back up. Install the new app, restore the file there, and check your files before removing the old one.
+
+## Help and bug reports
+
+[Open an issue](https://github.com/altyb/shoebill/issues/new/choose) and fill in the form: version, phone, and what happened.
+The app sends no crash reports, so your description is the only way I hear about a problem. For a security problem
+use [SECURITY.md](SECURITY.md) instead of a public issue.
 
 ## Privacy
 
@@ -139,6 +155,8 @@ Tests:
 - `cd library-tests && ./gradlew test` (library logic). GitHub Actions runs this plus a debug build on every push to main.
 - `qa/e2e.py`: end-to-end player checks on a device or emulator. `qa/make-media.sh` creates the test videos;
   build with `-PdevAbis=x86_64` for the emulator.
+- `qa/notif_e2e.py`: notifications and deep links. `qa/features_e2e.py`: music, settings and subtitle checks; it needs
+  test media that `qa/make-fixtures.sh` only partly creates, so some sections still fail on a fresh phone.
 
 ## Known limits
 
@@ -157,7 +175,9 @@ Much of this code was written with an AI coding assistant (Claude) under my dire
 
 - [mpv](https://mpv.io) and [FFmpeg](https://ffmpeg.org), through [libmpv-android](https://github.com/jarnedemeulemeester/libmpv-android).
 - [Tink](https://github.com/tink-crypto/tink-java) for encryption.
-- Screenshots show *Sintel* and *Big Buck Bunny* © Blender Foundation, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/).
+- [yt-dlp](https://github.com/yt-dlp/yt-dlp) for the downloader (full build).
+- [Noto Naskh Arabic](https://github.com/notofonts/arabic), SIL Open Font License 1.1, for Arabic subtitles.
+- Screenshots show *Sintel* and *Big Buck Bunny* © Blender Foundation, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/). The Arabic subtitle, songs and covers in them are made for the screenshots.
 
 ## License
 
