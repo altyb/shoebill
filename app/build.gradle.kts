@@ -81,7 +81,7 @@ dependencies {
     implementation("dev.jdtech.mpv:libmpv:1.0.0")
     implementation("com.hierynomus:smbj:0.14.0")
     implementation("com.hierynomus:sshj:0.40.0") // SFTP, Apache-2.0
-    implementation("commons-net:commons-net:3.12.0") // FTP, Apache-2.0
+    implementation("commons-net:commons-net:3.13.0") // FTP, Apache-2.0
     implementation("com.squareup.okhttp3:okhttp:4.12.0") // WebDAV, Apache-2.0
     implementation("org.bouncycastle:bcprov-jdk18on:1.83") // Already pulled in by smbj and sshj; named because SFTP installs it as a provider
     implementation("androidx.core:core-ktx:1.17.0")
