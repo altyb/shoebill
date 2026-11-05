@@ -279,6 +279,8 @@ fun PlayerScreen(uri: Uri, title: String, onBack: () -> Unit, private: Boolean =
     }
 
     LaunchedEffect(settingsState.value.subStyle) { applySubStyle(player, settingsState.value.subStyle) }
+    // ponytail: polls once a second for a track change; an observer on the sub track would be exact but needs a new mpv callback
+    LaunchedEffect(settingsState.value.subStyle.font) { while (true) { applySubFont(player, settingsState.value.subStyle); delay(1000) } }
 
     // qa/e2e.py turns auto-hide off on debug builds (a uiautomator dump outlasts the 3 s)
     val qaKeepUi = remember {

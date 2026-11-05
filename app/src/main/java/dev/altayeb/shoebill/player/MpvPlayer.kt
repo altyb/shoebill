@@ -71,6 +71,13 @@ class MpvPlayer(context: Context) : MPVLib.EventObserver {
     private val mpv: MPVLib = requireNotNull(MPVLib.create(appContext)) { "libmpv create failed" }
 
     init {
+        // An Arabic font of our own, so word spacing does not depend on the phone's font (some UI fonts draw a very narrow space).
+        runCatching {
+            val dir = java.io.File(appContext.filesDir, "fonts").apply { mkdirs() }
+            val f = java.io.File(dir, "NotoNaskhArabic-Regular.ttf")
+            if (!f.exists()) appContext.assets.open("fonts/NotoNaskhArabic-Regular.ttf").use { i -> f.outputStream().use { i.copyTo(it) } }
+            mpv.setOptionString("sub-fonts-dir", dir.absolutePath)
+        }
         mpv.setOptionString("vo", "gpu")
         mpv.setOptionString("gpu-context", "android")
         mpv.setOptionString("opengl-es", "yes")
