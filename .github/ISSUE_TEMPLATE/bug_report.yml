@@ -1,0 +1,32 @@
+name: Bug report
+description: Something does not work
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, what you saw. A screenshot helps.
+    validations: { required: true }
+  - type: input
+    id: version
+    attributes:
+      label: Shoebill version
+      description: Settings → About
+    validations: { required: true }
+  - type: input
+    id: phone
+    attributes:
+      label: Phone and Android version
+      placeholder: Xiaomi 15, Android 16
+    validations: { required: true }
+  - type: dropdown
+    id: source
+    attributes:
+      label: Where did you install it from
+      options: [GitHub release, Obtainium, F-Droid (my repo), Google Play, Other]
+  - type: textarea
+    id: file
+    attributes:
+      label: The video or subtitle, if it is about one
+      description: Format, codec, and where it plays from (phone, SMB, link). Do not attach anything private.

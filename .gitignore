@@ -1,24 +1,57 @@
+# Build output
 build/
 .gradle/
-local.properties
+.kotlin/
+.cxx/
+.externalNativeBuild/
+captures/
 *.apk
 *.aab
+*.hprof
+
+# IDE and local config
 .idea/
-.kotlin/
 *.iml
-work/
+local.properties
+.vscode/
+.claude/
+
+# Signing keys and secrets: never commit
+*.jks
+*.keystore
+keystore.properties
+*.p12
+.env
+.env.*
+
+# OS and editor junk
+.DS_Store
+Thumbs.db
+*.log
+*.orig
+*.rej
+*~
+
+# Python (qa scripts)
+__pycache__/
+*.pyc
+
+# QA run output and scratch
 qa/*.apk
 qa/shots/
-qa/__pycache__/
 qa/e2e-report.md
-shots/
+qa/e2e-out/
 qa/ui.sh
 qa/ui.xml
 qa/REPORT-player.md
 qa/monkey*.txt
-design/logo/ref/
-design/logo/choose.html
 
-# Working design files
+# Local work folders and screenshots
+work/
+shots/
+
+# Working design files; only the logo sources are kept
 design/*
 !design/logo/
+design/logo/ref/
+design/logo/choose.html
