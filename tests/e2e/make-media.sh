@@ -1,6 +1,6 @@
 #!/bin/sh
-# Test videos for qa/e2e.py on a device without the original phone files (e.g. the emulator).
-# Usage: qa/make-media.sh  -> pushes a.mkv + b.mkv to /sdcard/Movies and prints their ids for SHOEBILL_VIDEO_A (a.mkv) / SHOEBILL_VIDEO_B (b.mkv).
+# Test videos for tests/e2e/e2e.py on a device without the original phone files (e.g. the emulator).
+# Usage: tests/e2e/make-media.sh  -> pushes a.mkv + b.mkv to /sdcard/Movies and prints their ids for SHOEBILL_VIDEO_A (a.mkv) / SHOEBILL_VIDEO_B (b.mkv).
 set -e
 d=$(mktemp -d); cd "$d"
 printf '1\n00:00:01,000 --> 00:00:50,000\nTest subtitle line\n' > s.srt

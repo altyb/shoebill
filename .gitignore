@@ -37,14 +37,14 @@ __pycache__/
 *.pyc
 
 # QA run output and scratch
-qa/*.apk
-qa/shots/
-qa/e2e-report.md
-qa/e2e-out/
-qa/ui.sh
-qa/ui.xml
-qa/REPORT-player.md
-qa/monkey*.txt
+tests/e2e/*.apk
+tests/e2e/shots/
+tests/e2e/e2e-report.md
+tests/e2e/e2e-out/
+tests/e2e/ui.sh
+tests/e2e/ui.xml
+tests/e2e/REPORT-player.md
+tests/e2e/monkey*.txt
 
 # Local work folders and screenshots
 work/

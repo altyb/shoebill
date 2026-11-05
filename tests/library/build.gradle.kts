@@ -18,7 +18,7 @@ tasks.test {
 }
 
 // Pure logic lives in the app; these JVM tests are its contract (no android imports allowed there).
-kotlin.sourceSets["main"].kotlin.srcDir("../app/src/main/java/dev/altayeb/shoebill/library/logic")
-kotlin.sourceSets["main"].kotlin.srcDir("../app/src/main/java/dev/altayeb/shoebill/player/cast/logic")
-kotlin.sourceSets["main"].kotlin.srcDir("../app/src/full/java/dev/altayeb/shoebill/download/logic")
-kotlin.sourceSets["main"].kotlin.srcDir("../app/src/main/java/dev/altayeb/shoebill/player/logic")
+kotlin.sourceSets["main"].kotlin.srcDir("../../app/src/main/java/dev/altayeb/shoebill/library/logic")
+kotlin.sourceSets["main"].kotlin.srcDir("../../app/src/main/java/dev/altayeb/shoebill/player/cast/logic")
+kotlin.sourceSets["main"].kotlin.srcDir("../../app/src/full/java/dev/altayeb/shoebill/download/logic")
+kotlin.sourceSets["main"].kotlin.srcDir("../../app/src/main/java/dev/altayeb/shoebill/player/logic")

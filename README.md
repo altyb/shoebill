@@ -20,6 +20,7 @@
   <img alt="Android 8.0+" src="https://img.shields.io/badge/Android-8.0%2B-3ddc84">
   <a href="../../releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/altyb/shoebill/total"></a>
   <a href="https://github.com/altyb/shoebill/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/altyb/shoebill"></a>
+  <a href="https://github.com/altyb/shoebill/actions/workflows/check.yml"><img alt="CI" src="https://github.com/altyb/shoebill/actions/workflows/check.yml/badge.svg"></a>
   <a href="LICENSE"><img alt="GPL-3.0" src="https://img.shields.io/badge/license-GPL--3.0-blue"></a>
 </p>
 
@@ -150,13 +151,13 @@ Release signing reads `~/.secrets/shoebill-release.properties`
 (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`); without it, release builds use the debug key.
 
 Tests:
-- `cd vault-tests && ./gradlew test` (vault crypto, PIN, backup format)
-- `cd subs-tests && ./gradlew test` (subtitle search and parsing)
-- `cd library-tests && ./gradlew test` (library logic). GitHub Actions runs this plus a debug build on every push to main.
-- `qa/e2e.py`: end-to-end player checks on a device or emulator. `qa/make-media.sh` creates the test videos;
+- `cd tests/vault && ./gradlew test` (vault crypto, PIN, backup format)
+- `cd tests/subs && ./gradlew test` (subtitle search and parsing)
+- `cd tests/library && ./gradlew test` (library logic). GitHub Actions runs all three plus a debug build on every push to main.
+- `tests/e2e/e2e.py`: end-to-end player checks on a device or emulator. `tests/e2e/make-media.sh` creates the test videos;
   build with `-PdevAbis=x86_64` for the emulator.
-- `qa/notif_e2e.py`: notifications and deep links. `qa/features_e2e.py`: music, settings and subtitle checks; it needs
-  test media that `qa/make-fixtures.sh` only partly creates, so some sections still fail on a fresh phone.
+- `tests/e2e/notif_e2e.py`: notifications and deep links. `tests/e2e/features_e2e.py`: music, settings and subtitle checks; it needs
+  test media that `tests/e2e/make-fixtures.sh` only partly creates, so some sections still fail on a fresh phone.
 
 ## Known limits
 
@@ -166,6 +167,10 @@ Tests:
 - DLNA server browsing is not built; SMB shares and direct links are.
 - After the wipe PIN the real vault is gone for good; the PIN pad stays and the decoy PIN keeps working.
   To start a new real vault, clear the app's data.
+
+## Contributing
+
+Issues and pull requests are welcome: see [CONTRIBUTING](.github/CONTRIBUTING.md), and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for how the code is laid out. Translations are the easiest way to help.
 
 ## How it was made
 

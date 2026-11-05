@@ -2,9 +2,9 @@
 """End-to-end player checks on a real phone. Asserts the player's real state from the debug `BrandState` log line
 (MpvPlayer logs it once per second), and finds buttons by their content-desc through uiautomator — no blind taps.
 
-    python3 qa/e2e.py            # all cases
-    python3 qa/e2e.py T4 T6      # some cases
-Results: table on stdout + qa/e2e-report.md. Needs the debug build installed (./gradlew installFullDebug) and adb on PATH. Keeps app data unless SHOEBILL_CLEAR=1.
+    python3 tests/e2e/e2e.py            # all cases
+    python3 tests/e2e/e2e.py T4 T6      # some cases
+Results: table on stdout + tests/e2e/e2e-report.md. Needs the debug build installed (./gradlew installFullDebug) and adb on PATH. Keeps app data unless SHOEBILL_CLEAR=1.
 Buttons are found by their Arabic labels: set the app language to Arabic (Settings → Language) first.
 """
 import os, re, subprocess, sys, time, xml.etree.ElementTree as ET
@@ -16,7 +16,7 @@ CLEAN = os.environ.get("SHOEBILL_CLEAR") == "1"
 ACT = f"{PKG}/dev.altayeb.shoebill.MainActivity"
 HERE = os.path.dirname(os.path.abspath(__file__))
 # MediaStore ids of two test videos: A = HEVC 10-bit + two audio tracks + ASS subtitles, B = HEVC + one subtitle.
-# qa/make-media.sh creates both and prints their ids.
+# tests/e2e/make-media.sh creates both and prints their ids.
 VID_A, VID_B = int(os.environ["SHOEBILL_VIDEO_A"]), int(os.environ["SHOEBILL_VIDEO_B"])
 B_MIN = float(os.environ.get("SHOEBILL_B_MIN", 1))  # B's length in minutes, to tell the two files apart
 
