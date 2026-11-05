@@ -29,3 +29,5 @@ Google Play and the Google Play logo are trademarks of Google LLC.
 Music playback uses AndroidX Media3 (https://github.com/androidx/media, Apache License 2.0).
 
 The full build also includes youtubedl-android (https://github.com/JunkFood02/youtubedl-android, GPL-3.0), Apache Commons Compress (Apache License 2.0), and downloads yt-dlp (https://github.com/yt-dlp/yt-dlp, Unlicense). The Play build has none of these.
+
+Subtitles use Noto Naskh Arabic (SIL Open Font License 1.1, https://github.com/notofonts/arabic), bundled in app/src/main/assets/fonts.

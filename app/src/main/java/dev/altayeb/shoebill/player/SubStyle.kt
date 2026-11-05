@@ -29,6 +29,13 @@ import dev.altayeb.shoebill.settings.SubStyle
 import java.util.Locale
 import kotlin.math.roundToInt
 
+/** The chosen font, else the bundled Arabic one while the subtitle track is Arabic, else the default. */
+fun applySubFont(player: MpvPlayer, s: SubStyle) {
+    val arabic = player.getString("current-tracks/sub/lang")?.lowercase(Locale.ROOT)?.let { it == "ar" || it.startsWith("ara") || it.startsWith("ar-") } == true
+    val want = s.font.ifEmpty { if (arabic) "Noto Naskh Arabic" else "sans-serif" }
+    if (player.getString("sub-font") != want) runCatching { player.setString("sub-font", want) }
+}
+
 fun applySubStyle(player: MpvPlayer, s: SubStyle) {
     player.setDouble("sub-scale", s.scale.toDouble())
     player.setString("sub-color", argb(s.color))
@@ -44,7 +51,7 @@ fun applySubStyle(player: MpvPlayer, s: SubStyle) {
     for (n in listOf("sub-outline-color", "sub-border-color")) runCatching { player.setString(n, if (s.box && s.boxLines) boxColor else argb(s.outlineColor)) }
     runCatching { player.setString("sub-back-color", if (s.box) boxColor else "#80000000") }
     runCatching { player.setDouble("sub-shadow-offset", if (s.box && !s.boxLines) 6.0 else 0.0) }
-    runCatching { player.setString("sub-font", s.font.ifEmpty { "sans-serif" }) }
+    applySubFont(player, s)
 }
 
 private fun argb(c: Long) = "#%08X".format(Locale.ROOT, c)
