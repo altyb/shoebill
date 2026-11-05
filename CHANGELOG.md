@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.5.1 (2026-11-05)
 Notifications for finished and failed downloads, with a Try again button. `shoebill://` links open the Music and Downloads tabs, play a link, or start a download. Music: a home-screen widget, a Quick Settings tile, a video playback notification, clearer shuffle and repeat, a play/pause animation, and speed and sleep-timer chips on the player page. Subtitles: one background box around all lines (box per line is still a choice), a font choice, and a bundled Arabic font so word spacing no longer depends on the phone's font.
 
 ## 0.5.0 (2026-11-01)
