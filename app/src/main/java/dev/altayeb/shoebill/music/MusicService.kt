@@ -83,22 +83,24 @@ class MusicService : MediaLibraryService() {
         }
         restoreQueue(player)
         // A kill mid-song resumes near where it was: the position is a few ints, every 15 s while playing.
-        settingsScope.launch { while (true) { delay(15_000); if (player.isPlaying) saveState(player) } }
+        settingsScope.launch { while (true) { delay(15_000); if (player.isPlaying) { saveState(player); counted(tracker.check(clock())) } } }
         player.addListener(object : Player.Listener {
             override fun onEvents(p: Player, events: Player.Events) {
+                if (events.contains(Player.EVENT_PLAYBACK_STATE_CHANGED) && p.playbackState == Player.STATE_READY) tracker.duration(p.duration)
                 if (events.contains(Player.EVENT_TIMELINE_CHANGED)) saveIds(p)
                 if (events.containsAny(Player.EVENT_TIMELINE_CHANGED, Player.EVENT_MEDIA_ITEM_TRANSITION, Player.EVENT_IS_PLAYING_CHANGED, Player.EVENT_SHUFFLE_MODE_ENABLED_CHANGED, Player.EVENT_REPEAT_MODE_CHANGED)) saveState(p)
             }
 
             // Tags arrive with the track's data; a new track starts without the previous track's gain.
             override fun onMediaItemTransition(item: MediaItem?, reason: Int) {
+                counted(tracker.start(item?.mediaId?.toLongOrNull(), player.duration.coerceAtLeast(0), player.isPlaying, clock()))
                 MusicWidget.update(this@MusicService, item?.mediaMetadata?.title?.toString().orEmpty(), player.isPlaying)
                 gainTrack = null
                 gainAlbum = null
                 applyGain(player)
             }
 
-            override fun onIsPlayingChanged(isPlaying: Boolean) { if (isPlaying) failStreak = 0; MusicWidget.update(this@MusicService, player.mediaMetadata.title?.toString().orEmpty(), isPlaying) }
+            override fun onIsPlayingChanged(isPlaying: Boolean) { counted(tracker.playing(isPlaying, clock())); if (isPlaying) failStreak = 0; MusicWidget.update(this@MusicService, player.mediaMetadata.title?.toString().orEmpty(), isPlaying) }
 
             // A file deleted or no longer readable: say so once, move on, and stop when the whole queue is like that.
             override fun onPlayerError(error: PlaybackException) {
@@ -136,6 +138,11 @@ class MusicService : MediaLibraryService() {
             else -> null
         }
     }
+
+    /** Plays for Most played / Recently played. Only library songs have a numeric id; a file opened from outside has none. */
+    private val tracker = dev.altayeb.shoebill.library.logic.PlayTracker()
+    private fun clock() = android.os.SystemClock.elapsedRealtime()
+    private fun counted(id: Long?) { if (id != null) MusicStats.get(this).played(id) }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? = session
 
@@ -262,6 +269,7 @@ class MusicService : MediaLibraryService() {
 
     override fun onDestroy() {
         session?.player?.let { saveState(it); saveIds(it, now = true) }
+        counted(tracker.check(clock())) // the song playing when the service ends still counts if it was listened to
         running = false
         instance = null
         sleepAt = 0L

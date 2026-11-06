@@ -89,11 +89,14 @@ import kotlinx.coroutines.Job
 
 object SharedLink { val value = MutableStateFlow<String?>(null) }
 
-enum class DlState { Waiting, Running, Finishing, Done, Failed, Cancelled }
+enum class DlState { Waiting, Running, Finishing, Done, Failed, Cancelled, Paused }
 data class DlJob(
     val id: String, val url: String, val options: DownloadOptions, val state: DlState = DlState.Waiting, val percent: Int = 0,
     val title: String = "", val error: String = "", val uploader: String = "", val thumb: String? = null,
     val speed: String? = null, val etaSec: Long = -1, val audio: Boolean = false, val fileUri: String? = null,
+    val batch: String? = null, // jobs started together from one playlist pick share this
+    val item: String? = null, // "4/12" while a whole playlist downloads in one job
+    val size: Long = 0, val doneAt: Long = 0, val fileName: String = "",
 )
 data class Preview(val title: String, val uploader: String, val thumb: String?, val durationSec: Long, val formats: List<Fmt> = emptyList(), val entries: List<PlEntry> = emptyList())
 
@@ -133,11 +136,11 @@ class DlPrefs(c: Context) {
     val archiveFile get() = java.io.File(dir, "download-archive.txt")
 
     /** One download's options: this sheet's choices on top of the standing ones. */
-    fun options(quality: Quality, playlist: Boolean, subs: Boolean, formatId: String? = null, formatAudioOnly: Boolean = false) = DownloadOptions(
+    fun options(quality: Quality, playlist: Boolean, subs: Boolean, formatId: String? = null, formatAudioOnly: Boolean = false, folder: String? = null) = DownloadOptions(
         quality, playlist, subs, limit, proxy.takeIf { it.isNotBlank() }?.trim(), formatId, formatAudioOnly, skipSponsors, sponsorCategories, container, codec, filename,
         restrictNames, embedThumbnail, embedMetadata, subLangs, autoSubs, forceIpv4, threads, cookiesFile.takeIf { it.exists() }?.path,
         archiveFile.path.takeIf { noDuplicates }, DownloadLogic.parseExtra(extra).orEmpty(),
-        playlistFolder = playlistFolder, thumbnailFile = thumbFile, subtitleFiles = subFiles,
+        playlistFolder = playlistFolder, thumbnailFile = thumbFile, subtitleFiles = subFiles, folder = folder,
     )
 }
 
@@ -207,6 +210,8 @@ object DownloadQueue {
     @Volatile private var ready = false
     @Volatile private var active: String? = null
 
+    /** Jobs whose finished notification is already out, or that finished in an earlier run: history must not notify again. */
+    val notified: MutableSet<String> = Collections.synchronizedSet(HashSet())
     private var historyFile: File? = null
     @Volatile private var incognito = false
 
@@ -216,45 +221,89 @@ object DownloadQueue {
         val f = File(c.filesDir, "download-history.json"); historyFile = f
         val prefs = DlPrefs(c)
         incognito = prefs.incognito
+        cacheRoot = File(c.cacheDir, "downloads")
         val a = runCatching { org.json.JSONArray(f.readText()) }.getOrNull() ?: return
         val old = (0 until a.length()).mapNotNull { n ->
             val o = a.optJSONObject(n) ?: return@mapNotNull null
-            DlJob(o.getString("id"), o.getString("url"), prefs.options(prefs.quality, false, false),
-                runCatching { DlState.valueOf(o.getString("state")) }.getOrDefault(DlState.Done), 100,
+            // This download's own choices; the standing ones (proxy, cookies, names) are read fresh, as for a retry.
+            val opts = prefs.options(runCatching { Quality.valueOf(o.optString("q")) }.getOrDefault(prefs.quality), o.optBoolean("pl"), o.optBoolean("subs"),
+                o.optString("fmt").ifEmpty { null }, o.optBoolean("fa"), o.optString("folder").ifEmpty { null }).copy(playlistName = o.optString("pn").ifEmpty { null })
+            val st = runCatching { DlState.valueOf(o.getString("state")) }.getOrDefault(DlState.Done)
+            DlJob(o.getString("id"), o.getString("url"), opts,
+                if (st in UNFINISHED) DlState.Paused else st, if (st == DlState.Done) 100 else 0, // a download the app was killed in waits for a tap
                 o.optString("title"), o.optString("error"), o.optString("uploader"), o.optString("thumb").ifEmpty { null },
-                audio = o.optBoolean("audio"), fileUri = o.optString("uri").ifEmpty { null })
+                audio = o.optBoolean("audio"), fileUri = o.optString("uri").ifEmpty { null }, batch = o.optString("batch").ifEmpty { null },
+                size = o.optLong("size"), doneAt = o.optLong("at"), fileName = o.optString("name"))
         }
+        old.forEach { notified += it.id }
         jobs.update { old + it }
     }
 
-    private fun saveHistory() {
+    private val UNFINISHED = setOf(DlState.Waiting, DlState.Running, DlState.Finishing, DlState.Paused)
+    private val KEPT_ALL = UNFINISHED // never dropped by the 200 cap: they are work still to do
+    @Volatile private var cacheRoot: File? = null
+
+    @Synchronized private fun saveHistory() {
         val f = historyFile ?: return
         if (incognito) return
         val a = org.json.JSONArray()
-        jobs.value.filter { it.state == DlState.Done || it.state == DlState.Failed }.takeLast(200).forEach { j ->
+        val l = jobs.value.filter { it.state != DlState.Cancelled }
+        (l.filter { it.state !in KEPT_ALL }.takeLast(200) + l.filter { it.state in KEPT_ALL }).sortedBy { l.indexOf(it) }.forEach { j ->
+            val o = j.options
             a.put(org.json.JSONObject().put("id", j.id).put("url", j.url).put("state", j.state.name).put("title", j.title).put("error", j.error)
-                .put("uploader", j.uploader).put("thumb", j.thumb.orEmpty()).put("audio", j.audio).put("uri", j.fileUri.orEmpty()))
+                .put("uploader", j.uploader).put("thumb", j.thumb.orEmpty()).put("audio", j.audio).put("uri", j.fileUri.orEmpty())
+                .put("q", o.quality.name).put("pl", o.playlist).put("subs", o.subtitles).put("fmt", o.formatId.orEmpty()).put("fa", o.formatAudioOnly)
+                .put("pn", o.playlistName.orEmpty()).put("folder", o.folder.orEmpty()).put("batch", j.batch.orEmpty())
+                .put("size", j.size).put("at", j.doneAt).put("name", j.fileName))
         }
         runCatching { f.writeText(a.toString()) }
     }
 
-    fun add(c: Context, url: String, o: DownloadOptions, preview: Preview? = null) {
+    fun add(c: Context, url: String, o: DownloadOptions, preview: Preview? = null, batch: String? = null) {
+        loadHistory(c) // first, so the save below never writes over a history not read yet
         incognito = DlPrefs(c).incognito
-        jobs.update { it + DlJob(UUID.randomUUID().toString(), url, o, title = preview?.title.orEmpty(), uploader = preview?.uploader.orEmpty(), thumb = preview?.thumb) }
+        val id = UUID.randomUUID().toString()
+        jobs.update { it + DlJob(id, url, o, title = preview?.title.orEmpty(), uploader = preview?.uploader.orEmpty(), thumb = preview?.thumb, batch = batch) }
+        saveHistory()
+        // A quick download has no preview: read the title and picture beside the download, so the card and notification are not a bare link.
+        if (preview == null) scope.launch { runCatching { Probe.info(c.applicationContext, url, o.proxy) }.getOrNull()?.let { i ->
+            change(id) { it.copy(title = it.title.ifEmpty { i.title }, uploader = it.uploader.ifEmpty { i.uploader }, thumb = it.thumb ?: i.thumb) }; saveHistory()
+        } }
         pump(c.applicationContext)
     }
 
-    fun retry(c: Context, j: DlJob) { change(j.id) { it.copy(state = DlState.Waiting, percent = 0, error = "") }; pump(c.applicationContext) }
-    fun clearFinished() { jobs.update { l -> l.filter { it.state in setOf(DlState.Waiting, DlState.Running, DlState.Finishing) } }; saveHistory() }
+    fun retry(c: Context, j: DlJob) { notified.remove(j.id); change(j.id) { it.copy(state = DlState.Waiting, error = "", percent = if (j.state == DlState.Paused) it.percent else 0) }; saveHistory(); pump(c.applicationContext) }
+    /** Resume is a retry that keeps the half-done files: yt-dlp carries on from them (it continues partial downloads by default). */
+    fun resume(c: Context, j: DlJob) = retry(c, j)
+    fun resumeAll(c: Context) { jobs.value.filter { it.state == DlState.Paused }.forEach { notified.remove(it.id) }; jobs.update { l -> l.map { if (it.state == DlState.Paused) it.copy(state = DlState.Waiting) else it } }; saveHistory(); pump(c.applicationContext) }
+
+    /** Stops now and keeps what is downloaded so far, in the job's private folder, until resume. */
+    fun pause(j: DlJob) {
+        if (j.state == DlState.Waiting) change(j.id) { it.copy(state = DlState.Paused) }
+        else if (active == j.id && j.state == DlState.Running) { change(j.id) { it.copy(state = DlState.Paused, speed = null) }; runCatching { YoutubeDL.getInstance().destroyProcessById(j.id) } }
+        saveHistory()
+    }
+    fun pauseAll() = jobs.value.filter { it.state == DlState.Waiting || it.state == DlState.Running }.forEach(::pause)
+
+    fun remove(j: DlJob) {
+        if (j.state in setOf(DlState.Waiting, DlState.Running, DlState.Finishing)) return
+        jobs.update { l -> l.filter { it.id != j.id } }; saveHistory()
+        if (j.state == DlState.Paused) cacheRoot?.let { File(it, j.id).deleteRecursively() }
+    }
+    fun clearFinished() { jobs.update { l -> l.filter { it.state in UNFINISHED } }; saveHistory() }
 
     fun cancel(j: DlJob) {
-        if (j.state == DlState.Waiting) change(j.id) { it.copy(state = DlState.Cancelled) }
-        else if (active == j.id) { runCatching { YoutubeDL.getInstance().destroyProcessById(j.id) }; change(j.id) { it.copy(state = DlState.Cancelled) } }
+        if (j.state == DlState.Waiting || j.state == DlState.Paused) { change(j.id) { it.copy(state = DlState.Cancelled) }; cacheRoot?.let { File(it, j.id).deleteRecursively() } }
+        else if (active == j.id) { change(j.id) { it.copy(state = DlState.Cancelled) }; runCatching { YoutubeDL.getInstance().destroyProcessById(j.id) } }
+        saveHistory()
     }
+
+    /** After a delete, rename or move made outside the queue: the card follows the file. */
+    fun changed(id: String, f: (DlJob) -> DlJob) { change(id, f); saveHistory() }
 
     private fun change(id: String, f: (DlJob) -> DlJob) = jobs.update { l -> l.map { if (it.id == id) f(it) else it } }
 
-    @Synchronized private fun pump(c: Context) {
+    @Synchronized fun pump(c: Context) {
         if (active != null) return
         val next = jobs.value.firstOrNull { it.state == DlState.Waiting } ?: return
         active = next.id
@@ -262,12 +311,12 @@ object DownloadQueue {
         scope.launch {
             run(c, next)
             synchronized(this@DownloadQueue) { active = null }
-            if (jobs.value.none { it.state == DlState.Waiting }) c.stopService(Intent(c, DownloadService::class.java))
+            if (jobs.value.none { it.state == DlState.Waiting }) DownloadService.idle(c)
             pump(c)
         }
     }
 
-    fun ensureReady(c: Context) {
+    @Synchronized fun ensureReady(c: Context) {
         if (ready) return
         YoutubeDL.getInstance().init(c)
         FFmpeg.getInstance().init(c)
@@ -288,10 +337,11 @@ object DownloadQueue {
 
     private suspend fun run(c: Context, j: DlJob) {
         val out = File(c.cacheDir, "downloads/${j.id}").apply { mkdirs() }
+        cacheRoot = out.parentFile
         try {
             if (DlPrefs(c).wifiOnly && c.getSystemService(ConnectivityManager::class.java).isActiveNetworkMetered) error(c.getString(R.string.dl_wifi_blocked))
             ensureReady(c)
-            change(j.id) { it.copy(state = DlState.Running) }
+            change(j.id) { it.copy(state = DlState.Running, error = "") }
             updateIfStale(c)
             val req = YoutubeDLRequest(j.url)
             val args = DownloadLogic.args(j.options, out.absolutePath)
@@ -302,33 +352,39 @@ object DownloadQueue {
                 else { req.addOption(a); i++ }
             }
             YoutubeDL.getInstance().execute(req, j.id) { progress, eta, line ->
-                change(j.id) { it.copy(percent = progress.toInt().coerceIn(0, 100), etaSec = eta, speed = DownloadLogic.speed(line) ?: it.speed) }
+                change(j.id) { if (it.state != DlState.Running) it else it.copy(percent = progress.toInt().coerceIn(0, 100), etaSec = eta, speed = DownloadLogic.speed(line) ?: it.speed, item = DownloadLogic.playlistItem(line) ?: it.item) }
             }
-            if (jobs.value.firstOrNull { it.id == j.id }?.state == DlState.Cancelled) return
+            if (stateOf(j.id) in STOPPED) return
             change(j.id) { it.copy(state = DlState.Finishing, percent = 100) }
             val all = out.walkTopDown().filter { it.isFile }.toList()
             val media = all.filter { DownloadLogic.isMediaFile(it.name) }
             check(media.isNotEmpty()) { if (j.options.archiveFile != null) c.getString(R.string.dl_already) else "no file was produced" }
-            val saved = media.map { publish(c, it, folderOf(out, it)) }
+            val saved = media.map { publish(c, it, folderOf(out, it), j.options.folder) }
             // Sidecars come after the check and never fail the job: the video is already in the library by then. A failed one is shown on the Done card.
             val lost = all.filter { f ->
                 val side = (j.options.thumbnailFile && DownloadLogic.isThumbFile(f.name)) || (j.options.subtitleFiles && DownloadLogic.isSubtitleFile(f.name))
-                side && runCatching { publish(c, f, folderOf(out, f)) }.onFailure { Log.w("Download", "sidecar ${f.name}: $it") }.isFailure
+                side && runCatching { publish(c, f, folderOf(out, f), j.options.folder) }.onFailure { Log.w("Download", "sidecar ${f.name}: $it") }.isFailure
             }
             val sideError = if (lost.isEmpty()) "" else c.getString(R.string.dl_sidecar_failed, lost.joinToString(", ") { it.name })
-            change(j.id) { it.copy(state = DlState.Done, error = sideError, title = it.title.ifEmpty { media.first().nameWithoutExtension }, audio = DownloadLogic.isAudioFile(media.first().name), fileUri = saved.first()) }
+            change(j.id) { it.copy(state = DlState.Done, error = sideError, title = it.title.ifEmpty { media.first().nameWithoutExtension }, audio = DownloadLogic.isAudioFile(media.first().name), fileUri = saved.first(),
+                size = media.sumOf { f -> f.length() }, doneAt = System.currentTimeMillis(), fileName = media.first().name, item = null, speed = null) }
             saveHistory()
             VideoIndex.refresh(c)
         } catch (e: Throwable) { // a broken runtime throws LinkageError; that must fail the job, not kill music and video too
-            if (jobs.value.firstOrNull { it.id == j.id }?.state != DlState.Cancelled) {
+            if (stateOf(j.id) !in STOPPED) {
                 val line = e.message.orEmpty().lineSequence().lastOrNull { it.startsWith("ERROR") } ?: e.message.orEmpty().lineSequence().lastOrNull { it.isNotBlank() } ?: e.javaClass.simpleName
                 change(j.id) { it.copy(state = DlState.Failed, error = DownloadLogic.scrub(line, j.options.proxy).take(200)) }
                 saveHistory()
             }
         } finally {
-            out.deleteRecursively()
+            // Paused, or already resumed (Waiting) before this run wound down: the partial files are what the next run continues from.
+            if (stateOf(j.id) != DlState.Paused && stateOf(j.id) != DlState.Waiting) out.deleteRecursively()
         }
     }
+
+    /** Stopped by a tap while running: cancelled, paused, or paused and resumed again. Not a failure. */
+    private val STOPPED = setOf(DlState.Cancelled, DlState.Paused, DlState.Waiting)
+    private fun stateOf(id: String) = jobs.value.firstOrNull { it.id == id }?.state
 
     /** The playlist folder a file sits in, as safe path parts under the private output folder. Empty for a flat download. */
     private fun folderOf(out: File, f: File): String =
@@ -340,12 +396,12 @@ object DownloadQueue {
      * (IllegalArgumentException on insert), so they go to Download/Shoebill via MediaStore.Downloads; older versions write
      * them beside the video.
      */
-    private fun publish(c: Context, f: File, folder: String): String {
+    private fun publish(c: Context, f: File, folder: String, userFolder: String?): String {
         val audio = DownloadLogic.isAudioFile(f.name)
         val thumb = DownloadLogic.isThumbFile(f.name)
         val sub = DownloadLogic.isSubtitleFile(f.name) && Build.VERSION.SDK_INT >= 29
         val root = when { thumb -> Environment.DIRECTORY_PICTURES; sub -> Environment.DIRECTORY_DOWNLOADS; audio -> Environment.DIRECTORY_MUSIC; else -> Environment.DIRECTORY_MOVIES }
-        val rel = listOf("Shoebill", folder).filter { it.isNotEmpty() }.joinToString("/")
+        val rel = DownloadLogic.libraryPath(root, userFolder, folder)
         val r = c.contentResolver
         if (Build.VERSION.SDK_INT >= 29) {
             val base = when {
@@ -357,7 +413,7 @@ object DownloadQueue {
             val v = ContentValues().apply {
                 put(MediaStore.MediaColumns.DISPLAY_NAME, f.name)
                 put(MediaStore.MediaColumns.MIME_TYPE, DownloadLogic.mime(f.name))
-                put(MediaStore.MediaColumns.RELATIVE_PATH, "$root/$rel")
+                put(MediaStore.MediaColumns.RELATIVE_PATH, rel)
                 put(MediaStore.MediaColumns.IS_PENDING, 1)
             }
             val uri = r.insert(base, v) ?: error("could not save the file")
@@ -370,7 +426,7 @@ object DownloadQueue {
                 throw e
             }
         } else {
-            val dir = File(Environment.getExternalStoragePublicDirectory(root), rel).apply { mkdirs() }
+            val dir = File(Environment.getExternalStorageDirectory(), rel).apply { mkdirs() }
             val to = File(dir, f.name)
             f.copyTo(to, overwrite = true)
             MediaScannerConnection.scanFile(c, arrayOf(to.path), null, null)
@@ -379,3 +435,65 @@ object DownloadQueue {
     }
 }
 
+/** What a file action needs: done, a system "allow" prompt first (then run it again), or no luck. */
+sealed interface FileOp { data object Ok : FileOp; class Ask(val sender: android.content.IntentSender) : FileOp; data object Failed : FileOp }
+
+/**
+ * Delete, rename and move a finished download. Files this install saved are its own and change at once; a file an older
+ * install saved (or one another app touched) needs the user's yes on Android 10+, which [FileOp.Ask] carries.
+ */
+object DownloadFiles {
+    fun exists(c: Context, j: DlJob): Boolean {
+        val u = j.fileUri?.let(Uri::parse) ?: return false
+        if (u.scheme == "file") return File(u.path.orEmpty()).exists()
+        return runCatching { c.contentResolver.query(u, arrayOf(MediaStore.MediaColumns._ID), null, null, null)?.use { it.count > 0 } }.getOrNull() ?: false
+    }
+
+    fun name(c: Context, j: DlJob): String {
+        val u = j.fileUri?.let(Uri::parse) ?: return j.fileName
+        if (u.scheme == "file") return File(u.path.orEmpty()).name
+        return runCatching { c.contentResolver.query(u, arrayOf(MediaStore.MediaColumns.DISPLAY_NAME), null, null, null)?.use { if (it.moveToFirst()) it.getString(0) else null } }.getOrNull() ?: j.fileName
+    }
+
+    /** The file goes too; the card leaves the list. A file already gone counts as deleted. */
+    fun delete(c: Context, j: DlJob): FileOp = guarded(c, j, delete = true) { u ->
+        if (u.scheme == "file") File(u.path.orEmpty()).delete() else c.contentResolver.delete(u, null, null)
+        DownloadQueue.remove(j)
+    }
+
+    fun rename(c: Context, j: DlJob, typed: String): FileOp {
+        val old = name(c, j)
+        val new = DownloadLogic.rename(typed, old) ?: return FileOp.Failed
+        return guarded(c, j) { u ->
+            val uri = if (u.scheme == "file") {
+                val to = File(File(u.path.orEmpty()).parentFile, new)
+                check(!to.exists() && File(u.path.orEmpty()).renameTo(to)); MediaScannerConnection.scanFile(c, arrayOf(u.path, to.path), null, null); Uri.fromFile(to)
+            } else { check(c.contentResolver.update(u, ContentValues().apply { put(MediaStore.MediaColumns.DISPLAY_NAME, new) }, null, null) > 0); u }
+            DownloadQueue.changed(j.id) { it.copy(fileUri = uri.toString(), fileName = new, title = new.substringBeforeLast('.')) }
+        }
+    }
+
+    /** Into Shoebill/<folder> under Music or Movies; an empty folder is Shoebill itself. */
+    fun move(c: Context, j: DlJob, folder: String): FileOp {
+        val f = DownloadLogic.folderName(folder)
+        val rel = DownloadLogic.libraryPath(if (j.audio) Environment.DIRECTORY_MUSIC else Environment.DIRECTORY_MOVIES, f, "")
+        return guarded(c, j) { u ->
+            val uri = if (u.scheme == "file") {
+                val from = File(u.path.orEmpty()); val dir = File(Environment.getExternalStorageDirectory(), rel).apply { mkdirs() }; val to = File(dir, from.name)
+                check(!to.exists() && from.renameTo(to)); MediaScannerConnection.scanFile(c, arrayOf(from.path, to.path), null, null); Uri.fromFile(to)
+            } else { check(c.contentResolver.update(u, ContentValues().apply { put(MediaStore.MediaColumns.RELATIVE_PATH, "$rel/") }, null, null) > 0); u }
+            DownloadQueue.changed(j.id) { it.copy(fileUri = uri.toString(), options = it.options.copy(folder = f)) }
+        }
+    }
+
+    private fun guarded(c: Context, j: DlJob, delete: Boolean = false, block: (Uri) -> Unit): FileOp {
+        val u = j.fileUri?.let(Uri::parse) ?: return FileOp.Failed
+        return try { block(u); FileOp.Ok } catch (e: SecurityException) {
+            when {
+                Build.VERSION.SDK_INT >= 30 -> FileOp.Ask((if (delete) MediaStore.createDeleteRequest(c.contentResolver, listOf(u)) else MediaStore.createWriteRequest(c.contentResolver, listOf(u))).intentSender)
+                Build.VERSION.SDK_INT == 29 && e is android.app.RecoverableSecurityException -> FileOp.Ask(e.userAction.actionIntent.intentSender)
+                else -> FileOp.Failed
+            }
+        } catch (e: Exception) { Log.w("Download", "file action: ${e.javaClass.simpleName}"); FileOp.Failed }
+    }
+}

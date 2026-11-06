@@ -32,6 +32,7 @@ data class DownloadOptions(
     val playlistName: String? = null, // the playlist's title, for entries picked one by one (playlist = false)
     val thumbnailFile: Boolean = false, // keep the thumbnail as a .jpg beside the video
     val subtitleFiles: Boolean = false, // keep subtitles as .srt/.vtt files beside the video instead of embedding them
+    val folder: String? = null, // a folder of the user's choice under Shoebill/, one plain name (see folderName)
 )
 
 /** One format yt-dlp offers. Size is 0 when the site does not say. */
@@ -137,6 +138,20 @@ object DownloadLogic {
     }
 
     /** "[download]  42.0% of 10MiB at 1.20MiB/s ETA 00:05" to "1.20MiB/s". Null on any other line. */
+    /** yt-dlp's "[download] Downloading item 4 of 12" while a whole playlist downloads in one job: "4/12", else null. */
+    fun playlistItem(line: String?): String? = line?.let { Regex("""Downloading (?:item|video) (\d+) of (\d+)""").find(it) }?.let { "${it.groupValues[1]}/${it.groupValues[2]}" }
+
+    /** The library folder a download lands in: Shoebill, then the user's folder, then the playlist's. */
+    fun libraryPath(root: String, userFolder: String?, playlistFolder: String): String =
+        listOf(root, "Shoebill", folderName(userFolder).orEmpty(), playlistFolder).filter { it.isNotEmpty() }.joinToString("/")
+
+    /** A new file name from what the user typed: the old extension kept, unsafe marks removed. Null if nothing is left. */
+    fun rename(typed: String, oldName: String): String? {
+        val ext = oldName.substringAfterLast('.', "")
+        val base = folderName(typed.removeSuffix(".$ext")) ?: return null
+        return if (ext.isEmpty()) base else "$base.$ext"
+    }
+
     fun speed(line: String?): String? = line?.let { Regex("""\bat\s+([0-9.]+\s*[KMG]?i?B/s)""").find(it)?.groupValues?.get(1) }
 
     /** A failure message may repeat the proxy address, which can hold a password. */

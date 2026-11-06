@@ -221,6 +221,13 @@ class MainActivity : FragmentActivity() { // FragmentActivity: BiometricPrompt (
             Intent.ACTION_SEND -> if (Build.VERSION.SDK_INT >= 33) i.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java) else @Suppress("DEPRECATION") i.getParcelableExtra(Intent.EXTRA_STREAM)
             else -> null
         } ?: return
+        // audio goes to the music player, not the video player; streams and playlists stay with mpv
+        val mime = (i?.type?.takeIf { it != "audio/*" } ?: runCatching { contentResolver.getType(uri) }.getOrNull() ?: i?.type).orEmpty()
+        if (mime.startsWith("audio/") && "mpegurl" !in mime && uri.scheme in setOf("content", "file")) {
+            dev.altayeb.shoebill.music.MusicInbox.uri.value = uri // plays with the full player over whatever tab is open
+            routeRequest.value = RouteRequest(Route.Home)
+            return
+        }
         incoming.value = Incoming(uri)
     }
 }

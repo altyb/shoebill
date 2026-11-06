@@ -239,7 +239,7 @@ fun SettingsScreen(onBack: () -> Unit, onAppearance: () -> Unit) {
                         SwitchRow(stringResource(R.string.music_remember), pb[5], s.rememberQueue, stringResource(R.string.music_remember_sub)) { v -> app.update { it.copy(rememberQueue = v) } }
                     }
                     GroupTitle(stringResource(R.string.music_group_library))
-                    val lib = groupShapes(3)
+                    val lib = groupShapes(4)
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         ChoiceRow(stringResource(R.string.music_start_tab), lib[0], listOf(R.string.music_songs, R.string.music_albums, R.string.music_artists, R.string.music_genres, R.string.music_folders, R.string.music_lists).mapIndexed { i, r -> i to stringResource(r) }, s.musicStartTab) { v -> app.update { it.copy(musicStartTab = v) } }
                         ChoiceRow(stringResource(R.string.music_min_length), lib[1], listOf(0, 30, 60, 120).map { it to if (it == 0) stringResource(R.string.off) else stringResource(R.string.settings_seconds, it) }, s.minSongSec) { v -> app.update { it.copy(minSongSec = v) } }
@@ -255,6 +255,17 @@ fun SettingsScreen(onBack: () -> Unit, onAppearance: () -> Unit) {
                                         FilterChip(f !in s.hiddenFolders, { app.update { it.copy(hiddenFolders = if (f in it.hiddenFolders) it.hiddenFolders - f else it.hiddenFolders + f) } }, { Text(f) })
                                     }
                                 }
+                            }
+                        }
+                        SettingRow(title = stringResource(R.string.music_clear_plays), shape = lib[3], subtitle = stringResource(R.string.music_clear_plays_sub), onClick = { dev.altayeb.shoebill.music.MusicStats.get(context).clearPlays() })
+                    }
+                    GroupTitle(stringResource(R.string.music_group_menu), stringResource(R.string.music_group_menu_sub))
+                    val menu = dev.altayeb.shoebill.music.SongAction.entries
+                    val mg = groupShapes(menu.size)
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        menu.forEachIndexed { i, a ->
+                            SwitchRow(stringResource(a.label), mg[i], a.key !in s.hiddenSongActions) { v ->
+                                app.update { it.copy(hiddenSongActions = if (v) it.hiddenSongActions - a.key else it.hiddenSongActions + a.key) }
                             }
                         }
                     }
@@ -283,6 +294,19 @@ fun SettingsScreen(onBack: () -> Unit, onAppearance: () -> Unit) {
                         title = stringResource(R.string.language), shape = groupShapes(1)[0], onClick = { langDialog = true },
                         trailing = { Text(langNames[lang].orEmpty(), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary) },
                     )
+
+                    GroupTitle(stringResource(R.string.settings_bottom_bar), stringResource(R.string.settings_bottom_bar_sub))
+                    // Library always stays; the others can go when they are not used (an empty Network or Playlists tab).
+                    val tabs = listOf("playlists" to R.string.lib_tab_playlists, "network" to R.string.lib_tab_network, "music" to R.string.lib_tab_music) +
+                        if (dev.altayeb.shoebill.download.DownloadFeature.ENABLED) listOf("downloads" to R.string.lib_tab_downloads) else emptyList()
+                    val bar = groupShapes(tabs.size)
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        tabs.forEachIndexed { i, (key, label) ->
+                            SwitchRow(stringResource(label), bar[i], key !in s.hiddenTabs) { v ->
+                                app.update { it.copy(hiddenTabs = if (v) it.hiddenTabs - key else it.hiddenTabs + key) }
+                            }
+                        }
+                    }
 
                     GroupTitle(stringResource(R.string.settings_privacy))
                     val privacy = groupShapes(2)

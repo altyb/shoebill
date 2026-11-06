@@ -5,6 +5,7 @@ package dev.altayeb.shoebill.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,7 +24,7 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
  * equal widths and one-line labels mean a button can never squeeze its text into wrapping.
  */
 @Composable
-fun <T> ConnectedChoice(options: List<Pair<T, String>>, selected: T?, modifier: Modifier = Modifier, pick: (T) -> Unit) {
+fun <T> ConnectedChoice(options: List<Pair<T, String>>, selected: T?, modifier: Modifier = Modifier, unchecked: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.Unspecified, pick: (T) -> Unit) {
     Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)) {
         options.forEachIndexed { i, (v, label) ->
             ToggleButton(
@@ -31,6 +32,7 @@ fun <T> ConnectedChoice(options: List<Pair<T, String>>, selected: T?, modifier: 
                 onCheckedChange = { pick(v) },
                 modifier = Modifier.weight(1f),
                 contentPadding = PaddingValues(horizontal = 2.dp),
+                colors = if (unchecked.isSpecified) androidx.compose.material3.ToggleButtonDefaults.colors(containerColor = unchecked) else androidx.compose.material3.ToggleButtonDefaults.colors(),
                 shapes = when (i) {
                     0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
                     options.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()

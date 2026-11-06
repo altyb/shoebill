@@ -203,4 +203,17 @@ class MediaLogicTest {
         assertNull(DownloadLogic.parseExtra("--retries 'x"))
         for (bad in listOf("--exec rm", "--exec-before-download x", "-o /sdcard/x", "--output x", "-P /x", "--paths /x", "--config-location /x", "--plugin-dirs /x")) assertNull(bad, DownloadLogic.parseExtra(bad))
     }
+
+    @Test fun downloadPlaylistItemPathAndRename() {
+        assertEquals("4/12", DownloadLogic.playlistItem("[download] Downloading item 4 of 12"))
+        assertEquals("1/3", DownloadLogic.playlistItem("[download] Downloading video 1 of 3"))
+        assertNull(DownloadLogic.playlistItem("[download]  42.0% of 3.00MiB"))
+        assertEquals("Music/Shoebill", DownloadLogic.libraryPath("Music", null, ""))
+        assertEquals("Music/Shoebill/Quran/List", DownloadLogic.libraryPath("Music", " Quran ", "List"))
+        assertEquals("Movies/Shoebill/a b", DownloadLogic.libraryPath("Movies", "../a/b", ""))
+        assertEquals("New song.mp3", DownloadLogic.rename("New song", "old.mp3"))
+        assertEquals("New song.mp3", DownloadLogic.rename("New song.mp3", "old.mp3"))
+        assertEquals("a b.mp3", DownloadLogic.rename("a/b", "old.mp3"))
+        assertNull(DownloadLogic.rename("  ", "old.mp3"))
+    }
 }

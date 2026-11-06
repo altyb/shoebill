@@ -2,6 +2,16 @@
 
 package dev.altayeb.shoebill.music
 
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.material.icons.rounded.Timer
+import dev.altayeb.shoebill.library.logic.SmartLists
+import dev.altayeb.shoebill.library.logic.PlayPeriod
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.runtime.collectAsState
 import dev.altayeb.shoebill.settings.AppSettings
 import androidx.compose.foundation.verticalScroll
@@ -98,6 +108,8 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.Density
 import androidx.graphics.shapes.Morph
 import androidx.media3.common.MediaItem
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.flow.first
 import dev.altayeb.shoebill.ui.EmptyState
 import dev.altayeb.shoebill.ui.theme.Radius
 import kotlinx.coroutines.CoroutineScope
@@ -124,7 +136,8 @@ private fun rememberController(connect: Boolean): MediaController? {
 }
 
 /** What the Music tab, the dock and the sheet share. Lives above the tabs so playback stays visible on all of them. */
-class MusicHost(val state: PlayerState, val sheet: Animatable<Float, AnimationVector1D>) {
+class MusicHost(val state: PlayerState, val sheet: Animatable<Float, AnimationVector1D>, val density: Float = 1f) {
+    var pull = 0f
     var controller by mutableStateOf<MediaController?>(null)
     var songs by mutableStateOf<List<Song>?>(null)
     private val byId by derivedStateOf { songs.orEmpty().associateBy { it.id } }
@@ -138,19 +151,37 @@ class MusicHost(val state: PlayerState, val sheet: Animatable<Float, AnimationVe
 fun rememberMusicHost(tab: Int): MusicHost {
     var connect by remember { mutableStateOf(MusicService.running) }
     LaunchedEffect(tab) { if (tab == MUSIC_TAB) connect = true }
+    val inbox by MusicInbox.uri.collectAsStateWithLifecycle()
+    LaunchedEffect(inbox) { if (inbox != null) connect = true }
     val controller = rememberController(connect)
     val state = rememberPlayerState(controller)
     val sheet = remember { Animatable(0f) }
-    val host = remember { MusicHost(state, sheet) }.also { it.controller = controller }
+    val host = LocalDensity.current.density.let { dp -> remember { MusicHost(state, sheet, dp) } }.also { it.controller = controller }
     // Open or closed survives a theme change, which recreates the activity: the sheet reopens once the controller is back.
     var open by rememberSaveable { mutableStateOf(false) }
     var reopen by remember { mutableStateOf(open) }
     LaunchedEffect(host.hasTrack) { if (reopen && host.hasTrack) { reopen = false; sheet.snapTo(1f) } }
     LaunchedEffect(Unit) { snapshotFlow { sheet.targetValue > 0.5f }.collect { if (!reopen) open = it } }
+    // An audio file opened from anywhere (a finished download, its notification, a file manager) plays at once with the
+    // full player over the current tab, in the library queue when it is in the library.
+    val ctx = LocalContext.current
+    LaunchedEffect(inbox, controller) {
+        val u = inbox ?: return@LaunchedEffect
+        val c = controller ?: return@LaunchedEffect
+        MusicInbox.uri.value = null
+        val all = host.songs ?: runCatching { querySongs(ctx) }.getOrDefault(emptyList()).also { host.songs = it }
+        val id = if (u.authority == android.provider.MediaStore.AUTHORITY) runCatching { android.content.ContentUris.parseId(u) }.getOrNull() else null
+        val i = all.indexOfFirst { it.id == id }
+        if (i >= 0) play(c, all, i) else { c.setMediaItem(MediaItem.fromUri(u)); c.prepare(); c.play() }
+        snapshotFlow { host.hasTrack }.first { it } // the sheet closes itself while there is no track yet
+        sheet.animateTo(1f)
+    }
     return host
 }
 
 const val MUSIC_TAB = 3
+
+object MusicInbox { val uri = kotlinx.coroutines.flow.MutableStateFlow<android.net.Uri?>(null) }
 
 @Composable
 fun MusicTab(host: MusicHost, modifier: Modifier = Modifier) {
@@ -247,9 +278,64 @@ private fun Library(all: List<Song>, c: MediaController?) {
     var listsVersion by remember { mutableIntStateOf(0) }
     var tab by remember { mutableStateOf(LibTab.entries.getOrElse(AppSettings.get(ctx).settings.value.musicStartTab) { LibTab.Songs }) }
     var query by remember { mutableStateOf("") }
+    val ui = remember { ctx.getSharedPreferences("music_ui", android.content.Context.MODE_PRIVATE) }
+    var az by remember { mutableStateOf(ui.getBoolean("az", false)) }
+    LaunchedEffect(az) { ui.edit().putBoolean("az", az).apply() }
     var open by remember { mutableStateOf<Pair<String, List<Song>>?>(null) }
+    // One of your own playlists is open by name, so a removed song or a rename shows at once.
+    var openList by remember { mutableStateOf<String?>(null) }
+    var renameList by remember { mutableStateOf<String?>(null) }
+    var deleteList by remember { mutableStateOf<String?>(null) }
     var addTo by remember { mutableStateOf<Song?>(null) }
-    open?.let { (name, songs) ->
+    var menuFor by remember { mutableStateOf<Song?>(null) }
+    var newList by remember { mutableStateOf(false) }
+    var ringtone by remember { mutableStateOf<Song?>(null) }
+    val stats = remember { MusicStats.get(ctx) }
+    val plays by stats.plays.collectAsStateWithLifecycle()
+    val favs by stats.favorites.collectAsStateWithLifecycle()
+    // A ready-made list is opened by kind, not as a copy: it follows plays and hearts while it is open.
+    var smart by rememberSaveable { mutableStateOf<SmartKind?>(null) }
+    val smartSongs = remember(all, plays, favs) { SmartKind.entries.associateWith { it.songs(all, plays, favs) } }
+    // The span each list shows, kept while it is open and back again (Most played: by plays; Recently added: by days).
+    var period by rememberSaveable { mutableStateOf(PlayPeriod.All) }
+    var days by rememberSaveable { mutableStateOf(0) }
+    smart?.let { k ->
+        BackHandler { smart = null }
+        val keys = remember(plays) { MusicStats.periodKeys() }
+        val songs = remember(k, all, plays, favs, period, days) { k.songs(all, plays, favs, period, days, keys) }
+        val most = k == SmartKind.MostPlayed
+        Column(Modifier.fillMaxSize()) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = { smart = null }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back)) }
+                Text(stringResource(k.label), style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                IconButton(onClick = { play(c, songs, 0) }, enabled = songs.isNotEmpty()) { Icon(Icons.Rounded.PlayArrow, stringResource(R.string.play)) }
+            }
+            if (most) {
+                val month = remember { java.time.LocalDate.now().month.getDisplayName(java.time.format.TextStyle.FULL_STANDALONE, java.util.Locale.getDefault()) }
+                SpanChips(listOf(PlayPeriod.Week to stringResource(R.string.music_this_week), PlayPeriod.Month to month, PlayPeriod.All to stringResource(R.string.music_all_time)), period) { period = it }
+            } else if (k == SmartKind.RecentlyAdded) {
+                SpanChips(listOf(15, 30, 60, 365).map { it to stringResource(R.string.music_past_days, it) } + (0 to stringResource(R.string.music_all_time)), days) { days = it }
+            }
+            // Most played: time spent listening (plays × length); the other lists: how long they take to play through.
+            ListSummary(songs.size, if (most) SmartLists.listened(songs, Song::id, Song::durationMs, plays, period, keys.first, keys.second) else songs.sumOf { it.durationMs })
+            if (songs.isEmpty()) Text(stringResource(k.empty), Modifier.fillMaxWidth().padding(32.dp), textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            else SongList(songs, c, favs, if (most) { s -> SmartLists.plays(plays[s.id], period, keys.first, keys.second) } else null) { menuFor = it }
+        }
+    } ?: openList?.let { name ->
+        BackHandler { openList = null }
+        val songs = remember(name, all, listsVersion) { lists.songs(name, all) }
+        Column(Modifier.fillMaxSize()) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = { openList = null }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back)) }
+                Text(name, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                IconButton(onClick = { play(c, songs, 0) }, enabled = songs.isNotEmpty()) { Icon(Icons.Rounded.PlayArrow, stringResource(R.string.play)) }
+                ListMenu({ renameList = name }, { deleteList = name })
+            }
+            ListSummary(songs.size, songs.sumOf { it.durationMs })
+            if (songs.isEmpty()) Text(stringResource(R.string.music_list_empty), Modifier.fillMaxWidth().padding(32.dp), textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            else SongList(songs, c, favs) { menuFor = it }
+        }
+    } ?: open?.let { (name, songs) ->
         BackHandler { open = null }
         Column(Modifier.fillMaxSize()) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -257,38 +343,103 @@ private fun Library(all: List<Song>, c: MediaController?) {
                 Text(name, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 IconButton(onClick = { play(c, songs, 0) }) { Icon(Icons.Rounded.PlayArrow, stringResource(R.string.play)) }
             }
-            SongList(songs, c) { addTo = it }
+            ListSummary(songs.size, songs.sumOf { it.durationMs })
+            SongList(songs, c, favs) { menuFor = it }
         }
     } ?: Column(Modifier.fillMaxSize()) {
         OutlinedTextField(query, { query = it }, Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), singleLine = true,
             label = { Text(stringResource(R.string.search)) }, leadingIcon = { Icon(Icons.Rounded.Search, null) })
         Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             LibTab.entries.forEach { t -> FilterChip(tab == t, { tab = t }, { Text(stringResource(t.label)) }) }
+            VerticalDivider(Modifier.height(32.dp).align(Alignment.CenterVertically))
+            FilterChip(az, { az = !az }, { Text(stringResource(if (az) R.string.music_sort_az else R.string.music_sort_new)) })
         }
         val q = query.trim()
-        val hits = remember(all, q) { if (q.isEmpty()) all else all.filter { listOf(it.title, it.artist, it.album).any { f -> f.contains(q, true) } } }
+        val hits = remember(all, q, az) {
+            val found = if (q.isEmpty()) all else all.filter { listOf(it.title, it.artist, it.album).any { f -> f.contains(q, true) } }
+            if (az) found.sortedWith(compareBy(NaturalOrder) { it.title }) else found // the library comes newest first
+        }
         // Grouping and sorting once per (list, tab), not on every recomposition the 4 Hz position tick causes.
-        val groups = remember(hits, tab, listsVersion) {
+        val groups = remember(hits, tab, listsVersion, az) {
             fun by(songs: List<Song>, key: (Song) -> String) = songs.groupBy(key).toSortedMap(NaturalOrder).map { it.key to it.value }
             when (tab) {
                 LibTab.Songs -> emptyList()
                 LibTab.Albums -> by(hits) { it.album }
                 LibTab.Genres -> by(hits.filter { it.genre.isNotBlank() }) { it.genre }
                 LibTab.Artists -> by(hits) { it.artist.ifEmpty { "—" } }
-                LibTab.Folders -> by(hits) { it.folder }
+                LibTab.Folders -> if (az) by(hits) { it.folder } else hits.groupBy { it.folder }.toList() // newest: the folder with the latest song leads
                 LibTab.Lists -> lists.names().map { it to lists.songs(it, all) }
             }
         }
+        val allLabel = stringResource(R.string.music_all_songs)
         when (tab) {
-            LibTab.Songs -> SongList(hits, c) { addTo = it }
+            LibTab.Songs -> SongList(hits, c, favs) { menuFor = it }
             LibTab.Albums -> AlbumGrid(groups) { n, s -> open = n to s.sortedWith(compareBy<Song> { it.track }.thenBy(NaturalOrder) { it.title }) }
-            LibTab.Lists -> {
-                if (groups.isEmpty()) Text(stringResource(R.string.music_lists_empty), Modifier.fillMaxWidth().padding(32.dp), textAlign = TextAlign.Center)
-                GroupList(groups) { n, s -> open = n to s }
+            LibTab.Lists -> LazyColumn(Modifier.fillMaxSize()) {
+                item(key = "all") {
+                    Row(Modifier.fillMaxWidth().clickable { open = allLabel to hits }.padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Surface(Modifier.size(52.dp), shape = Radius.S, color = MaterialTheme.colorScheme.secondaryContainer) { Box(contentAlignment = Alignment.Center) { Icon(Icons.Rounded.LibraryMusic, null) } }
+                        Spacer(Modifier.width(12.dp))
+                        Column {
+                            Text(allLabel, style = MaterialTheme.typography.titleMedium, maxLines = 1)
+                            Text(pluralStringResource(R.plurals.music_count, hits.size, hits.size), style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+                items(SmartKind.entries, key = { "smart-" + it.name }) { k ->
+                    Row(Modifier.fillMaxWidth().clickable { smart = k }.padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Surface(Modifier.size(52.dp), shape = Radius.S, color = MaterialTheme.colorScheme.secondaryContainer) { Box(contentAlignment = Alignment.Center) { Icon(k.icon, null) } }
+                        Spacer(Modifier.width(12.dp))
+                        Column {
+                            Text(stringResource(k.label), style = MaterialTheme.typography.titleMedium, maxLines = 1)
+                            Text(pluralStringResource(R.plurals.music_count, smartSongs.getValue(k).size, smartSongs.getValue(k).size), style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
+                item(key = "yours") {
+                    Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(stringResource(R.string.music_your_lists), Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+                        TextButton(onClick = { newList = true }) { Icon(Icons.Rounded.Add, null); Spacer(Modifier.width(4.dp)); Text(stringResource(R.string.music_new_list_button)) }
+                    }
+                }
+                if (groups.isEmpty()) item(key = "none") { Text(stringResource(R.string.music_lists_empty), Modifier.fillMaxWidth().padding(32.dp), textAlign = TextAlign.Center) }
+                items(groups, key = { "list-" + it.first }) { (name, songs) -> GroupRow(name, songs, { ListMenu({ renameList = name }, { deleteList = name }) }) { openList = name } }
             }
             else -> GroupList(groups) { n, s -> open = n to s }
         }
     }
+    if (newList) {
+        var name by remember { mutableStateOf("") }
+        AlertDialog(onDismissRequest = { newList = false }, title = { Text(stringResource(R.string.music_new_list)) },
+            text = { OutlinedTextField(name, { name = it.take(60) }, singleLine = true, label = { Text(stringResource(R.string.ring_name)) }) },
+            confirmButton = { TextButton(enabled = name.isNotBlank(), onClick = { lists.create(name.trim()); listsVersion++; newList = false }) { Text(stringResource(R.string.music_create)) } },
+            dismissButton = { TextButton(onClick = { newList = false }) { Text(stringResource(R.string.cancel)) } })
+    }
+    menuFor?.let { s ->
+        val inList = openList
+        SongMenu(s, c, onDismiss = { menuFor = null }, onAddToList = { addTo = s }, onRingtone = { ringtone = s },
+            onRemove = inList?.let { n -> { lists.remove(n, s.id); listsVersion++ } })
+    }
+    renameList?.let { old ->
+        var name by remember(old) { mutableStateOf(old) }
+        val t = name.trim()
+        val taken = t != old && lists.exists(t)
+        AlertDialog(onDismissRequest = { renameList = null }, title = { Text(stringResource(R.string.rename)) },
+            text = { OutlinedTextField(name, { name = it.take(60) }, singleLine = true, label = { Text(stringResource(R.string.ring_name)) },
+                isError = taken, supportingText = if (taken) { { Text(stringResource(R.string.music_list_taken)) } } else null) },
+            confirmButton = { TextButton(enabled = t.isNotEmpty() && !taken, onClick = {
+                if (t == old || lists.rename(old, t)) { if (openList == old) openList = t; listsVersion++ }
+                renameList = null
+            }) { Text(stringResource(R.string.rename)) } },
+            dismissButton = { TextButton(onClick = { renameList = null }) { Text(stringResource(R.string.cancel)) } })
+    }
+    deleteList?.let { n ->
+        AlertDialog(onDismissRequest = { deleteList = null }, title = { Text(stringResource(R.string.music_delete_list)) },
+            text = { Text(stringResource(R.string.music_delete_list_q, n)) },
+            confirmButton = { TextButton(onClick = { lists.delete(n); if (openList == n) openList = null; listsVersion++; deleteList = null }) { Text(stringResource(R.string.delete)) } },
+            dismissButton = { TextButton(onClick = { deleteList = null }) { Text(stringResource(R.string.cancel)) } })
+    }
+    ringtone?.let { s -> RingtoneMaker(s) { ringtone = null } }
     addTo?.let { s ->
         var name by remember { mutableStateOf("") }
         AlertDialog(
@@ -305,13 +456,35 @@ private fun Library(all: List<Song>, c: MediaController?) {
 }
 
 @Composable
-private fun SongList(songs: List<Song>, c: MediaController?, onLong: (Song) -> Unit) {
+private fun SongList(songs: List<Song>, c: MediaController?, favs: List<Long>, badge: ((Song) -> Int)? = null, onLong: (Song) -> Unit) {
+    val fav = remember(favs) { favs.toHashSet() }
     LazyColumn(Modifier.fillMaxSize()) {
-        itemsIndexed(songs, key = { _, s -> s.id }) { i, s -> SongRow(s, { play(c, songs, i) }, { onLong(s) }) }
+        itemsIndexed(songs, key = { _, s -> s.id }) { i, s -> SongRow(s, s.id in fav, badge?.invoke(s), { play(c, songs, i) }, { onLong(s) }) }
     }
 }
 
-/** Decoded covers by album and request size, bounded by bytes, so scrolling back never decodes again or flashes the placeholder. */
+/** The line on top of an open list: how many songs and how long (as Musicolet shows it). */
+@Composable
+private fun ListSummary(count: Int, totalMs: Long) {
+    val cs = MaterialTheme.colorScheme
+    Row(Modifier.padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(pluralStringResource(R.plurals.music_count, count, count), style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
+        Spacer(Modifier.width(16.dp))
+        Icon(Icons.Rounded.Timer, null, Modifier.size(16.dp), tint = cs.onSurfaceVariant)
+        Spacer(Modifier.width(4.dp))
+        Text(formatTime(totalMs), style = MaterialTheme.typography.bodyMedium, color = cs.onSurfaceVariant)
+    }
+}
+
+/** The span chips of a ready-made list (this week / this month / all time, or past N days). */
+@Composable
+private fun <T> SpanChips(options: List<Pair<T, String>>, selected: T, pick: (T) -> Unit) {
+    Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        options.forEach { (v, label) -> FilterChip(v == selected, { pick(v) }, { Text(label) }) }
+    }
+}
+
+/** Decoded covers by song and request size (not album: downloads with no album tag all share their folder's album id), bounded by bytes, so scrolling back never decodes again or flashes the placeholder. */
 private val artCache = object : LruCache<Pair<Long, Int>, Bitmap>(32 shl 20) { override fun sizeOf(key: Pair<Long, Int>, value: Bitmap) = value.byteCount }
 /** Songs with no cover, by song and size: asked once per run. Per song, not per album, so one bare track never hides the art its album mates carry. */
 private val artMissing: MutableSet<Pair<Long, Int>> = java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap())
@@ -353,7 +526,7 @@ private fun AlbumGrid(groups: List<Pair<String, List<Song>>>, open: (String, Lis
                 Column {
                     songs.firstOrNull()?.let { Art(it, side) }
                     Text(name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
-                    Text(songs.first().artist.ifEmpty { stringResource(R.string.music_count, songs.size) }, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(songs.first().artist.ifEmpty { pluralStringResource(R.plurals.music_count, songs.size, songs.size) }, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -363,22 +536,41 @@ private fun AlbumGrid(groups: List<Pair<String, List<Song>>>, open: (String, Lis
 @Composable
 private fun GroupList(groups: List<Pair<String, List<Song>>>, open: (String, List<Song>) -> Unit) {
     LazyColumn(Modifier.fillMaxSize()) {
-        items(groups, key = { it.first }) { (name, songs) ->
-            Row(Modifier.fillMaxWidth().clickable { open(name, songs) }.padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                songs.firstOrNull()?.let { Art(it, 52) }
-                Spacer(Modifier.width(12.dp))
-                Column {
-                    Text(name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(stringResource(R.string.music_count, songs.size), style = MaterialTheme.typography.bodySmall)
-                }
-            }
+        items(groups, key = { it.first }) { (name, songs) -> GroupRow(name, songs) { open(name, songs) } }
+    }
+}
+
+@Composable
+private fun GroupRow(name: String, songs: List<Song>, trailing: (@Composable () -> Unit)? = null, onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        songs.firstOrNull()?.let { Art(it, 52) } ?: Surface(Modifier.size(52.dp), shape = Radius.S, color = MaterialTheme.colorScheme.secondaryContainer) {
+            Box(contentAlignment = Alignment.Center) { Icon(Icons.AutoMirrored.Rounded.QueueMusic, null) }
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(pluralStringResource(R.plurals.music_count, songs.size, songs.size), style = MaterialTheme.typography.bodySmall)
+        }
+        trailing?.invoke()
+    }
+}
+
+/** ⋮ on one of your playlists: rename or delete it. */
+@Composable
+private fun ListMenu(onRename: () -> Unit, onDelete: () -> Unit) {
+    var shown by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { shown = true }) { Icon(Icons.Rounded.MoreVert, stringResource(R.string.music_list_options)) }
+        DropdownMenu(shown, { shown = false }) {
+            DropdownMenuItem({ Text(stringResource(R.string.rename)) }, { shown = false; onRename() }, leadingIcon = { Icon(Icons.Rounded.Edit, null) })
+            DropdownMenuItem({ Text(stringResource(R.string.delete)) }, { shown = false; onDelete() }, leadingIcon = { Icon(Icons.Rounded.Delete, null) })
         }
     }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun SongRow(s: Song, onClick: () -> Unit, onLong: () -> Unit) {
+private fun SongRow(s: Song, favorite: Boolean, plays: Int?, onClick: () -> Unit, onLong: () -> Unit) {
     Row(Modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = onLong).padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Art(s, 48)
         Spacer(Modifier.width(12.dp))
@@ -386,7 +578,15 @@ private fun SongRow(s: Song, onClick: () -> Unit, onLong: () -> Unit) {
             Text(s.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(listOf(s.artist, s.album).filter { it.isNotEmpty() }.joinToString(" · "), style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        Text(formatTime(s.durationMs), style = MaterialTheme.typography.labelMedium)
+        if (favorite) Icon(Icons.Rounded.Favorite, stringResource(R.string.music_favorite), Modifier.padding(end = 8.dp).size(16.dp), tint = MaterialTheme.colorScheme.primary)
+        // Most played: the play count of the chosen span, over the length.
+        if (plays != null) Column(horizontalAlignment = Alignment.End) {
+            Surface(shape = Radius.S, color = MaterialTheme.colorScheme.primaryContainer) {
+                Text("$plays", Modifier.padding(horizontal = 8.dp, vertical = 2.dp), style = MaterialTheme.typography.labelLarge)
+            }
+            Spacer(Modifier.height(2.dp))
+            Text(formatTime(s.durationMs), style = MaterialTheme.typography.labelMedium)
+        } else Text(formatTime(s.durationMs), style = MaterialTheme.typography.labelMedium)
     }
 }
 
@@ -395,12 +595,11 @@ private fun Art(s: Song, sizeDp: Int) {
     val ctx = LocalContext.current
     // Asked at the size drawn (rounded up to a bucket), so the 280 dp cover is not a 256 px thumbnail stretched.
     val px = artBucket(with(LocalDensity.current) { sizeDp.dp.roundToPx() })
-    val key = s.albumId to px
+    val key = s.id to px
     // State keyed on the song: a track change shows its own cover or the placeholder at once, never the previous cover.
     val bmp = remember(s.id, px) { mutableStateOf(artCache.get(key)) }
     LaunchedEffect(s.id, px) {
         if (bmp.value != null || (s.id to px) in artMissing) return@LaunchedEffect
-        artCache.get(key)?.let { bmp.value = it; return@LaunchedEffect } // an album mate decoded it since the cache miss above
         val b = withContext(artIo) {
             if (Build.VERSION.SDK_INT >= 29) runCatching { ctx.contentResolver.loadThumbnail(s.uri, Size(px, px), null) }.getOrNull() else null
         }
@@ -413,7 +612,10 @@ private fun Art(s: Song, sizeDp: Int) {
     else Box(Modifier.size(sizeDp.dp).clip(shape).background(MaterialTheme.colorScheme.secondaryContainer), contentAlignment = Alignment.Center) { Icon(Icons.Rounded.MusicNote, null) }
 }
 
-private fun settle(host: MusicHost, scope: CoroutineScope, springOpen: FiniteAnimationSpec<Float>, springClose: FiniteAnimationSpec<Float>, velocity: Float = 0f) {
+private fun settle(host: MusicHost, scope: CoroutineScope, springOpen: FiniteAnimationSpec<Float>, springClose: FiniteAnimationSpec<Float>, velocity: Float = 0f, density: Float = host.density) {
+    // A fling down on the closed bar turns the music off and the bar goes away.
+    val pulled = host.pull; host.pull = 0f
+    if ((velocity > 300f || pulled > 48f * density) && host.sheet.value < 0.05f) { host.controller?.let(::close); return }
     val open = if (kotlin.math.abs(velocity) > 300f) velocity < 0 else host.sheet.value > 0.3f
     scope.launch { host.sheet.animateTo(if (open) 1f else 0f, if (open) springOpen else springClose) }
 }
@@ -422,9 +624,14 @@ private fun settle(host: MusicHost, scope: CoroutineScope, springOpen: FiniteAni
 private fun rememberSheetDrag(host: MusicHost, scope: CoroutineScope): DraggableState {
     val range = LocalWindowInfo.current.containerSize.height.toFloat().coerceAtLeast(1f)
     return androidx.compose.foundation.gestures.rememberDraggableState { d ->
+        // How far the closed bar is pulled down past its rest: enough of it turns the music off (see settle).
+        host.pull = if (host.sheet.value <= 0f && d > 0f) host.pull + d else 0f
         scope.launch { host.sheet.snapTo((host.sheet.value - d / range).coerceIn(0f, 1f)) }
     }
 }
+
+/** Music off: stop and empty the queue, so the bar and the notification go away. */
+private fun close(c: MediaController) { c.stop(); c.clearMediaItems() }
 
 /** The top of the bottom dock: same surface as the tabs, no card of its own. Tap or drag up to open. */
 @Composable
@@ -450,7 +657,9 @@ fun MiniPlayer(host: MusicHost) {
         IconButton(onClick = { if (s.playing) c.pause() else c.play() }, shapes = IconButtonDefaults.shapes()) {
             Icon(if (s.playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, stringResource(if (s.playing) R.string.pause else R.string.play))
         }
-        IconButton(onClick = { c.seekToNext() }, shapes = IconButtonDefaults.shapes()) { Icon(Icons.Rounded.SkipNext, stringResource(R.string.player_next)) }
+        // Paused: next is of little use, so the place turns into close.
+        if (s.playing) IconButton(onClick = { c.seekToNext() }, shapes = IconButtonDefaults.shapes()) { Icon(Icons.Rounded.SkipNext, stringResource(R.string.player_next)) }
+        else IconButton(onClick = { close(c) }, shapes = IconButtonDefaults.shapes()) { Icon(Icons.Rounded.Close, stringResource(R.string.music_close)) }
     }
     // Moves while playing and lies flat when paused, which is also the only way to tell the two apart at a glance.
     LinearWavyProgressIndicator(
@@ -561,8 +770,15 @@ private fun NowPlaying(c: MediaController, host: MusicHost, modifier: Modifier, 
             } }
         }
         Column(Modifier.fillMaxWidth().arrive(progress, 0.35f), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(s.current?.mediaMetadata?.title?.toString().orEmpty(), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
-            Text(s.current?.mediaMetadata?.artist?.toString().orEmpty(), style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Spacer(Modifier.size(48.dp)) // balances the heart, so the title stays centred
+                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(s.current?.mediaMetadata?.title?.toString().orEmpty(), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+                    Text(s.current?.mediaMetadata?.artist?.toString().orEmpty(), style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                val id = s.current?.mediaId?.toLongOrNull()
+                if (id != null) FavoriteButton(id) else Spacer(Modifier.size(48.dp))
+            }
         }
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
             Column(Modifier.arrive(progress, 0.45f)) {

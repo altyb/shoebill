@@ -118,6 +118,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.material3.NavigationItemIconPosition
 import androidx.compose.runtime.derivedStateOf
 
 // Index order is what HomeScreen switches on. Downloads exists only in the full build, so it stays last.
@@ -127,6 +128,9 @@ private val homeTabs = listOf(
     R.string.lib_tab_network to Icons.Rounded.Lan,
     R.string.lib_tab_music to Icons.Rounded.MusicNote,
 ) + if (DownloadFeature.ENABLED) listOf(R.string.lib_tab_downloads to Icons.Rounded.Download) else emptyList()
+
+/** Settings key per tab index, for hiding tabs from the bar; Library (0) has none and always stays. */
+private val tabKeys = listOf("", "playlists", "network", "music", "downloads")
 
 /** A deep link (notification, shoebill://music) asks the home screen for a tab. */
 object HomeNav { val tab = kotlinx.coroutines.flow.MutableStateFlow<Int?>(null) }
@@ -141,13 +145,19 @@ fun HomeScreen(
     onSettings: () -> Unit,
     onVault: () -> Unit,
     onPlayQueue: (List<Pair<Uri, String>>, Int) -> Unit,
-) = VideoGate { videos ->
+) {
+    // Only the Videos tab needs video access and at least one video; Music, Downloads and the rest work without either.
+    val videos = VideoIndex.videos.collectAsStateWithLifecycle().value.orEmpty()
     val ctx = LocalContext.current
     val states by PlaybackStore.get(ctx).all.collectAsStateWithLifecycle()
     var tab by rememberSaveable { mutableIntStateOf(0) }
     // A link shared to the app opens on Downloads.
     val shared by SharedLink.value.collectAsStateWithLifecycle()
     LaunchedEffect(shared) { if (shared != null && DownloadFeature.ENABLED) tab = 4 }
+    val hidden = dev.altayeb.shoebill.settings.AppSettings.get(ctx).settings.collectAsStateWithLifecycle().value.hiddenTabs
+    val shownTabs = remember(hidden) { homeTabs.indices.filter { it == 0 || tabKeys[it] !in hidden } }
+    // A tab turned off while open falls back to Library. A deep link may still open a hidden tab; it just has no button.
+    LaunchedEffect(shownTabs) { if (tab !in shownTabs && HomeNav.tab.value == null) tab = 0 }
     val navTab by HomeNav.tab.collectAsStateWithLifecycle()
     LaunchedEffect(navTab) { navTab?.let { if (it < homeTabs.size) tab = it; HomeNav.tab.value = null } }
     val scroll = TopAppBarDefaults.pinnedScrollBehavior()
@@ -186,7 +196,7 @@ fun HomeScreen(
             )
         },
         bottomBar = {
-            HomeDock(music, tab, Modifier.onSizeChanged { dockHeight = it.height }) { tab = it }
+            HomeDock(music, tab, shownTabs, Modifier.onSizeChanged { dockHeight = it.height }) { tab = it }
         },
     ) { pad ->
         // Plain fade between tabs: scaling a whole list of thumbnails costs frames for little gain.
@@ -199,8 +209,9 @@ fun HomeScreen(
             MUSIC_TAB -> { MusicTab(music, Modifier.padding(pad)); return@AnimatedContent }
             4 -> { DownloadFeature.Tab(Modifier.padding(pad)); return@AnimatedContent }
         }
+        Box(Modifier.padding(pad)) { VideoGate { _ ->
         LazyColumn(
-            Modifier.fillMaxSize().padding(pad),
+            Modifier.fillMaxSize(),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
         ) {
             item {
@@ -252,6 +263,7 @@ fun HomeScreen(
             }
             item { Spacer(Modifier.height(16.dp)) }
         }
+        } }
         }
     }
     MusicSheet(music, dockHeight)
@@ -344,20 +356,33 @@ private fun FolderRow(f: FolderInfo, shape: Shape, modifier: Modifier, onClick: 
 /** One surface from the mini player down to the tabs. The tabs are Material 3 Expressive's own bar, with its own motion. */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun HomeDock(music: MusicHost, tab: Int, modifier: Modifier, onTab: (Int) -> Unit) {
+private fun HomeDock(music: MusicHost, tab: Int, shown: List<Int>, modifier: Modifier, onTab: (Int) -> Unit) {
     val cs = MaterialTheme.colorScheme
     Surface(modifier, shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp), color = cs.surfaceContainer) {
         Column(Modifier.animateContentSize(MaterialTheme.motionScheme.defaultSpatialSpec())) {
             if (music.hasTrack) MiniPlayer(music)
             // Narrow phones get one smaller size for all five labels, so they stay equal and do not collide.
             val navLabel = if (LocalConfiguration.current.screenWidthDp < 360) MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp) else MaterialTheme.typography.labelMedium
+            // Up to four tabs: icons only, and the chosen one shows its name beside the icon (Material's horizontal item).
+            // Five: every name under its icon, as before, so none is cut.
+            val compact = shown.size <= 4
             ShortNavigationBar(containerColor = Color.Transparent) {
-                homeTabs.forEachIndexed { i, (labelRes, icon) ->
+                shown.forEach { i ->
+                    val (labelRes, icon) = homeTabs[i]
+                    val name = stringResource(labelRes)
+                    val selected = tab == i
                     ShortNavigationBarItem(
-                        selected = tab == i,
+                        selected = selected,
                         onClick = { onTab(i) },
-                        icon = { Icon(icon, null) },
-                        label = { Text(stringResource(labelRes), maxLines = 1, softWrap = false, style = navLabel, autoSize = TextAutoSize.StepBased(minFontSize = 8.sp, maxFontSize = navLabel.fontSize)) },
+                        icon = { Icon(icon, if (compact && !selected) name else null) },
+                        iconPosition = if (compact) NavigationItemIconPosition.Start else NavigationItemIconPosition.Top,
+                        label = {
+                            androidx.compose.animation.AnimatedVisibility(!compact || selected,
+                                enter = androidx.compose.animation.expandHorizontally(MaterialTheme.motionScheme.fastSpatialSpec()) + fadeIn(MaterialTheme.motionScheme.fastEffectsSpec()),
+                                exit = androidx.compose.animation.shrinkHorizontally(MaterialTheme.motionScheme.fastSpatialSpec()) + fadeOut(MaterialTheme.motionScheme.fastEffectsSpec())) {
+                                Text(name, maxLines = 1, softWrap = false, style = navLabel, autoSize = TextAutoSize.StepBased(minFontSize = 8.sp, maxFontSize = navLabel.fontSize))
+                            }
+                        },
                     )
                 }
             }

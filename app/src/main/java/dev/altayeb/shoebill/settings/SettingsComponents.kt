@@ -43,12 +43,13 @@ fun groupShapes(count: Int): List<Shape> = List(count) { i ->
     )
 }
 
+/** A group's name, with an optional line that explains the whole group (not one row of it). */
 @Composable
-fun GroupTitle(text: String) {
-    Text(
-        text, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 4.dp),
-    )
+fun GroupTitle(text: String, hint: String? = null) {
+    Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 4.dp)) {
+        Text(text, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+        if (hint != null) Text(hint, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
 }
 
 @Composable
@@ -105,7 +106,7 @@ fun <T> ChoiceRow(title: String, shape: Shape, options: List<Pair<T, String>>, s
             Text(title, style = MaterialTheme.typography.bodyLarge)
             Spacer(Modifier.padding(top = 8.dp))
             // Few short answers: one joined control. Long ones: chips that wrap, so none hides off the edge.
-            if (options.size <= 4 && options.all { it.second.length <= 9 }) ConnectedChoice(options, selected, pick = pick)
+            if (options.size <= 4 && options.all { it.second.length <= 9 }) ConnectedChoice(options, selected, unchecked = MaterialTheme.colorScheme.surfaceContainerLowest, pick = pick)
             else @OptIn(ExperimentalLayoutApi::class) FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 options.forEach { (v, label) -> FilterChip(v == selected, { pick(v) }, { Text(label) }) }
             }

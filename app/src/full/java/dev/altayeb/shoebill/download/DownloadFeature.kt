@@ -5,6 +5,11 @@ package dev.altayeb.shoebill.download
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Search
+import android.widget.Toast
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearWavyProgressIndicator
@@ -123,9 +128,22 @@ object DownloadFeature {
         LaunchedEffect(Unit) { withContext(Dispatchers.IO) { DownloadQueue.loadHistory(ctx) } }
         val jobs by DownloadQueue.jobs.collectAsStateWithLifecycle()
         var kind by remember { mutableStateOf(0) } // 0 all, 1 video, 2 audio
+        var sort by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(0) } // 0 newest, 1 oldest, 2 name, 3 size
+        var query by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
         val notify = androidx.activity.compose.rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
         val cs = MaterialTheme.colorScheme
         val hero = jobs.firstOrNull { it.state == DlState.Running || it.state == DlState.Finishing }
+        // The search and type filters act only while their controls are on screen: a word typed earlier must never hide a card for good.
+        val controls = jobs.count { it !== hero && it.state == DlState.Done } > 1
+        val q = if (controls) query.trim() else ""
+        val k = if (controls) kind else 0
+        // Unfinished work stays on top in queue order; the sort and search apply to the finished ones.
+        val shown = remember(jobs, hero, k, sort, q) {
+            val rest = jobs.filter { it !== hero }
+            val open = rest.filter { it.state == DlState.Waiting || it.state == DlState.Paused }
+            val done = rest.filter { it !in open && (k == 0 || (it.state == DlState.Done && it.audio == (k == 2))) && (q.isEmpty() || it.title.contains(q, true) || it.uploader.contains(q, true)) }
+            open + when (sort) { 1 -> done; 2 -> done.sortedWith(compareBy(dev.altayeb.shoebill.library.logic.NaturalOrder) { it.title }); 3 -> done.sortedByDescending { it.size }; else -> done.reversed() }
+        }
         LazyColumn(modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item(key = "hero") {
                 Column(Modifier.animateContentSize()) {
@@ -148,12 +166,24 @@ object DownloadFeature {
                     val others = jobs.filter { it !== hero }
                     if (others.isNotEmpty()) Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(stringResource(R.string.dl_queue), Modifier.weight(1f), style = MaterialTheme.typography.titleSmall)
+                        if (jobs.any { it.state == DlState.Paused }) TextButton(onClick = { DownloadQueue.resumeAll(ctx) }) { Text(stringResource(R.string.dl_resume_all)) }
+                        else if (jobs.count { it.state == DlState.Waiting || it.state == DlState.Running } > 1) TextButton(onClick = { DownloadQueue.pauseAll() }) { Text(stringResource(R.string.dl_pause_all)) }
                         TextButton(onClick = { DownloadQueue.clearFinished() }, contentPadding = PaddingValues(horizontal = 0.dp, vertical = 8.dp)) { Text(stringResource(R.string.dl_clear)) }
                     }
-                    if (others.any { it.state == DlState.Done }) dev.altayeb.shoebill.ui.ConnectedChoice(listOf(0 to stringResource(R.string.dl_all), 1 to stringResource(R.string.dl_video), 2 to stringResource(R.string.dl_audio)), kind) { kind = it }
+                    if (others.count { it.state == DlState.Done } > 1) {
+                        OutlinedTextField(query, { query = it.take(100) }, Modifier.fillMaxWidth(), singleLine = true, label = { Text(stringResource(R.string.dl_search)) }, leadingIcon = { Icon(Icons.Rounded.Search, null) })
+                        Spacer(Modifier.height(8.dp))
+                        dev.altayeb.shoebill.ui.ConnectedChoice(listOf(0 to stringResource(R.string.dl_all), 1 to stringResource(R.string.dl_video), 2 to stringResource(R.string.dl_audio)), kind) { kind = it }
+                        Spacer(Modifier.height(8.dp))
+                        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf(R.string.dl_sort_new, R.string.dl_sort_old, R.string.dl_sort_name, R.string.dl_sort_size).forEachIndexed { n, label ->
+                                FilterChip(sort == n, { sort = n }, { Text(stringResource(label)) })
+                            }
+                        }
+                    }
                 }
             }
-            items(jobs.filter { it !== hero && (kind == 0 || (it.state == DlState.Done && it.audio == (kind == 2))) }.reversed(), key = { it.id }) { j -> JobCard(j, Modifier.animateItem()) }
+            items(shown, key = { it.id }) { j -> JobCard(j, Modifier.animateItem()) }
             if (jobs.isEmpty()) item(key = "none") { EmptyState(R.drawable.art_download, stringResource(R.string.dl_none), Modifier.height(320.dp)) }
         }
         sheetUrl?.let { u -> ConfigureSheet(u, { sheetUrl = null }) { url = "" } }
@@ -161,7 +191,7 @@ object DownloadFeature {
 
     /** Before anything downloads: what this link is, and how to save it. Starts from the Settings defaults. */
     @Composable
-    private fun ConfigureSheet(url: String, close: () -> Unit, started: () -> Unit) {
+    fun ConfigureSheet(url: String, close: () -> Unit, started: () -> Unit) {
         val ctx = LocalContext.current
         val prefs = remember { DlPrefs(ctx) }
         val proxy = remember { prefs.proxy.takeIf { it.isNotBlank() }?.trim() }
@@ -173,14 +203,19 @@ object DownloadFeature {
         var format by remember { mutableStateOf<Fmt?>(null) }
         var showFormats by remember { mutableStateOf(false) }
         val unpicked = remember { androidx.compose.runtime.mutableStateListOf<String>() }
+        var folder by remember { mutableStateOf("") }
+        val folders = remember { DownloadQueue.jobs.value.mapNotNull { it.options.folder }.distinct().take(8) }
         LaunchedEffect(url) {
             withContext(Dispatchers.IO) { runCatching {
-                (if (DownloadLogic.looksLikePlaylist(url)) runCatching { Probe.playlist(ctx, url, proxy) }.getOrNull() else null) ?: Probe.info(ctx, url, proxy)
+                (if (DownloadLogic.looksLikePlaylist(url)) runCatching { Probe.playlist(ctx, url, proxy) }.getOrNull() else null)
+                    // once more on failure: on the very first run yt-dlp renews itself while this read runs, and the first read can fail
+                    ?: runCatching { Probe.info(ctx, url, proxy) }.getOrElse { Probe.info(ctx, url, proxy) }
             } }
                 .onSuccess { info = it }
                 .onFailure { e -> error = DownloadLogic.scrub(e.message.orEmpty().lineSequence().lastOrNull { it.startsWith("ERROR") } ?: ctx.getString(R.string.dl_no_preview), proxy).take(200) }
         }
-        ModalBottomSheet(onDismissRequest = close) {
+        // Fully open at once: half-open hid the Start button below the fold.
+        ModalBottomSheet(onDismissRequest = close, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
             val i = info
             val entries = i?.entries.orEmpty()
             // The buttons stay in reach however long the format or playlist list gets.
@@ -224,21 +259,31 @@ object DownloadFeature {
                 val fmts = i?.formats.orEmpty()
                 if (fmts.isNotEmpty()) {
                     TextButton(onClick = { showFormats = !showFormats }, contentPadding = PaddingValues(horizontal = 0.dp, vertical = 8.dp)) { Text(stringResource(R.string.dl_all_formats, fmts.size)) }
-                    if (showFormats) FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        fmts.forEach { f -> FilterChip(format == f, { format = f.takeIf { format != it } }, { Text(DownloadLogic.formatLabel(f)) }) }
+                    if (showFormats) listOf(R.string.dl_formats_video to fmts.filter { it.hasVideo }, R.string.dl_formats_audio to fmts.filter { it.audioOnly }).forEach { (title, group) ->
+                        if (group.isNotEmpty()) {
+                            Text(stringResource(title, group.size), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                group.forEach { f -> FilterChip(format == f, { format = f.takeIf { format != it } }, { Text(DownloadLogic.formatLabel(f)) }) }
+                            }
+                        }
                     }
                 }
                 if (entries.isEmpty()) Row(Modifier.offset(x = (-12).dp), verticalAlignment = Alignment.CenterVertically) { Checkbox(playlist, { playlist = it }); Text(stringResource(R.string.dl_playlist)) }
                 if (quality.audio == null) Row(Modifier.offset(x = (-12).dp), verticalAlignment = Alignment.CenterVertically) { Checkbox(subs, { subs = it }); Text(stringResource(R.string.dl_subs)) }
+                OutlinedTextField(folder, { folder = it.take(80) }, Modifier.fillMaxWidth(), singleLine = true, label = { Text(stringResource(R.string.dl_folder)) },
+                    supportingText = { Text(stringResource(R.string.dl_folder_hint, (if (quality.audio != null || format?.audioOnly == true) "Music" else "Movies") + "/Shoebill" + (DownloadLogic.folderName(folder)?.let { "/$it" } ?: ""))) })
+                if (folders.isNotEmpty()) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    folders.forEach { f -> FilterChip(folder == f, { folder = if (folder == f) "" else f }, { Text(f) }) }
+                }
             }
                 Row(Modifier.padding(horizontal = 16.dp).padding(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = close, Modifier.weight(1f)) { Text(stringResource(R.string.dl_cancel)) }
                     Button(onClick = {
-                        val base = prefs.options(quality, playlist, subs, format?.id, format?.audioOnly == true)
+                        val base = prefs.options(quality, playlist, subs, format?.id, format?.audioOnly == true, DownloadLogic.folderName(folder))
                         if (entries.isEmpty()) DownloadQueue.add(ctx, url, base, info)
-                        else entries.filter { it.url !in unpicked }.forEach { e ->
-                            DownloadQueue.add(ctx, e.url, base.copy(playlist = false, playlistName = i?.title), Preview(e.title, i?.uploader.orEmpty(), e.thumb, e.durationSec))
-                        }
+                        else { val batch = UUID.randomUUID().toString(); entries.filter { it.url !in unpicked }.forEach { e ->
+                            DownloadQueue.add(ctx, e.url, base.copy(playlist = false, playlistName = i?.title), Preview(e.title, i?.uploader.orEmpty(), e.thumb, e.durationSec), batch)
+                        } }
                         started(); close()
                     }, Modifier.weight(1f), enabled = entries.isEmpty() || unpicked.size < entries.size) { Text(stringResource(R.string.dl_start)) }
                 }
@@ -291,6 +336,7 @@ object DownloadFeature {
                             Text(heroLine(j), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                         Spacer(Modifier.width(8.dp))
+                        if (j.state == DlState.Running) FilledTonalIconButton(onClick = { DownloadQueue.pause(j) }, shapes = IconButtonDefaults.shapes()) { Icon(Icons.Rounded.Pause, stringResource(R.string.dl_pause)) }
                         FilledTonalIconButton(onClick = { DownloadQueue.cancel(j) }, shapes = IconButtonDefaults.shapes()) { Icon(Icons.Rounded.Close, stringResource(R.string.dl_cancel)) }
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -308,14 +354,16 @@ object DownloadFeature {
     @Composable
     private fun heroLine(j: DlJob): String =
         if (j.state != DlState.Running) status(j)
-        else listOfNotNull(j.speed, j.etaSec.takeIf { it > 0 }?.let { stringResource(R.string.dl_left, DownloadLogic.time(it)) }).joinToString(" · ").ifEmpty { stringResource(R.string.dl_starting) }
+        else listOfNotNull(j.item?.let { stringResource(R.string.dl_playlist_place, it) }, j.speed, j.etaSec.takeIf { it > 0 }?.let { stringResource(R.string.dl_left, DownloadLogic.time(it)) }).joinToString(" · ").ifEmpty { stringResource(R.string.dl_starting) }
 
     @Composable
     private fun status(j: DlJob): String = when (j.state) {
         DlState.Waiting -> stringResource(R.string.dl_waiting)
         DlState.Running -> listOfNotNull(stringResource(R.string.dl_running, j.percent), j.speed, j.etaSec.takeIf { it > 0 }?.let { stringResource(R.string.dl_left, DownloadLogic.time(it)) }).joinToString(" · ")
         DlState.Finishing -> stringResource(R.string.dl_finishing)
-        DlState.Done -> listOf(stringResource(R.string.dl_done), j.error).filter { it.isNotEmpty() }.joinToString(" · ")
+        DlState.Done -> listOf(stringResource(R.string.dl_done), j.size.takeIf { it > 0 }?.let(DownloadLogic::size).orEmpty(),
+            j.doneAt.takeIf { it > 0 }?.let { android.text.format.DateUtils.getRelativeTimeSpanString(it).toString() }.orEmpty(), j.error).filter { it.isNotEmpty() }.joinToString(" · ")
+        DlState.Paused -> stringResource(R.string.dl_paused) + (if (j.percent > 0) " · ${j.percent}%" else "")
         DlState.Failed -> stringResource(R.string.dl_failed, j.error)
         DlState.Cancelled -> stringResource(R.string.dl_cancelled)
     }
@@ -323,10 +371,27 @@ object DownloadFeature {
     @Composable
     private fun JobCard(j: DlJob, modifier: Modifier) {
         val ctx = LocalContext.current
+        val scope = rememberCoroutineScope()
+        var menu by remember { mutableStateOf(false) }
+        var dialog by remember { mutableStateOf(0) } // 1 rename, 2 move, 3 delete
+        var retry by remember { mutableStateOf<(() -> FileOp)?>(null) }
+        // Android's "allow Shoebill to change this file?" prompt; on yes, a delete is already done by the system, anything else runs again.
+        val allow = androidx.activity.compose.rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { res ->
+            val again = retry; retry = null
+            if (res.resultCode == android.app.Activity.RESULT_OK && again != null) scope.launch { withContext(Dispatchers.IO) { again() } }
+        }
+        fun run(op: () -> FileOp, afterAsk: () -> FileOp = op) = scope.launch {
+            when (val r = withContext(Dispatchers.IO) { op() }) {
+                is FileOp.Ask -> { retry = afterAsk; allow.launch(androidx.activity.result.IntentSenderRequest.Builder(r.sender).build()) }
+                FileOp.Failed -> Toast.makeText(ctx, R.string.dl_file_failed, Toast.LENGTH_SHORT).show()
+                FileOp.Ok -> Unit
+            }
+        }
         val open: () -> Unit = {
-            runCatching {
-                // our own player, not the system chooser
-                ctx.startActivity(Intent(ctx, dev.altayeb.shoebill.MainActivity::class.java).setAction(Intent.ACTION_VIEW).setDataAndType(Uri.parse(j.fileUri), if (j.audio) "audio/*" else "video/*").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_SINGLE_TOP))
+            scope.launch {
+                if (!withContext(Dispatchers.IO) { DownloadFiles.exists(ctx, j) }) { Toast.makeText(ctx, R.string.dl_gone, Toast.LENGTH_LONG).show(); return@launch }
+                // our own player, not the system chooser: music for audio, the video player for video
+                runCatching { ctx.startActivity(Intent(ctx, dev.altayeb.shoebill.MainActivity::class.java).setAction(Intent.ACTION_VIEW).setDataAndType(Uri.parse(j.fileUri), if (j.audio) "audio/*" else "video/*").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_SINGLE_TOP)) }
             }
         }
         Surface(modifier.fillMaxWidth().then(if (j.state == DlState.Done && j.fileUri != null) Modifier.clickable(onClick = open) else Modifier), shape = Radius.M, color = MaterialTheme.colorScheme.surfaceContainer) {
@@ -337,13 +402,64 @@ object DownloadFeature {
                     Text(j.title.ifEmpty { j.url }, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
                     Text(status(j), style = MaterialTheme.typography.bodySmall, maxLines = 3, overflow = TextOverflow.Ellipsis,
                         color = if (j.state == DlState.Failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+                    j.options.folder?.let { Text("Shoebill/$it", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                 }
                 when (j.state) {
-                    DlState.Waiting -> TextButton(onClick = { DownloadQueue.cancel(j) }) { Text(stringResource(R.string.dl_cancel)) }
-                    DlState.Failed, DlState.Cancelled -> TextButton(onClick = { DownloadQueue.retry(ctx, j) }) { Text(stringResource(R.string.dl_retry)) }
+                    DlState.Waiting -> {
+                        IconButton(onClick = { DownloadQueue.pause(j) }) { Icon(Icons.Rounded.Pause, stringResource(R.string.dl_pause)) }
+                        IconButton(onClick = { DownloadQueue.cancel(j) }) { Icon(Icons.Rounded.Close, stringResource(R.string.dl_cancel)) }
+                    }
+                    DlState.Paused -> {
+                        IconButton(onClick = { DownloadQueue.resume(ctx, j) }) { Icon(Icons.Rounded.PlayArrow, stringResource(R.string.dl_resume)) }
+                        IconButton(onClick = { DownloadQueue.cancel(j) }) { Icon(Icons.Rounded.Close, stringResource(R.string.dl_cancel)) }
+                    }
+                    DlState.Failed, DlState.Cancelled -> {
+                        TextButton(onClick = { DownloadQueue.retry(ctx, j) }) { Text(stringResource(R.string.dl_retry)) }
+                        IconButton(onClick = { DownloadQueue.remove(j) }) { Icon(Icons.Rounded.Close, stringResource(R.string.dl_remove)) } // the list only
+                    }
+                    DlState.Done -> Box {
+                        IconButton(onClick = { menu = true }) { Icon(Icons.Rounded.MoreVert, stringResource(R.string.dl_more)) }
+                        DropdownMenu(menu, { menu = false }) {
+                            if (j.fileUri != null) {
+                                DropdownMenuItem({ Text(stringResource(R.string.dl_share)) }, onClick = { menu = false
+                                    val mime = if (j.audio) "audio/*" else "video/*"
+                                    runCatching { ctx.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType(mime).putExtra(Intent.EXTRA_STREAM, Uri.parse(j.fileUri)).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), null)) } })
+                                DropdownMenuItem({ Text(stringResource(R.string.dl_rename)) }, onClick = { menu = false; dialog = 1 })
+                                DropdownMenuItem({ Text(stringResource(R.string.dl_move)) }, onClick = { menu = false; dialog = 2 })
+                                DropdownMenuItem({ Text(stringResource(R.string.dl_delete_file)) }, onClick = { menu = false; dialog = 3 })
+                            }
+                            DropdownMenuItem({ Text(stringResource(R.string.dl_remove)) }, onClick = { menu = false; DownloadQueue.remove(j) })
+                        }
+                    }
                     else -> Unit
                 }
             }
+        }
+        when (dialog) {
+            1, 2 -> {
+                var text by remember { mutableStateOf("") }
+                LaunchedEffect(Unit) { text = if (dialog == 1) withContext(Dispatchers.IO) { DownloadFiles.name(ctx, j) }.substringBeforeLast('.') else j.options.folder.orEmpty() }
+                val ok = if (dialog == 1) DownloadLogic.rename(text, "x.y") != null else true
+                AlertDialog(onDismissRequest = { dialog = 0 },
+                    title = { Text(stringResource(if (dialog == 1) R.string.dl_rename else R.string.dl_move)) },
+                    text = { Column {
+                        OutlinedTextField(text, { text = it.take(150) }, Modifier.fillMaxWidth(), singleLine = true, isError = !ok,
+                            label = { Text(stringResource(if (dialog == 1) R.string.dl_new_name else R.string.dl_folder)) },
+                            supportingText = if (dialog == 2) { { Text(stringResource(R.string.dl_folder_hint, (if (j.audio) "Music" else "Movies") + "/Shoebill" + (DownloadLogic.folderName(text)?.let { "/$it" } ?: ""))) } } else null)
+                    } },
+                    confirmButton = { TextButton(enabled = ok, onClick = {
+                        val t = text; val d = dialog; dialog = 0
+                        if (d == 1) run({ DownloadFiles.rename(ctx, j, t) }) else run({ DownloadFiles.move(ctx, j, t) })
+                    }) { Text(stringResource(R.string.ok)) } },
+                    dismissButton = { TextButton(onClick = { dialog = 0 }) { Text(stringResource(R.string.cancel)) } })
+            }
+            3 -> AlertDialog(onDismissRequest = { dialog = 0 },
+                title = { Text(stringResource(R.string.dl_delete_file)) }, text = { Text(stringResource(R.string.dl_delete_confirm, j.title.ifEmpty { j.url })) },
+                confirmButton = { TextButton(onClick = { dialog = 0
+                    // Android 11+ deletes the file itself on "allow"; then only the card is left to remove.
+                    run({ DownloadFiles.delete(ctx, j) }, afterAsk = { if (Build.VERSION.SDK_INT >= 30) { DownloadQueue.remove(j); FileOp.Ok } else DownloadFiles.delete(ctx, j) })
+                }) { Text(stringResource(R.string.dl_delete_file), color = MaterialTheme.colorScheme.error) } },
+                dismissButton = { TextButton(onClick = { dialog = 0 }) { Text(stringResource(R.string.cancel)) } })
         }
     }
 
@@ -444,7 +560,7 @@ object DownloadFeature {
 
         GroupTitle(stringResource(R.string.dl_group_tools))
         val sdk31 = Build.VERSION.SDK_INT >= 31
-        val t = groupShapes(if (sdk31) 6 else 5)
+        val t = groupShapes(if (sdk31) 7 else 6)
         var i = 0
         Column(verticalArrangement = col) {
             Surface(Modifier.fillMaxWidth(), shape = t[i++], color = MaterialTheme.colorScheme.surfaceContainerHigh) {
@@ -457,6 +573,7 @@ object DownloadFeature {
             if (sdk31) SettingRow(stringResource(R.string.dl_open_links), t[i++], onClick = {
                 ctx.startActivity(Intent(android.provider.Settings.ACTION_APP_OPEN_BY_DEFAULT_SETTINGS, android.net.Uri.parse("package:${ctx.packageName}")))
             })
+            sw(R.string.dl_quick, t[i++], QuickDownloadActivity.isEnabled(ctx), R.string.dl_quick_sub) { QuickDownloadActivity.setEnabled(ctx, it) }()
             sw(R.string.dl_autoupdate, t[i++], prefs.autoUpdate, R.string.dl_autoupdate_sub) { prefs.autoUpdate = it }()
             sw(R.string.dl_nightly, t[i++], prefs.nightly, R.string.dl_nightly_sub) { prefs.nightly = it }()
             SettingRow(stringResource(R.string.dl_update), t[i], subtitle = message, onClick = {

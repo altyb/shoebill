@@ -46,5 +46,15 @@
                 <data android:scheme="shoebill" android:host="download" />
             </intent-filter>
         </activity>
+        <!-- "Download with Shoebill" in the share sheet: the options sheet over the sharing app; the user stays in YouTube. -->
+        <activity android:name=".download.QuickDownloadActivity" android:exported="true" android:label="@string/dl_quick"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" android:excludeFromRecents="true" android:noHistory="true" android:windowSoftInputMode="adjustResize"
+            android:taskAffinity="" android:enabled="true">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
     </application>
 </manifest>
