@@ -9,7 +9,7 @@ plugins {
 // versionCode = release number x 10 + ABI slot, so each per-ABI APK has its own code and every one of them
 // is above the last single-APK release (versionCode 5). Universal gets slot 0 so a device offered several
 // APKs prefers its own ABI. Bump releaseNumber once per release.
-val releaseNumber = 7
+val releaseNumber = 8
 val abiSlot = mapOf("armeabi-v7a" to 1, "arm64-v8a" to 2, "x86_64" to 3)
 // the emulator build passes -PdevAbis=x86_64: one APK with only those ABIs, no splits
 val devAbis = providers.gradleProperty("devAbis").orNull
@@ -23,7 +23,7 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = releaseNumber * 10
-        versionName = "0.5.1"
+        versionName = "0.6.0"
         // without the filter the universal APK would also carry x86, which no phone needs
         ndk { abiFilters += devAbis?.split(",") ?: abiSlot.keys }
         // each worktree agent installs as its own app: ./gradlew installDebug -PdevSuffix=.player

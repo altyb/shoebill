@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.6.0 (2026-11-07)
+Downloads: pause and resume, a queue you can search, filter and sort, rename, move, share and delete for finished files, a folder per download, and playlist progress in the notification. Download from YouTube's Share menu: the options sheet opens over YouTube. Music: favorites, ready-made lists (Favorites, Recently added, Recently played, Most played, Not played) with this week / this month / all time and past-days tabs, play counts, and the song count and total time on top of every list. Rename and delete playlists, remove songs from them. A ringtone maker: pick the part, fade in and out, volume, save as ringtone, notification or alarm. A long-press song menu whose entries can be turned off. Close the music from the mini player. Tabs can be hidden from the bottom bar; Network and Playlists start hidden. Downloaded MP3s open in the music player, the newest songs come first, and each song keeps its own cover.
+
 ## 0.5.1 (2026-11-05)
 Notifications for finished and failed downloads, with a Try again button. `shoebill://` links open the Music and Downloads tabs, play a link, or start a download. Music: a home-screen widget, a Quick Settings tile, a video playback notification, clearer shuffle and repeat, a play/pause animation, and speed and sleep-timer chips on the player page. Subtitles: one background box around all lines (box per line is still a choice), a font choice, and a bundled Arabic font so word spacing no longer depends on the phone's font.
 
