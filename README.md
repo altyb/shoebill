@@ -94,6 +94,7 @@ Settings, or let it follow the phone.
 
 ## Install
 
+- **Download page:** [shoebill.altayeb.dev](https://shoebill.altayeb.dev) picks the right file and shows the install steps, in English and Arabic.
 - **GitHub:** download the APK from [Releases](../../releases/latest). Android 8.0 or newer. Most phones take `arm64-v8a`; older ones `armeabi-v7a`; `universal` runs anywhere and is the one to use if unsure or when updating from 0.4.0.
 - **[Obtainium](https://github.com/ImranR98/Obtainium):** add `https://github.com/altyb/shoebill` to get updates.
 - **F-Droid app:** add my own repo under Settings, Repositories: `https://altyb.github.io/fdroid/repo?fingerprint=4882F491E55FA2B5630EBA1409087C2DC2F404E8786813D0E60B13569CC1040A`. These are the same signed APKs as the GitHub releases. The apps are not in the main F-Droid catalogue yet.
