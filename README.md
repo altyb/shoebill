@@ -92,6 +92,10 @@ Settings, or let it follow the phone.
 - Encrypted backup and restore (`.shoebillvault` file, password-protected).
 - Screenshots and screen recording blocked inside the vault.
 
+## Screenshots
+
+<p align="center"><img src="https://raw.githubusercontent.com/altyb/fdroid/main/repo/dev.altayeb.shoebill/en-US/phoneScreenshots/1.png" width="23%" alt="shoebill screenshot 1"> <img src="https://raw.githubusercontent.com/altyb/fdroid/main/repo/dev.altayeb.shoebill/en-US/phoneScreenshots/2.png" width="23%" alt="shoebill screenshot 2"> <img src="https://raw.githubusercontent.com/altyb/fdroid/main/repo/dev.altayeb.shoebill/en-US/phoneScreenshots/3.png" width="23%" alt="shoebill screenshot 3"> <img src="https://raw.githubusercontent.com/altyb/fdroid/main/repo/dev.altayeb.shoebill/en-US/phoneScreenshots/4.png" width="23%" alt="shoebill screenshot 4"></p>
+
 ## Install
 
 - **Download page:** [shoebill.altayeb.dev](https://shoebill.altayeb.dev) picks the right file and shows the install steps, in English and Arabic.
@@ -172,10 +176,6 @@ Tests:
 ## Contributing
 
 Issues and pull requests are welcome: see [CONTRIBUTING](.github/CONTRIBUTING.md), and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for how the code is laid out. Translations are the easiest way to help.
-
-## How it was made
-
-Much of this code was written with an AI coding assistant (Claude) under my direction. If something looks wrong, please open an issue.
 
 ## Credits
 
